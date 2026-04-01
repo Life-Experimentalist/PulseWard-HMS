@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PulseWard | Multi-Hospital Care Operations</title>
+    <title>PulseWard Demo Console</title>
     <meta name="theme-color" content="#0f4c5c" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,77 +16,148 @@
   </head>
   <body>
     <div class="bg-aurora" aria-hidden="true"></div>
+
+    <div id="setup-wizard" class="wizard hidden" role="dialog" aria-modal="true">
+      <article class="wizard-card">
+        <p class="eyebrow">First Time Setup</p>
+        <h2>Initialize Your Hospital Workspace</h2>
+        <p class="subtle">
+          No real patient data is used in this demo. Start with generic placeholders and customize
+          everything through admin controls.
+        </p>
+
+        <div class="step-track">
+          <button type="button" data-step="1" class="step-dot active">1</button>
+          <button type="button" data-step="2" class="step-dot">2</button>
+          <button type="button" data-step="3" class="step-dot">3</button>
+          <button type="button" data-step="4" class="step-dot">4</button>
+        </div>
+
+        <form id="setup-form">
+          <section class="step-pane active" data-step="1">
+            <h3>Hospital Profile</h3>
+            <label for="setupHospitalName">Hospital Name</label>
+            <input id="setupHospitalName" name="hospitalName" value="Generic Care Hospital" />
+
+            <label for="setupTenantKey">Tenant Key</label>
+            <input id="setupTenantKey" name="tenantKey" value="default" />
+
+            <label for="setupDomain">Public Domain</label>
+            <input id="setupDomain" name="domain" value="generic-care.local" />
+          </section>
+
+          <section class="step-pane" data-step="2">
+            <h3>Admin Bootstrap</h3>
+            <label for="setupAdminEmail">Admin Email</label>
+            <input
+              id="setupAdminEmail"
+              name="adminEmail"
+              type="email"
+              value="admin@generic-care.local"
+            />
+
+            <label for="setupAdminPassword">Admin Password</label>
+            <input id="setupAdminPassword" name="adminPassword" type="password" value="Admin@123" />
+
+            <label for="setupTimezone">Timezone</label>
+            <input id="setupTimezone" name="timezone" value="Asia/Kolkata" />
+          </section>
+
+          <section class="step-pane" data-step="3">
+            <h3>Modules and Providers</h3>
+            <label
+              ><input type="checkbox" name="setupProviderTelegram" checked /> Telegram Bot</label
+            >
+            <label><input type="checkbox" name="setupProviderEmail" checked /> SMTP Email</label>
+            <label
+              ><input type="checkbox" name="setupProviderWebhook" checked /> Generic Webhook</label
+            >
+            <label><input type="checkbox" name="setupProviderWhatsApp" /> WhatsApp Cloud API</label>
+            <label
+              ><input type="checkbox" name="setupProviderAppleCalendar" checked /> Apple
+              Calendar</label
+            >
+
+            <label for="setupMode">Demo Data Mode</label>
+            <select id="setupMode" name="mode">
+              <option value="local">Local Browser Data</option>
+              <option value="live">Live Service APIs</option>
+            </select>
+          </section>
+
+          <section class="step-pane" data-step="4">
+            <h3>Service Endpoints</h3>
+            <label for="setupAuthUrl">Auth API Base URL</label>
+            <input id="setupAuthUrl" name="authUrl" value="http://localhost:5101/api/v1" />
+
+            <label for="setupNotificationUrl">Notification API Base URL</label>
+            <input
+              id="setupNotificationUrl"
+              name="notificationUrl"
+              value="http://localhost:5102/api/v1"
+            />
+
+            <label for="setupAppointmentUrl">Appointment API Base URL</label>
+            <input
+              id="setupAppointmentUrl"
+              name="appointmentUrl"
+              value="http://localhost:5103/api/v1"
+            />
+          </section>
+
+          <div class="wizard-actions">
+            <button id="setupBack" type="button" class="ghost">Back</button>
+            <button id="setupNext" type="button" class="cta">Next</button>
+            <button id="setupFinish" type="submit" class="cta hidden">Finish Setup</button>
+          </div>
+        </form>
+      </article>
+    </div>
+
     <header class="site-header">
-      <div class="logo-pill">PulseWard</div>
+      <div class="logo-pill" id="brandLogo">PulseWard</div>
       <nav>
-        <a href="#features">Features</a>
-        <a href="#dashboards">Dashboards</a>
-        <a href="#integrations">Integrations</a>
-        <a href="#auth">Login</a>
+        <a href="#overview">Overview</a>
+        <a href="#admin-console">Admin</a>
+        <a href="#data-lab">Data Lab</a>
+        <a href="#backup-center">Backup</a>
+        <a href="#pwa">PWA</a>
       </nav>
-      <button class="cta">Book Demo</button>
+      <button class="ghost" id="restart-setup-btn" type="button">Restart Setup</button>
     </header>
 
     <main>
-      <section class="hero">
-        <p class="eyebrow">Hospital Operations Platform</p>
-        <h1>One platform, many hospitals, zero hardcoded branding.</h1>
-        <p>
-          PulseWard gives each hospital admin full control over branding, notifications, and
-          calendar integrations while your core product stays clean and scalable.
+      <section id="overview" class="hero">
+        <p class="eyebrow">Operational Demo Workspace</p>
+        <h1 id="hospitalNameHeading">Generic Care Hospital Demo</h1>
+        <p id="hospitalSubheading">
+          Multi-tenant setup with modular providers, admin-owned controls, and demo-safe synthetic
+          data only.
         </p>
         <div class="hero-actions">
-          <button class="cta">Start Free Demo</button>
-          <button class="ghost">View Admin Controls</button>
+          <button class="cta" id="run-demo-flow-btn" type="button">Run Demo Flow</button>
+          <button class="ghost" id="view-admin-btn" type="button">Open Admin Console</button>
         </div>
         <div class="hero-stats">
           <article>
-            <h3>4</h3>
-            <p>Role dashboards</p>
+            <h3 id="statMode">Local</h3>
+            <p>Data Mode</p>
           </article>
           <article>
-            <h3>6+</h3>
-            <p>Messaging and calendar providers</p>
+            <h3 id="statAppointments">0</h3>
+            <p>Appointments</p>
           </article>
           <article>
-            <h3>Per Tenant</h3>
-            <p>Branding and provider routing</p>
+            <h3 id="statNotifications">0</h3>
+            <p>Notifications</p>
           </article>
         </div>
       </section>
 
-      <section id="features" class="panel-grid">
+      <section id="auth" class="card-grid two-up">
         <article class="panel">
-          <h2>Configurable Branding</h2>
-          <p>
-            Hospitals can set logos, color tokens, typography, and legal copy through admin config
-            only.
-          </p>
-        </article>
-        <article class="panel">
-          <h2>Modular Integrations</h2>
-          <p>
-            Switch between Telegram, Email, Webhooks, WhatsApp, Google, Apple, Outlook, and ICS with
-            fallback routing.
-          </p>
-        </article>
-        <article class="panel">
-          <h2>GitHub as Control Plane</h2>
-          <p>
-            Automated issue triage, backup drill tickets, and release docs keep operations auditable
-            and repeatable.
-          </p>
-        </article>
-      </section>
-
-      <section id="auth" class="auth-section">
-        <article class="auth-panel">
-          <h2>Multi-Role Login</h2>
-          <p>
-            Sign in as admin, doctor, nurse, patient, frontdesk, or operations. OAuth options can be
-            enabled per tenant.
-          </p>
-          <form id="role-login-form">
+          <h2>Role Login Test</h2>
+          <form id="role-login-form" class="stack-form">
             <label for="tenantKey">Hospital Tenant</label>
             <input id="tenantKey" name="tenantKey" value="default" />
 
@@ -101,107 +172,220 @@
             </select>
 
             <label for="email">Email</label>
-            <input id="email" name="email" type="email" value="demo@pulseward.local" />
+            <input id="email" name="email" type="email" />
 
             <label for="password">Password</label>
-            <input id="password" name="password" type="password" value="demo123" />
+            <input id="password" name="password" type="password" />
 
-            <div class="auth-actions">
+            <div class="button-row">
               <button type="submit" class="cta">Login</button>
-              <button type="button" class="ghost" id="google-oauth-btn">Google OAuth</button>
-              <button type="button" class="ghost" id="clerk-oauth-btn">Clerk</button>
+              <button type="button" class="ghost" id="google-oauth-btn">Google OAuth URL</button>
+              <button type="button" class="ghost" id="clerk-oauth-btn">Clerk Config</button>
             </div>
           </form>
-          <pre id="auth-output" class="auth-output"></pre>
+          <pre id="auth-output" class="terminal"></pre>
         </article>
 
-        <article class="auth-panel">
-          <h3>Role Dashboards</h3>
-          <div class="role-grid">
-            <button class="role-card" data-role="admin">Admin Control</button>
-            <button class="role-card" data-role="doctor">Doctor View</button>
-            <button class="role-card" data-role="nurse">Nurse Board</button>
-            <button class="role-card" data-role="patient">Patient Journey</button>
-            <button class="role-card" data-role="frontdesk">Frontdesk Queue</button>
-            <button class="role-card" data-role="operations">Operations Health</button>
-          </div>
-          <p class="hint">
-            This demo shell shows role-targeted flow previews while backend auth endpoints provide
-            API-level role/OAuth integration hooks.
+        <article class="panel">
+          <h2>System Links</h2>
+          <div class="link-list" id="system-link-list"></div>
+          <p class="subtle">
+            Use these links after starting auth, notification, and appointment services in parallel.
           </p>
         </article>
       </section>
 
-      <section id="dashboards" class="dashboard-section">
-        <h2>Unified Dashboard Suite</h2>
-        <div class="dashboard-tabs" role="tablist">
-          <button class="tab active" data-tab="admin">Admin Console</button>
-          <button class="tab" data-tab="operations">Operations</button>
-          <button class="tab" data-tab="clinician">Clinician</button>
-          <button class="tab" data-tab="patient">Patient</button>
-        </div>
-
-        <div class="dashboard-canvas">
-          <article class="dash-view active" id="admin">
-            <h3>Admin Console</h3>
-            <ul>
-              <li>Enable provider per hospital tenant</li>
-              <li>Set WhatsApp paid onboarding link for admins</li>
-              <li>Apply branding without code deploy</li>
-            </ul>
-          </article>
-          <article class="dash-view" id="operations">
-            <h3>Operations Dashboard</h3>
-            <ul>
-              <li>Provider health and fallback events</li>
-              <li>Daily delivery success trends</li>
-              <li>Backup verification workflow status</li>
-            </ul>
-          </article>
-          <article class="dash-view" id="clinician">
-            <h3>Clinician Portal</h3>
-            <ul>
-              <li>Appointment timeline with calendar status</li>
-              <li>Shift-ready alert summaries</li>
-              <li>Role-specific patient communication tools</li>
-            </ul>
-          </article>
-          <article class="dash-view" id="patient">
-            <h3>Patient Portal</h3>
-            <ul>
-              <li>Notifications over preferred channel</li>
-              <li>Appointment reminders and confirmations</li>
-              <li>Hospital-branded self-service experience</li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section id="integrations" class="integration-matrix">
-        <h2>Provider Options</h2>
-        <div class="matrix-grid">
-          <article>
-            <h3>Free-first</h3>
-            <p>Telegram Bot, SMTP Email, Webhooks, Apple Calendar, ICS.</p>
-          </article>
-          <article>
-            <h3>Paid optional</h3>
-            <p>WhatsApp Cloud API and Outlook business setup by each admin.</p>
-          </article>
-          <article>
-            <h3>Admin-owned billing</h3>
-            <p>Billing and onboarding are completed by each hospital admin.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="pwa-section">
-        <h2>Low-Cost PWA Delivery</h2>
-        <p>
-          Install this app on Android, iOS, Windows, and macOS. Push notifications can be powered by
-          Firebase Cloud Messaging when enabled by admin.
+      <section id="admin-console" class="panel">
+        <h2>Admin Configuration Center</h2>
+        <p class="subtle">
+          Every setting here is modular and tenant-configurable. No source-code edits are required.
         </p>
-        <button id="install-pwa-btn" class="cta" disabled>Install App</button>
+
+        <form id="admin-config-form" class="card-grid three-up">
+          <article class="mini-panel">
+            <h3>Branding</h3>
+            <label for="adminHospitalName">Hospital Name</label>
+            <input id="adminHospitalName" name="hospitalName" />
+
+            <label for="adminPrimaryColor">Primary Color</label>
+            <input id="adminPrimaryColor" name="primaryColor" type="color" value="#0f4c5c" />
+
+            <label for="adminAccentColor">Accent Color</label>
+            <input id="adminAccentColor" name="accentColor" type="color" value="#ea8f3b" />
+          </article>
+
+          <article class="mini-panel">
+            <h3>Messaging Providers</h3>
+            <label><input type="checkbox" name="providerTelegram" /> Telegram Bot</label>
+            <label><input type="checkbox" name="providerEmail" /> SMTP Email</label>
+            <label><input type="checkbox" name="providerWebhook" /> Webhook</label>
+            <label><input type="checkbox" name="providerWhatsApp" /> WhatsApp</label>
+
+            <label for="defaultMessagingProvider">Default Messaging Provider</label>
+            <select id="defaultMessagingProvider" name="defaultMessagingProvider">
+              <option value="telegram-bot">Telegram Bot</option>
+              <option value="email-smtp">SMTP Email</option>
+              <option value="generic-webhook">Generic Webhook</option>
+              <option value="whatsapp-cloud-api">WhatsApp Cloud API</option>
+            </select>
+          </article>
+
+          <article class="mini-panel">
+            <h3>Calendar and OAuth</h3>
+            <label
+              ><input type="checkbox" name="providerGoogleCalendar" checked /> Google
+              Calendar</label
+            >
+            <label><input type="checkbox" name="providerAppleCalendar" /> Apple Calendar</label>
+            <label><input type="checkbox" name="providerOutlookCalendar" /> Outlook Calendar</label>
+
+            <label><input type="checkbox" name="oauthGoogle" /> Google OAuth</label>
+            <label><input type="checkbox" name="oauthClerk" /> Clerk</label>
+
+            <label for="dataMode">Data Mode</label>
+            <select id="dataMode" name="dataMode">
+              <option value="local">Local Browser Data</option>
+              <option value="live">Live Service APIs</option>
+            </select>
+          </article>
+
+          <article class="mini-panel span-all">
+            <h3>Service Endpoints</h3>
+            <div class="grid-endpoints">
+              <div>
+                <label for="authApiUrl">Auth API URL</label>
+                <input id="authApiUrl" name="authApiUrl" />
+              </div>
+              <div>
+                <label for="notificationApiUrl">Notification API URL</label>
+                <input id="notificationApiUrl" name="notificationApiUrl" />
+              </div>
+              <div>
+                <label for="appointmentApiUrl">Appointment API URL</label>
+                <input id="appointmentApiUrl" name="appointmentApiUrl" />
+              </div>
+            </div>
+            <div class="button-row">
+              <button type="submit" class="cta">Save Configuration</button>
+              <button type="button" class="ghost" id="sync-providers-btn">
+                Sync Provider Status
+              </button>
+              <button type="button" class="ghost" id="discover-services-btn">
+                Discover Service URLs
+              </button>
+            </div>
+          </article>
+        </form>
+        <pre id="admin-output" class="terminal"></pre>
+      </section>
+
+      <section id="data-lab" class="panel">
+        <h2>Interactive Data Lab</h2>
+        <p class="subtle">
+          Create and inspect appointments and notifications in local mode or live API mode to
+          validate full demo behavior.
+        </p>
+
+        <div class="card-grid two-up">
+          <article class="mini-panel">
+            <h3>Create Appointment</h3>
+            <form id="appointment-form" class="stack-form">
+              <label for="patientId">Patient ID</label>
+              <input id="patientId" name="patientId" value="pat-demo-001" />
+
+              <label for="clinicianId">Clinician ID</label>
+              <input id="clinicianId" name="clinicianId" value="cln-demo-001" />
+
+              <label for="appointmentDate">Date Time (ISO)</label>
+              <input id="appointmentDate" name="appointmentDate" />
+
+              <label for="appointmentStatus">Status</label>
+              <select id="appointmentStatus" name="status">
+                <option value="scheduled">Scheduled</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+
+              <button type="submit" class="cta">Create Appointment</button>
+            </form>
+          </article>
+
+          <article class="mini-panel">
+            <h3>Send Notification</h3>
+            <form id="notification-form" class="stack-form">
+              <label for="recipient">Recipient</label>
+              <input id="recipient" name="recipient" value="patient@generic-care.local" />
+
+              <label for="channel">Channel</label>
+              <select id="channel" name="channel">
+                <option value="patient-notification">Patient Notification</option>
+                <option value="staff-notification">Staff Notification</option>
+                <option value="website-event">Website Event</option>
+              </select>
+
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="3">Demo alert from PulseWard.</textarea>
+
+              <label for="providerKey">Preferred Provider</label>
+              <select id="providerKey" name="providerKey">
+                <option value="telegram-bot">Telegram Bot</option>
+                <option value="email-smtp">SMTP Email</option>
+                <option value="generic-webhook">Generic Webhook</option>
+                <option value="whatsapp-cloud-api">WhatsApp</option>
+              </select>
+
+              <button type="submit" class="cta">Send Notification</button>
+            </form>
+          </article>
+        </div>
+
+        <div class="button-row top-gap">
+          <button type="button" class="ghost" id="refresh-data-btn">Refresh Data</button>
+          <button type="button" class="ghost" id="run-seed-btn">Seed Demo Data</button>
+        </div>
+
+        <div class="card-grid two-up">
+          <article class="mini-panel">
+            <h3>Appointments</h3>
+            <div id="appointments-table"></div>
+          </article>
+          <article class="mini-panel">
+            <h3>Notifications</h3>
+            <div id="notifications-table"></div>
+          </article>
+        </div>
+
+        <pre id="data-output" class="terminal"></pre>
+      </section>
+
+      <section id="backup-center" class="panel">
+        <h2>Backup and Restore</h2>
+        <p class="subtle">
+          Export and restore the full demo state, including admin config and generated test data.
+        </p>
+        <div class="button-row">
+          <button type="button" class="cta" id="create-backup-btn">Create Snapshot</button>
+          <button type="button" class="ghost" id="download-backup-btn">Download Backup JSON</button>
+          <label class="ghost file-btn">
+            Restore Backup
+            <input type="file" id="restore-backup-input" accept="application/json" />
+          </label>
+        </div>
+        <div id="backup-list"></div>
+      </section>
+
+      <section id="pwa" class="panel">
+        <h2>PWA and Push Notification Test</h2>
+        <p class="subtle">
+          Install this app and validate browser notifications. Live server push requires your chosen
+          push provider; this demo includes a local simulation path.
+        </p>
+        <div class="button-row">
+          <button id="install-pwa-btn" class="cta" disabled type="button">Install App</button>
+          <button id="enable-push-btn" class="ghost" type="button">Enable Notifications</button>
+          <button id="test-push-btn" class="ghost" type="button">Simulate Server Push</button>
+        </div>
+        <pre id="pwa-output" class="terminal"></pre>
       </section>
     </main>
 

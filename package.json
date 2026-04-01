@@ -4,11 +4,11 @@
   "description": "PulseWard Hospital Management System - A comprehensive solution for managing hospital operations, patient care, and administrative tasks.",
   "main": "index.js",
   "scripts": {
-    "start": "node apps/api-gateway/src/index.js",
+    "start": "node services/api-gateway/src",
     "start:auth": "node services/auth-service/src",
     "start:notification": "node services/notification-service/src",
     "start:appointment": "node services/appointment-service/src",
-    "start:landing": "http-server ./apps/landing-page -p 4173",
+    "start:landing": "node ./scripts/start-landing.mjs",
     "test": "jest",
     "test:smoke": "node ./scripts/smoke-test-platform.mjs",
     "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); console.log('Route modules loaded');\"",

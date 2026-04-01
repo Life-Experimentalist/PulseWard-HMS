@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+coverage/
+.pnpm-store/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Runtime and editor noise
+logs/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/

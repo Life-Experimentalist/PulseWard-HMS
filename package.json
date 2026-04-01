@@ -1,0 +1,71 @@
+{
+  "name": "pulseward-hms",
+  "version": "1.2.0",
+  "description": "PulseWard Hospital Management System - A comprehensive solution for managing hospital operations, patient care, and administrative tasks.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node apps/api-gateway/src/index.js",
+    "start:auth": "node services/auth-service/src",
+    "start:notification": "node services/notification-service/src",
+    "start:appointment": "node services/appointment-service/src",
+    "start:landing": "http-server ./apps/landing-page -p 4173",
+    "test": "jest",
+    "test:smoke": "node ./scripts/smoke-test-platform.mjs",
+    "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); console.log('Route modules loaded');\"",
+    "build": "tsc",
+    "lint": "eslint . --ext .js,.mjs",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"**/*.{js,mjs,ts,json,md,yml,yaml,css,html}\"",
+    "format:check": "prettier --check \"**/*.{js,mjs,ts,json,md,yml,yaml,css,html}\"",
+    "quality:check": "npm run lint && npm run format:check && npm run test:routes && npm run test:smoke",
+    "demo:up": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-up.ps1",
+    "demo:down": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-down.ps1",
+    "visuals:generate": "node ./scripts/generate-mermaid-visuals.mjs",
+    "integrations:validate": "node ./scripts/validate-integration-config.mjs"
+  },
+  "author": "VKrishna04",
+  "license": "UNLICENSED",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.10.9",
+    "nodemailer": "^8.0.4"
+  },
+  "devDependencies": {
+    "eslint": "^7.11.0",
+    "http-server": "^14.1.1",
+    "jest": "^26.6.0",
+    "prettier": "^2.2.1",
+    "typescript": "^4.1.3"
+  },
+  "icon": "",
+  "contributors": [
+    {
+      "email": "me@vkrishna04.me",
+      "name": "VKrishna04",
+      "url": "https://vkrishna04.me"
+    },
+    {
+      "email": "github@vkrishna04.me",
+      "name": "Life Experimentalist",
+      "url": "https://github.com/Life-Experimentalist/"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Life-Experimentalist/PulseWard-HMS.git"
+  },
+  "keywords": [
+    "hospital",
+    "management",
+    "system",
+    "healthcare",
+    "patient",
+    "clinician",
+    "admin"
+  ]
+}

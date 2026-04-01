@@ -1,0 +1,80 @@
+name: Issue Operations
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply triage labels, assignee, and guidance
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = issue.number;
+            const title = issue.title || '';
+            const body = issue.body || '';
+
+            const labelsToAdd = new Set(['triage']);
+
+            const lowerTitle = title.toLowerCase();
+            if (lowerTitle.includes('[bug]')) labelsToAdd.add('bug');
+            if (lowerTitle.includes('[feature]')) labelsToAdd.add('enhancement');
+            if (lowerTitle.includes('[risk]')) labelsToAdd.add('risk');
+            if (lowerTitle.includes('[incident]')) labelsToAdd.add('incident');
+
+            const lowerBody = body.toLowerCase();
+            if (lowerBody.includes('critical')) labelsToAdd.add('severity:critical');
+            else if (lowerBody.includes('high')) labelsToAdd.add('severity:high');
+            else if (lowerBody.includes('medium')) labelsToAdd.add('severity:medium');
+            else if (lowerBody.includes('low')) labelsToAdd.add('severity:low');
+
+            const hasRisk = Array.from(labelsToAdd).includes('risk');
+            const hasBug = Array.from(labelsToAdd).includes('bug');
+            if (hasRisk || hasBug) labelsToAdd.add('needs-review');
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: number,
+              labels: Array.from(labelsToAdd)
+            });
+
+            if (!issue.assignees || issue.assignees.length === 0) {
+              await github.rest.issues.addAssignees({
+                owner,
+                repo,
+                issue_number: number,
+                assignees: ['VKrishna04']
+              });
+            }
+
+            const guidance = [
+              'Automated triage completed.',
+              '',
+              'Next steps:',
+              '1. Confirm scope and impacted services/contracts.',
+              '2. Add rollout and rollback notes.',
+              '3. Link to PR once implementation starts.',
+              '',
+              'SLA guidance:',
+              '- severity:critical -> immediate response',
+              '- severity:high -> same day',
+              '- severity:medium -> next sprint',
+              '- severity:low -> backlog'
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: number,
+              body: guidance
+            });

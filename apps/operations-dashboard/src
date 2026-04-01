@@ -1,0 +1,97 @@
+// src/index.js
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// src/App.js
+
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Dashboard from './components/Dashboard';
+import Reports from './components/Reports';
+import Settings from './components/Settings';
+
+const App = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
+
+// src/components/Dashboard.js
+
+import React from 'react';
+
+const Dashboard = () => {
+  return (
+    <div>
+      <h1>Operations Dashboard</h1>
+      <p>Welcome to the Operations Dashboard. Here you can view insights into hospital operations.</p>
+    </div>
+  );
+};
+
+export default Dashboard;
+
+// src/components/Reports.js
+
+import React from 'react';
+
+const Reports = () => {
+  return (
+    <div>
+      <h1>Reports</h1>
+      <p>View and manage operational reports here.</p>
+    </div>
+  );
+};
+
+export default Reports;
+
+// src/components/Settings.js
+
+import React from 'react';
+
+const Settings = () => {
+  return (
+    <div>
+      <h1>Settings</h1>
+      <p>Configure your dashboard settings here.</p>
+    </div>
+  );
+};
+
+export default Settings;
+
+// src/index.css
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+h1 {
+  color: #333;
+}
+
+p {
+  color: #666;
+}

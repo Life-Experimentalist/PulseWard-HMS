@@ -1,0 +1,94 @@
+openapi: 3.0.0
+info:
+  title: PulseWard Billing Service API
+  description: API for managing billing and payments within the PulseWard Hospital Management System.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development server
+paths:
+  /billing:
+    get:
+      summary: Retrieve billing information
+      description: Get billing details for a specific patient.
+      parameters:
+        - name: patientId
+          in: query
+          required: true
+          description: ID of the patient to retrieve billing information for.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful retrieval of billing information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patientId:
+                    type: string
+                  totalAmount:
+                    type: number
+                    format: float
+                  dueDate:
+                    type: string
+                    format: date
+        "404":
+          description: Patient not found
+        "500":
+          description: Internal server error
+
+  /billing/payment:
+    post:
+      summary: Process a payment
+      description: Submit a payment for a specific billing record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patientId:
+                  type: string
+                amount:
+                  type: number
+                  format: float
+                paymentMethod:
+                  type: string
+                  enum: [credit_card, debit_card, insurance]
+      responses:
+        "200":
+          description: Payment processed successfully
+        "400":
+          description: Invalid payment details
+        "404":
+          description: Patient not found
+        "500":
+          description: Internal server error
+
+components:
+  schemas:
+    Billing:
+      type: object
+      properties:
+        patientId:
+          type: string
+        totalAmount:
+          type: number
+          format: float
+        dueDate:
+          type: string
+          format: date
+    Payment:
+      type: object
+      properties:
+        patientId:
+          type: string
+        amount:
+          type: number
+          format: float
+        paymentMethod:
+          type: string
+          enum: [credit_card, debit_card, insurance]

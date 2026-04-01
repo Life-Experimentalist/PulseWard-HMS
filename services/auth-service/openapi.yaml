@@ -1,0 +1,444 @@
+openapi: 3.0.0
+info:
+  title: PulseWard Authentication Service
+  description: API for role-based authentication, OAuth provider setup, and tenant domain resolution.
+  version: 1.2.0
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Development server
+paths:
+  /auth/roles:
+    get:
+      summary: List supported role keys
+      tags:
+        - Auth
+      responses:
+        "200":
+          description: Supported role keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: string
+
+  /auth/register:
+    post:
+      summary: Register a user for a tenant and role
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      summary: Login and receive JWT token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/oauth/providers:
+    get:
+      summary: List OAuth providers and enablement state
+      tags:
+        - OAuth
+      responses:
+        "200":
+          description: Provider catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthProvidersResponse"
+
+  /auth/oauth/google/start:
+    get:
+      summary: Build Google OAuth URL for tenant and role
+      tags:
+        - OAuth
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+            default: patient
+      responses:
+        "200":
+          description: Google OAuth bootstrap payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleOAuthStartResponse"
+
+  /auth/oauth/google/callback:
+    post:
+      summary: Exchange OAuth callback payload for a platform JWT
+      tags:
+        - OAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleOAuthCallbackRequest"
+      responses:
+        "200":
+          description: OAuth login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleOAuthCallbackResponse"
+
+  /auth/oauth/clerk/start:
+    get:
+      summary: Get Clerk setup metadata for tenant login
+      tags:
+        - OAuth
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Clerk bootstrap metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClerkStartResponse"
+
+  /platform/domain-config:
+    get:
+      summary: Resolve platform and tenant domain config
+      tags:
+        - Platform Domains
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Resolved domain config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolvedDomainConfig"
+
+  /platform/domain-config/validate:
+    post:
+      summary: Validate a browser origin for a tenant
+      tags:
+        - Platform Domains
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainValidationRequest"
+      responses:
+        "200":
+          description: Domain validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainValidationResponse"
+        "400":
+          description: Missing tenantKey or origin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /platform/domain-config/all:
+    get:
+      summary: Get full domain configuration model
+      tags:
+        - Platform Domains
+      responses:
+        "200":
+          description: Full domain configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainConfig"
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@citycare.example.com
+        password:
+          type: string
+          example: secure-password
+        role:
+          type: string
+          example: admin
+        tenantKey:
+          type: string
+          example: citycare-hospital
+    RegisterResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 6d6df4ee-c329-437f-a88b-1d4a2082f9f9
+        message:
+          type: string
+          example: User registered
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@citycare.example.com
+        password:
+          type: string
+          example: secure-password
+        role:
+          type: string
+          example: admin
+        tenantKey:
+          type: string
+          example: citycare-hospital
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        role:
+          type: string
+          example: admin
+        tenantKey:
+          type: string
+          example: citycare-hospital
+    OAuthProvidersResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/OAuthProviderStatus"
+    OAuthProviderStatus:
+      type: object
+      properties:
+        key:
+          type: string
+          example: google-oauth
+        enabled:
+          type: boolean
+          example: true
+        mode:
+          type: string
+          enum:
+            - free
+            - paid-optional
+          example: free
+    GoogleOAuthStartResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: google-oauth
+        oauthUrl:
+          type: string
+          example: https://accounts.google.com/o/oauth2/v2/auth?client_id=...
+        note:
+          type: string
+          example: Admin must configure Google OAuth client in console.
+    GoogleOAuthCallbackRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: doctor@citycare.example.com
+        role:
+          type: string
+          example: doctor
+        tenantKey:
+          type: string
+          example: citycare-hospital
+    GoogleOAuthCallbackResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        provider:
+          type: string
+          example: google-oauth
+        role:
+          type: string
+          example: doctor
+        tenantKey:
+          type: string
+          example: citycare-hospital
+    ClerkStartResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: clerk
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        note:
+          type: string
+          example: Configure Clerk frontend SDK with tenant context and callback URL.
+        publishableKeyConfigured:
+          type: boolean
+          example: false
+    DomainValidationRequest:
+      type: object
+      required:
+        - tenantKey
+        - origin
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        origin:
+          type: string
+          format: uri
+          example: https://citycare.pulseward.example.com
+    DomainValidationResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          example: true
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        origin:
+          type: string
+          format: uri
+          example: https://citycare.pulseward.example.com
+    DomainConfig:
+      type: object
+      properties:
+        platform:
+          $ref: "#/components/schemas/PlatformDomainSettings"
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantDomainSettings"
+    ResolvedDomainConfig:
+      type: object
+      properties:
+        platform:
+          $ref: "#/components/schemas/PlatformDomainSettings"
+        tenant:
+          $ref: "#/components/schemas/TenantDomainSettings"
+    PlatformDomainSettings:
+      type: object
+      properties:
+        hostingMode:
+          type: string
+          enum:
+            - github-subdomain
+            - custom-domain
+            - hybrid
+          example: hybrid
+        githubSubdomain:
+          type: string
+          format: uri
+          example: https://life-experimentalist.github.io/pulseward-hms
+        primaryCustomDomain:
+          type: string
+          format: uri
+          example: https://pulseward.example.com
+        apiBasePath:
+          type: string
+          example: /api/v1
+    TenantDomainSettings:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        landingDomain:
+          type: string
+          format: uri
+          example: https://citycare.pulseward.example.com
+        apiDomain:
+          type: string
+          format: uri
+          example: https://citycare-api.pulseward.example.com
+        allowedOrigins:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - https://citycare.pulseward.example.com
+            - https://citycare.example.com
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Invalid credentials

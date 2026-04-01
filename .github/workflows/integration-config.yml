@@ -1,0 +1,34 @@
+name: Integration Config Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - config/integrations/**
+      - contracts/rest/integration-provider-config.schema.json
+      - scripts/validate-integration-config.mjs
+  pull_request:
+    branches:
+      - main
+    paths:
+      - config/integrations/**
+      - contracts/rest/integration-provider-config.schema.json
+      - scripts/validate-integration-config.mjs
+  workflow_dispatch:
+
+jobs:
+  validate-integration-config:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate integration configuration
+        run: node ./scripts/validate-integration-config.mjs

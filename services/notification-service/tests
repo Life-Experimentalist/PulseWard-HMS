@@ -1,0 +1,59 @@
+# Test Cases for Notification Service
+
+This file contains test cases for the notification service in the PulseWard hospital management system. The tests are designed to ensure that the notification service functions correctly and meets the specified requirements.
+
+## Test Cases
+
+### 1. Test Notification Creation
+- **Description**: Verify that a notification can be created successfully.
+- **Input**: Notification data (title, message, recipient).
+- **Expected Output**: Notification is created and stored in the database.
+
+### 2. Test Notification Retrieval
+- **Description**: Verify that a notification can be retrieved by its ID.
+- **Input**: Notification ID.
+- **Expected Output**: The correct notification data is returned.
+
+### 3. Test Notification Update
+- **Description**: Verify that a notification can be updated successfully.
+- **Input**: Notification ID and updated data (title, message).
+- **Expected Output**: The notification is updated in the database.
+
+### 4. Test Notification Deletion
+- **Description**: Verify that a notification can be deleted successfully.
+- **Input**: Notification ID.
+- **Expected Output**: The notification is removed from the database.
+
+### 5. Test Notification Sending
+- **Description**: Verify that a notification can be sent to the recipient.
+- **Input**: Notification ID.
+- **Expected Output**: The notification is sent successfully, and the recipient receives it.
+
+### 6. Test Error Handling for Invalid Notification ID
+- **Description**: Verify that an error is returned when trying to retrieve or update a notification with an invalid ID.
+- **Input**: Invalid Notification ID.
+- **Expected Output**: Error message indicating that the notification was not found.
+
+### 7. Test Bulk Notification Sending
+- **Description**: Verify that multiple notifications can be sent in a single request.
+- **Input**: List of notification data.
+- **Expected Output**: All notifications are sent successfully.
+
+### 8. Test Notification Format Validation
+- **Description**: Verify that the notification data adheres to the required format.
+- **Input**: Invalid notification data (missing fields).
+- **Expected Output**: Error message indicating validation failure.
+
+### 9. Test Notification Status Update
+- **Description**: Verify that the status of a notification can be updated (e.g., read/unread).
+- **Input**: Notification ID and new status.
+- **Expected Output**: The notification status is updated successfully.
+
+### 10. Test Notification History Retrieval
+- **Description**: Verify that the history of notifications for a recipient can be retrieved.
+- **Input**: Recipient ID.
+- **Expected Output**: List of notifications sent to the recipient.
+
+## Conclusion
+
+These test cases provide a comprehensive overview of the functionality that the notification service should support. Each test should be implemented using a suitable testing framework, and the results should be documented to ensure that the service meets the required specifications.

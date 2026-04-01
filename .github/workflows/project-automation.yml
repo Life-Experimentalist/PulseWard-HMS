@@ -1,0 +1,32 @@
+name: Project Automation
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip when project automation is not configured
+        if: env.PROJECT_URL == '' || env.PROJECT_TOKEN == ''
+        run: echo "PROJECT_AUTOMATION_TOKEN or GITHUB_PROJECT_URL is not configured. Skipping."
+        env:
+          PROJECT_URL: ${{ vars.GITHUB_PROJECT_URL }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+
+      - name: Add issue or PR to project board
+        if: env.PROJECT_URL != '' && env.PROJECT_TOKEN != ''
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: ${{ env.PROJECT_URL }}
+          github-token: ${{ env.PROJECT_TOKEN }}
+        env:
+          PROJECT_URL: ${{ vars.GITHUB_PROJECT_URL }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}

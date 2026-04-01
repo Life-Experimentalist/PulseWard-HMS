@@ -1,0 +1,36 @@
+{
+  "tenantKey": "default",
+  "displayName": "PulseWard",
+  "legalName": "PulseWard Health Platform",
+  "tagline": "Reliable care operations",
+  "logo": {
+    "light": "/assets/logo/pulseward-light.svg",
+    "dark": "/assets/logo/pulseward-dark.svg",
+    "favicon": "/assets/logo/favicon.ico",
+    "appIcon": "/assets/logo/app-icon.png"
+  },
+  "colors": {
+    "primary": "#0f4c5c",
+    "secondary": "#2f6f7e",
+    "accent": "#ea8f3b",
+    "surface": "#f7faf9",
+    "text": "#1f2933",
+    "success": "#1b8a5a",
+    "warning": "#b7791f",
+    "danger": "#c53030"
+  },
+  "typography": {
+    "heading": "'Source Sans 3', sans-serif",
+    "body": "'Inter', sans-serif",
+    "baseScale": 1
+  },
+  "contact": {
+    "supportEmail": "support@pulseward.local",
+    "supportPhone": "+1-000-000-0000",
+    "website": "https://example-hospital.local"
+  },
+  "complianceCopy": {
+    "consentNotice": "Your data is processed according to applicable healthcare regulations.",
+    "privacyUrl": "https://example-hospital.local/privacy"
+  }
+}

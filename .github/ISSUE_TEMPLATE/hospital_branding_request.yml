@@ -1,0 +1,48 @@
+name: Hospital branding request
+description: Configure branding for a hospital tenant while keeping core repo generic.
+title: "[Branding]: "
+labels:
+  - branding
+  - configuration
+  - triage
+body:
+  - type: input
+    id: tenant_key
+    attributes:
+      label: Hospital tenant key
+      placeholder: citycare-hospital
+    validations:
+      required: true
+  - type: input
+    id: legal_name
+    attributes:
+      label: Hospital legal name
+      placeholder: CityCare Multispeciality Hospital
+    validations:
+      required: true
+  - type: input
+    id: display_name
+    attributes:
+      label: Display name
+      placeholder: CityCare Hospital
+    validations:
+      required: true
+  - type: textarea
+    id: color_tokens
+    attributes:
+      label: Color tokens
+      description: Provide hex values for primary/secondary/surface/text colors.
+    validations:
+      required: true
+  - type: textarea
+    id: logo_assets
+    attributes:
+      label: Logo assets
+      description: Link to SVG/PNG assets and favicon.
+    validations:
+      required: true
+  - type: textarea
+    id: compliance_notes
+    attributes:
+      label: Compliance notes
+      description: Any hospital-specific legal or regulatory copy requirements.

@@ -1,0 +1,41 @@
+name: Automated Visuals
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**/*.md
+      - scripts/generate-mermaid-visuals.mjs
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docs/**/*.md
+      - scripts/generate-mermaid-visuals.mjs
+
+jobs:
+  generate-visuals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate SVG visuals from Mermaid diagrams
+        run: node ./scripts/generate-mermaid-visuals.mjs
+
+      - name: Upload generated visuals
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-visuals
+          path: |
+            docs/visuals/generated
+            docs/visuals/source
+            docs/visuals/manifest.json

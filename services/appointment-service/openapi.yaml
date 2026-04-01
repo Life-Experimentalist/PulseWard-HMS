@@ -1,0 +1,232 @@
+openapi: 3.0.0
+info:
+  title: Appointment Service API
+  description: API for managing patient appointments in the PulseWard Hospital Management System.
+  version: 1.2.0
+servers:
+  - url: http://localhost:3000/api/v1
+paths:
+  /appointments:
+    get:
+      summary: Retrieve all appointments
+      responses:
+        "200":
+          description: A list of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      summary: Create a new appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Appointment"
+      responses:
+        "201":
+          description: Appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+  /appointments/{id}:
+    get:
+      summary: Retrieve a specific appointment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the appointment to retrieve
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Appointment not found
+    put:
+      summary: Update an existing appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the appointment to update
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Appointment"
+      responses:
+        "200":
+          description: Appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Appointment not found
+    delete:
+      summary: Delete an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the appointment to delete
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Appointment deleted successfully
+        "404":
+          description: Appointment not found
+  /integrations/calendars/providers:
+    get:
+      summary: List calendar providers for a tenant
+      parameters:
+        - name: tenantKey
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Calendar providers for the tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarProviderStatus"
+  /integrations/calendars/test:
+    post:
+      summary: Test calendar provider booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarProviderTestRequest"
+      responses:
+        "200":
+          description: Calendar provider test completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarProviderTestResponse"
+components:
+  schemas:
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "12345"
+        patientId:
+          type: string
+          example: "67890"
+        clinicianId:
+          type: string
+          example: "54321"
+        appointmentDate:
+          type: string
+          format: date-time
+          example: "2023-10-01T10:00:00Z"
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+          example: "scheduled"
+    CalendarProviderStatus:
+      type: object
+      properties:
+        key:
+          type: string
+          example: google-calendar
+        displayName:
+          type: string
+          example: Google Calendar
+        enabled:
+          type: boolean
+          example: true
+        billing:
+          type: object
+          properties:
+            model:
+              type: string
+              enum:
+                - free
+                - paid
+              example: free
+            adminActionRequired:
+              type: boolean
+              example: true
+            setupUrl:
+              type: string
+              example: https://developers.google.com/calendar
+            notes:
+              type: string
+              example: Admin completes provider account onboarding directly.
+    CalendarProviderTestRequest:
+      type: object
+      required:
+        - tenantKey
+        - providerKey
+        - appointmentId
+        - clinicianId
+        - patientId
+        - startTime
+        - endTime
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        providerKey:
+          type: string
+          enum:
+            - google-calendar
+            - apple-calendar
+            - outlook-calendar
+            - ics-calendar
+            - internal-calendar
+        appointmentId:
+          type: string
+          example: apt-1001
+        clinicianId:
+          type: string
+          example: cln-42
+        patientId:
+          type: string
+          example: pat-88
+        startTime:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:30:00Z"
+    CalendarProviderTestResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: google-calendar
+        accepted:
+          type: boolean
+          example: true
+        externalEventId:
+          type: string
+          example: google-apt-1001
+        detail:
+          type: string
+          example: Booking accepted by provider adapter.

@@ -1,0 +1,24 @@
+// lab-service/src/index.js
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const { getLabTests, createLabTest, updateLabTest, deleteLabTest } = require('./labController');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(bodyParser.json());
+
+// Routes
+app.get('/api/lab-tests', getLabTests);
+app.post('/api/lab-tests', createLabTest);
+app.put('/api/lab-tests/:id', updateLabTest);
+app.delete('/api/lab-tests/:id', deleteLabTest);
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Lab Service running on port ${PORT}`);
+});
+
+module.exports = app;

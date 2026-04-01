@@ -1,0 +1,57 @@
+// billingService.js
+
+const express = require('express');
+const router = express.Router();
+
+// Mock database for billing records
+let billingRecords = [];
+
+// Create a new billing record
+router.post('/billing', (req, res) => {
+    const { patientId, amount, status } = req.body;
+    const newRecord = {
+        id: billingRecords.length + 1,
+        patientId,
+        amount,
+        status,
+        createdAt: new Date(),
+    };
+    billingRecords.push(newRecord);
+    res.status(201).json(newRecord);
+});
+
+// Get all billing records
+router.get('/billing', (req, res) => {
+    res.json(billingRecords);
+});
+
+// Get a billing record by ID
+router.get('/billing/:id', (req, res) => {
+    const record = billingRecords.find(r => r.id === parseInt(req.params.id));
+    if (!record) return res.status(404).send('Billing record not found');
+    res.json(record);
+});
+
+// Update a billing record
+router.put('/billing/:id', (req, res) => {
+    const record = billingRecords.find(r => r.id === parseInt(req.params.id));
+    if (!record) return res.status(404).send('Billing record not found');
+
+    const { amount, status } = req.body;
+    record.amount = amount !== undefined ? amount : record.amount;
+    record.status = status !== undefined ? status : record.status;
+
+    res.json(record);
+});
+
+// Delete a billing record
+router.delete('/billing/:id', (req, res) => {
+    const recordIndex = billingRecords.findIndex(r => r.id === parseInt(req.params.id));
+    if (recordIndex === -1) return res.status(404).send('Billing record not found');
+
+    billingRecords.splice(recordIndex, 1);
+    res.status(204).send();
+});
+
+// Export the router
+module.exports = router;

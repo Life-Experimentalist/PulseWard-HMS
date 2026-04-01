@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PulseWard | Multi-Hospital Care Operations</title>
+    <meta name="theme-color" content="#0f4c5c" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-aurora" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="logo-pill">PulseWard</div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#dashboards">Dashboards</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#auth">Login</a>
+      </nav>
+      <button class="cta">Book Demo</button>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Hospital Operations Platform</p>
+        <h1>One platform, many hospitals, zero hardcoded branding.</h1>
+        <p>
+          PulseWard gives each hospital admin full control over branding, notifications, and
+          calendar integrations while your core product stays clean and scalable.
+        </p>
+        <div class="hero-actions">
+          <button class="cta">Start Free Demo</button>
+          <button class="ghost">View Admin Controls</button>
+        </div>
+        <div class="hero-stats">
+          <article>
+            <h3>4</h3>
+            <p>Role dashboards</p>
+          </article>
+          <article>
+            <h3>6+</h3>
+            <p>Messaging and calendar providers</p>
+          </article>
+          <article>
+            <h3>Per Tenant</h3>
+            <p>Branding and provider routing</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="features" class="panel-grid">
+        <article class="panel">
+          <h2>Configurable Branding</h2>
+          <p>
+            Hospitals can set logos, color tokens, typography, and legal copy through admin config
+            only.
+          </p>
+        </article>
+        <article class="panel">
+          <h2>Modular Integrations</h2>
+          <p>
+            Switch between Telegram, Email, Webhooks, WhatsApp, Google, Apple, Outlook, and ICS with
+            fallback routing.
+          </p>
+        </article>
+        <article class="panel">
+          <h2>GitHub as Control Plane</h2>
+          <p>
+            Automated issue triage, backup drill tickets, and release docs keep operations auditable
+            and repeatable.
+          </p>
+        </article>
+      </section>
+
+      <section id="auth" class="auth-section">
+        <article class="auth-panel">
+          <h2>Multi-Role Login</h2>
+          <p>
+            Sign in as admin, doctor, nurse, patient, frontdesk, or operations. OAuth options can be
+            enabled per tenant.
+          </p>
+          <form id="role-login-form">
+            <label for="tenantKey">Hospital Tenant</label>
+            <input id="tenantKey" name="tenantKey" value="default" />
+
+            <label for="role">Role</label>
+            <select id="role" name="role">
+              <option value="admin">Admin</option>
+              <option value="doctor">Doctor</option>
+              <option value="nurse">Nurse</option>
+              <option value="patient">Patient</option>
+              <option value="frontdesk">Frontdesk</option>
+              <option value="operations">Operations</option>
+            </select>
+
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" value="demo@pulseward.local" />
+
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" value="demo123" />
+
+            <div class="auth-actions">
+              <button type="submit" class="cta">Login</button>
+              <button type="button" class="ghost" id="google-oauth-btn">Google OAuth</button>
+              <button type="button" class="ghost" id="clerk-oauth-btn">Clerk</button>
+            </div>
+          </form>
+          <pre id="auth-output" class="auth-output"></pre>
+        </article>
+
+        <article class="auth-panel">
+          <h3>Role Dashboards</h3>
+          <div class="role-grid">
+            <button class="role-card" data-role="admin">Admin Control</button>
+            <button class="role-card" data-role="doctor">Doctor View</button>
+            <button class="role-card" data-role="nurse">Nurse Board</button>
+            <button class="role-card" data-role="patient">Patient Journey</button>
+            <button class="role-card" data-role="frontdesk">Frontdesk Queue</button>
+            <button class="role-card" data-role="operations">Operations Health</button>
+          </div>
+          <p class="hint">
+            This demo shell shows role-targeted flow previews while backend auth endpoints provide
+            API-level role/OAuth integration hooks.
+          </p>
+        </article>
+      </section>
+
+      <section id="dashboards" class="dashboard-section">
+        <h2>Unified Dashboard Suite</h2>
+        <div class="dashboard-tabs" role="tablist">
+          <button class="tab active" data-tab="admin">Admin Console</button>
+          <button class="tab" data-tab="operations">Operations</button>
+          <button class="tab" data-tab="clinician">Clinician</button>
+          <button class="tab" data-tab="patient">Patient</button>
+        </div>
+
+        <div class="dashboard-canvas">
+          <article class="dash-view active" id="admin">
+            <h3>Admin Console</h3>
+            <ul>
+              <li>Enable provider per hospital tenant</li>
+              <li>Set WhatsApp paid onboarding link for admins</li>
+              <li>Apply branding without code deploy</li>
+            </ul>
+          </article>
+          <article class="dash-view" id="operations">
+            <h3>Operations Dashboard</h3>
+            <ul>
+              <li>Provider health and fallback events</li>
+              <li>Daily delivery success trends</li>
+              <li>Backup verification workflow status</li>
+            </ul>
+          </article>
+          <article class="dash-view" id="clinician">
+            <h3>Clinician Portal</h3>
+            <ul>
+              <li>Appointment timeline with calendar status</li>
+              <li>Shift-ready alert summaries</li>
+              <li>Role-specific patient communication tools</li>
+            </ul>
+          </article>
+          <article class="dash-view" id="patient">
+            <h3>Patient Portal</h3>
+            <ul>
+              <li>Notifications over preferred channel</li>
+              <li>Appointment reminders and confirmations</li>
+              <li>Hospital-branded self-service experience</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="integrations" class="integration-matrix">
+        <h2>Provider Options</h2>
+        <div class="matrix-grid">
+          <article>
+            <h3>Free-first</h3>
+            <p>Telegram Bot, SMTP Email, Webhooks, Apple Calendar, ICS.</p>
+          </article>
+          <article>
+            <h3>Paid optional</h3>
+            <p>WhatsApp Cloud API and Outlook business setup by each admin.</p>
+          </article>
+          <article>
+            <h3>Admin-owned billing</h3>
+            <p>Billing and onboarding are completed by each hospital admin.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="pwa-section">
+        <h2>Low-Cost PWA Delivery</h2>
+        <p>
+          Install this app on Android, iOS, Windows, and macOS. Push notifications can be powered by
+          Firebase Cloud Messaging when enabled by admin.
+        </p>
+        <button id="install-pwa-btn" class="cta" disabled>Install App</button>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

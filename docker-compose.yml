@@ -1,0 +1,105 @@
+version: "3.8"
+
+services:
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - patient-service
+      - appointment-service
+      - ehr-service
+      - billing-service
+      - pharmacy-service
+      - lab-service
+      - notification-service
+    networks:
+      - pulseward-network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    networks:
+      - pulseward-network
+
+  patient-service:
+    build:
+      context: ./services/patient-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    networks:
+      - pulseward-network
+
+  appointment-service:
+    build:
+      context: ./services/appointment-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    networks:
+      - pulseward-network
+
+  ehr-service:
+    build:
+      context: ./services/ehr-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    networks:
+      - pulseward-network
+
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8080"
+    networks:
+      - pulseward-network
+
+  pharmacy-service:
+    build:
+      context: ./services/pharmacy-service
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8080"
+    networks:
+      - pulseward-network
+
+  lab-service:
+    build:
+      context: ./services/lab-service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8080"
+    networks:
+      - pulseward-network
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8080"
+    networks:
+      - pulseward-network
+
+  ai-project-manager-agent:
+    build:
+      context: ./services/ai-project-manager-agent
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8080"
+    networks:
+      - pulseward-network
+
+networks:
+  pulseward-network:
+    driver: bridge

@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: PulseWard Pharmacy Service API
+  description: API for managing medication prescriptions and inventory in the PulseWard Hospital Management System.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+paths:
+  /medications:
+    get:
+      summary: Retrieve a list of medications
+      responses:
+        "200":
+          description: A list of medications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medication"
+    post:
+      summary: Add a new medication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Medication"
+      responses:
+        "201":
+          description: Medication created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+  /medications/{id}:
+    get:
+      summary: Retrieve a specific medication by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the medication
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Medication details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "404":
+          description: Medication not found
+    put:
+      summary: Update a medication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the medication
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Medication"
+      responses:
+        "200":
+          description: Medication updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "404":
+          description: Medication not found
+    delete:
+      summary: Delete a medication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the medication
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Medication deleted
+        "404":
+          description: Medication not found
+components:
+  schemas:
+    Medication:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "med123"
+        name:
+          type: string
+          example: "Aspirin"
+        dosage:
+          type: string
+          example: "500mg"
+        quantity:
+          type: integer
+          example: 100
+        expirationDate:
+          type: string
+          format: date
+          example: "2025-12-31"

@@ -1,0 +1,52 @@
+name: Security Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.13"
+
+      - name: Install safety
+        run: pip install safety
+
+      - name: Run safety check
+        run: safety check
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit check
+        run: bandit -r .
+
+      - name: Install eslint
+        run: npm install eslint
+
+      - name: Run eslint check
+        run: npx eslint .
+
+      - name: Install snyk
+        run: npm install -g snyk
+
+      - name: Run snyk test
+        run: snyk test
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v2
+        with:
+          name: security-report
+          path: security-report.json

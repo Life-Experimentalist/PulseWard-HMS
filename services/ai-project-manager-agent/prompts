@@ -1,0 +1,58 @@
+# AI Project Manager Agent Prompts
+
+## Project Overview
+The AI Project Manager Agent is designed to assist in managing the PulseWard Hospital Management System project. It leverages AI capabilities to streamline project management tasks, enhance communication, and ensure adherence to project guidelines.
+
+## Prompts
+
+### General Project Management
+1. **Project Status Update**
+   - "Provide a summary of the current status of the PulseWard project, including completed tasks, ongoing activities, and any blockers."
+
+2. **Task Assignment**
+   - "Assign the following tasks to the respective team members: [list of tasks and team members]."
+
+3. **Deadline Reminder**
+   - "Remind the team of the upcoming deadlines for the following tasks: [list of tasks and deadlines]."
+
+### Iterative Development
+4. **Iteration Planning**
+   - "Outline the objectives and key deliverables for the next iteration of the PulseWard project."
+
+5. **Retrospective Feedback**
+   - "Gather feedback from the team regarding the last iteration. What went well, what could be improved, and any action items?"
+
+### Documentation and Compliance
+6. **Documentation Check**
+   - "Verify that all necessary documentation for the PulseWard project is up to date and accessible."
+
+7. **Compliance Review**
+   - "Conduct a compliance review of the project against the established governance documents. Highlight any areas of concern."
+
+### Risk Management
+8. **Risk Assessment**
+   - "Identify potential risks associated with the current phase of the PulseWard project and suggest mitigation strategies."
+
+9. **Decision Log Update**
+   - "Update the decision log with the following decisions made during the last project meeting: [list of decisions]."
+
+### Communication and Collaboration
+10. **Team Communication**
+    - "Draft a communication to the team regarding the latest updates and any important announcements."
+
+11. **Stakeholder Engagement**
+    - "Prepare a summary report for stakeholders highlighting the progress and challenges faced in the PulseWard project."
+
+### AI Agent Governance
+12. **Policy Review**
+    - "Review the AI agent's policies and suggest any necessary updates to align with project goals."
+
+13. **Performance Evaluation**
+    - "Evaluate the performance of the AI project manager agent based on its interactions and effectiveness in managing tasks."
+
+### Feedback and Improvement
+14. **Feedback Collection**
+    - "Collect feedback from team members on the AI agent's performance and areas for improvement."
+
+15. **Continuous Improvement Suggestions**
+    - "Propose suggestions for enhancing the AI project manager agent's capabilities and effectiveness in the PulseWard project."

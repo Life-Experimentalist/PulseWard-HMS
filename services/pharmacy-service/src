@@ -1,0 +1,72 @@
+// pharmacyService.js
+
+const express = require('express');
+const router = express.Router();
+
+// Mock database for demonstration purposes
+let medications = [];
+
+// Get all medications
+router.get('/medications', (req, res) => {
+    res.json(medications);
+});
+
+// Get medication by ID
+router.get('/medications/:id', (req, res) => {
+    const medication = medications.find(med => med.id === parseInt(req.params.id));
+    if (!medication) return res.status(404).send('Medication not found');
+    res.json(medication);
+});
+
+// Add new medication
+router.post('/medications', (req, res) => {
+    const { name, dosage, quantity } = req.body;
+    const newMedication = {
+        id: medications.length + 1,
+        name,
+        dosage,
+        quantity
+    };
+    medications.push(newMedication);
+    res.status(201).json(newMedication);
+});
+
+// Update medication
+router.put('/medications/:id', (req, res) => {
+    const medication = medications.find(med => med.id === parseInt(req.params.id));
+    if (!medication) return res.status(404).send('Medication not found');
+
+    const { name, dosage, quantity } = req.body;
+    medication.name = name;
+    medication.dosage = dosage;
+    medication.quantity = quantity;
+
+    res.json(medication);
+});
+
+// Delete medication
+router.delete('/medications/:id', (req, res) => {
+    const medicationIndex = medications.findIndex(med => med.id === parseInt(req.params.id));
+    if (medicationIndex === -1) return res.status(404).send('Medication not found');
+
+    medications.splice(medicationIndex, 1);
+    res.status(204).send();
+});
+
+// Export the router
+module.exports = router;
+
+// server.js
+
+const express = require('express');
+const pharmacyService = require('./pharmacyService');
+
+const app = express();
+app.use(express.json());
+
+app.use('/api/pharmacy', pharmacyService);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Pharmacy service running on port ${PORT}`);
+});

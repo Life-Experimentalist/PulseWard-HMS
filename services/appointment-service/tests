@@ -1,0 +1,65 @@
+const request = require('supertest');
+const app = require('../src/app'); // Adjust the path as necessary to import your app
+
+describe('Appointment Service Tests', () => {
+    let appointmentId;
+
+    beforeAll(async () => {
+        // Setup code to run before all tests, e.g., creating a test appointment
+        const response = await request(app)
+            .post('/appointments')
+            .send({
+                patientId: '12345',
+                date: '2023-10-01',
+                time: '10:00',
+                doctorId: '67890'
+            });
+        appointmentId = response.body.id;
+    });
+
+    afterAll(async () => {
+        // Cleanup code to run after all tests, e.g., deleting the test appointment
+        await request(app).delete(`/appointments/${appointmentId}`);
+    });
+
+    test('GET /appointments should return all appointments', async () => {
+        const response = await request(app).get('/appointments');
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    test('GET /appointments/:id should return a specific appointment', async () => {
+        const response = await request(app).get(`/appointments/${appointmentId}`);
+        expect(response.status).toBe(200);
+        expect(response.body.id).toBe(appointmentId);
+    });
+
+    test('POST /appointments should create a new appointment', async () => {
+        const response = await request(app)
+            .post('/appointments')
+            .send({
+                patientId: '54321',
+                date: '2023-10-02',
+                time: '11:00',
+                doctorId: '67890'
+            });
+        expect(response.status).toBe(201);
+        expect(response.body).toHaveProperty('id');
+    });
+
+    test('PUT /appointments/:id should update an existing appointment', async () => {
+        const response = await request(app)
+            .put(`/appointments/${appointmentId}`)
+            .send({
+                date: '2023-10-03',
+                time: '12:00'
+            });
+        expect(response.status).toBe(200);
+        expect(response.body.date).toBe('2023-10-03');
+    });
+
+    test('DELETE /appointments/:id should delete an appointment', async () => {
+        const response = await request(app).delete(`/appointments/${appointmentId}`);
+        expect(response.status).toBe(204);
+    });
+});

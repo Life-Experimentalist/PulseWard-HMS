@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a defect affecting PulseWard behavior or reliability.
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please provide enough detail to reproduce and assess patient/operational impact.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: Concise description of the defect.
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact level
+      options:
+        - Critical (patient safety/privacy or production outage)
+        - High (major workflow blocked)
+        - Medium (partial degradation)
+        - Low (minor issue)
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include exact steps, inputs, and expected vs actual behavior.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts or services affected
+      description: Mention APIs/events/services impacted.
+      placeholder: auth-service, appointment-service, contracts/rest/internal/... etc.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and evidence
+      description: Paste sanitized logs, screenshots, or traces.
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Mitigation or rollback
+      description: Known workaround, feature flag, or rollback path.

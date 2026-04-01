@@ -1,0 +1,268 @@
+openapi: 3.0.0
+info:
+  title: Notification Service API
+  description: API for managing notifications to patients and staff in the PulseWard Hospital Management System.
+  version: 1.2.0
+servers:
+  - url: http://localhost:3000/api/v1
+paths:
+  /notifications:
+    get:
+      summary: Retrieve all notifications
+      responses:
+        "200":
+          description: A list of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "12345"
+                    message:
+                      type: string
+                      example: "Your appointment is confirmed."
+                    recipient:
+                      type: string
+                      example: "patient@example.com"
+                    timestamp:
+                      type: string
+                      format: date-time
+                      example: "2023-10-01T12:00:00Z"
+    post:
+      summary: Create a new notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Your prescription is ready for pickup."
+                recipient:
+                  type: string
+                  example: "patient@example.com"
+      responses:
+        "201":
+          description: Notification created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "12345"
+                  message:
+                    type: string
+                    example: "Your prescription is ready for pickup."
+                  recipient:
+                    type: string
+                    example: "patient@example.com"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2023-10-01T12:00:00Z"
+  /notifications/{id}:
+    get:
+      summary: Retrieve a specific notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the notification to retrieve
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A single notification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "12345"
+                  message:
+                    type: string
+                    example: "Your appointment is confirmed."
+                  recipient:
+                    type: string
+                    example: "patient@example.com"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2023-10-01T12:00:00Z"
+        "404":
+          description: Notification not found
+    delete:
+      summary: Delete a specific notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the notification to delete
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Notification deleted successfully
+        "404":
+          description: Notification not found
+  /integrations/messaging/providers:
+    get:
+      summary: List messaging providers for a tenant
+      parameters:
+        - name: tenantKey
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messaging providers for the tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessagingProviderStatus"
+  /integrations/messaging/test:
+    post:
+      summary: Test messaging provider delivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagingProviderTestRequest"
+      responses:
+        "200":
+          description: Provider test completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingProviderTestResponse"
+  /integrations/messaging/telegram/setup:
+    get:
+      summary: Get Telegram bot setup checklist for a tenant
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Telegram setup guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramSetupResponse"
+components:
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        message:
+          type: string
+        recipient:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    MessagingProviderStatus:
+      type: object
+      properties:
+        key:
+          type: string
+          example: whatsapp-cloud-api
+        displayName:
+          type: string
+          example: WhatsApp Cloud API
+        enabled:
+          type: boolean
+          example: true
+        billing:
+          type: object
+          properties:
+            model:
+              type: string
+              enum:
+                - free
+                - paid
+              example: free
+            adminActionRequired:
+              type: boolean
+              example: true
+            setupUrl:
+              type: string
+              example: https://core.telegram.org/bots
+            notes:
+              type: string
+              example: Admin completes external provider onboarding directly.
+    MessagingProviderTestRequest:
+      type: object
+      required:
+        - tenantKey
+        - recipient
+        - message
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        channel:
+          type: string
+          example: patient-notification
+        providerKey:
+          type: string
+          enum:
+            - whatsapp-cloud-api
+            - telegram-bot
+            - generic-webhook
+            - email-smtp
+            - sms-gateway
+        recipient:
+          type: string
+          example: +919900000000
+        message:
+          type: string
+          example: Test message from PulseWard notification service.
+        dryRun:
+          type: boolean
+          default: true
+          example: true
+    MessagingProviderTestResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: whatsapp-cloud-api
+        accepted:
+          type: boolean
+          example: true
+        detail:
+          type: string
+          example: Message accepted by provider adapter.
+    TelegramSetupResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        providerEnabled:
+          type: boolean
+          example: true
+        setupSteps:
+          type: array
+          items:
+            type: string

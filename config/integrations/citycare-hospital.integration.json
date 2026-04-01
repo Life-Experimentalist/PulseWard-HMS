@@ -1,0 +1,135 @@
+{
+  "tenantKey": "citycare-hospital",
+  "messagingProviders": [
+    {
+      "key": "whatsapp-cloud-api",
+      "enabled": false,
+      "displayName": "CityCare WhatsApp",
+      "billing": {
+        "model": "paid",
+        "adminActionRequired": true,
+        "setupUrl": "https://developers.facebook.com/docs/whatsapp",
+        "notes": "CityCare admin must complete billing and number onboarding"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_WHATSAPP_CREDENTIALS"
+      }
+    },
+    {
+      "key": "telegram-bot",
+      "enabled": true,
+      "displayName": "CityCare Telegram",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": true,
+        "setupUrl": "https://core.telegram.org/bots",
+        "notes": "CityCare admin creates and owns bot token"
+      },
+      "endpoint": "https://api.telegram.org/bot<token>/sendMessage",
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_TELEGRAM_CREDENTIALS"
+      }
+    },
+    {
+      "key": "email-smtp",
+      "enabled": true,
+      "displayName": "CityCare SMTP",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": true,
+        "notes": "CityCare can use their own SMTP relay"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_EMAIL_SMTP_CREDENTIALS"
+      }
+    },
+    {
+      "key": "generic-webhook",
+      "enabled": true,
+      "displayName": "CityCare Website Hook",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": false,
+        "notes": "Internal webhook endpoint"
+      },
+      "endpoint": "https://citycare.example.com/api/pulseward/hooks/notification"
+    }
+  ],
+  "calendarProviders": [
+    {
+      "key": "google-calendar",
+      "enabled": true,
+      "displayName": "CityCare Google Calendar",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": true,
+        "setupUrl": "https://developers.google.com/calendar",
+        "notes": "Admin-managed OAuth setup"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_GOOGLE_CALENDAR_CREDENTIALS"
+      }
+    },
+    {
+      "key": "apple-calendar",
+      "enabled": true,
+      "displayName": "CityCare Apple Calendar",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": true,
+        "notes": "Admin-managed CalDAV integration"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_APPLE_CALENDAR_CREDENTIALS"
+      }
+    },
+    {
+      "key": "outlook-calendar",
+      "enabled": false,
+      "displayName": "CityCare Outlook Calendar",
+      "billing": {
+        "model": "paid",
+        "adminActionRequired": true,
+        "setupUrl": "https://learn.microsoft.com/graph/api/resources/event",
+        "notes": "Requires Microsoft tenant provisioning"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_OUTLOOK_CALENDAR_CREDENTIALS"
+      }
+    },
+    {
+      "key": "ics-calendar",
+      "enabled": true,
+      "displayName": "CityCare ICS",
+      "billing": {
+        "model": "free",
+        "adminActionRequired": false,
+        "notes": "ICS file generation"
+      },
+      "credentialsRef": {
+        "secretKey": "INTEGRATION_ICS_CREDENTIALS"
+      }
+    }
+  ],
+  "messagingRouting": [
+    {
+      "channel": "patient-notification",
+      "defaultProvider": "telegram-bot",
+      "fallbackProviders": ["email-smtp", "generic-webhook", "whatsapp-cloud-api"]
+    },
+    {
+      "channel": "staff-notification",
+      "defaultProvider": "email-smtp",
+      "fallbackProviders": ["telegram-bot", "generic-webhook"]
+    },
+    {
+      "channel": "website-hook",
+      "defaultProvider": "generic-webhook",
+      "fallbackProviders": ["telegram-bot"]
+    }
+  ],
+  "calendarRouting": {
+    "defaultProvider": "google-calendar",
+    "fallbackProviders": ["apple-calendar", "ics-calendar", "outlook-calendar"]
+  }
+}

@@ -1,0 +1,47 @@
+name: Feature request
+description: Propose a new capability for PulseWard.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What problem are we solving and for whom?
+      placeholder: As a <role>, I need <capability> so that <outcome>.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in scope and out of scope?
+      placeholder: Include explicit non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Architecture and contracts
+      description: Services, APIs, and events this change touches.
+      placeholder: api-gateway + appointment-service + contracts/events/... etc.
+  - type: textarea
+    id: data
+    attributes:
+      label: Data model impact
+      description: Schema, migration, and rollback notes.
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: Unit/integration/e2e validation approach.
+      placeholder: Include acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: operations
+    attributes:
+      label: Rollout and operations
+      description: Feature flags, monitoring, alerting, and rollback plan.

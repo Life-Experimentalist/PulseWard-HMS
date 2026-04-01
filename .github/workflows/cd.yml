@@ -1,0 +1,42 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build the project
+        run: pnpm build
+
+      - name: Deploy to Production
+        run: |
+          echo "Deploying to production server..."
+          # Add your deployment commands here
+          # e.g., scp -r ./dist user@yourserver:/path/to/deploy
+
+      - name: Notify Deployment Success
+        run: |
+          echo "Deployment successful!"
+          # Add your notification commands here
+          # e.g., curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment successful!"}' YOUR_WEBHOOK_URL

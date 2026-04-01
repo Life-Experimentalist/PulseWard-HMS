@@ -1,0 +1,77 @@
+// ehrService.js
+
+const express = require('express');
+const router = express.Router();
+const { getPatientRecords, updatePatientRecord, deletePatientRecord } = require('./ehrController');
+
+// Route to get patient records
+router.get('/records/:patientId', async (req, res) => {
+    try {
+        const records = await getPatientRecords(req.params.patientId);
+        res.status(200).json(records);
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving patient records', error });
+    }
+});
+
+// Route to update a patient record
+router.put('/records/:recordId', async (req, res) => {
+    try {
+        const updatedRecord = await updatePatientRecord(req.params.recordId, req.body);
+        res.status(200).json(updatedRecord);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating patient record', error });
+    }
+});
+
+// Route to delete a patient record
+router.delete('/records/:recordId', async (req, res) => {
+    try {
+        await deletePatientRecord(req.params.recordId);
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting patient record', error });
+    }
+});
+
+module.exports = router;
+
+// ehrController.js
+
+const db = require('../database'); // Assuming a database module is available
+
+// Function to get patient records
+async function getPatientRecords(patientId) {
+    return await db.query('SELECT * FROM records WHERE patient_id = ?', [patientId]);
+}
+
+// Function to update a patient record
+async function updatePatientRecord(recordId, data) {
+    return await db.query('UPDATE records SET ? WHERE id = ?', [data, recordId]);
+}
+
+// Function to delete a patient record
+async function deletePatientRecord(recordId) {
+    return await db.query('DELETE FROM records WHERE id = ?', [recordId]);
+}
+
+module.exports = {
+    getPatientRecords,
+    updatePatientRecord,
+    deletePatientRecord
+};
+
+// index.js
+
+const express = require('express');
+const ehrService = require('./ehrService');
+
+const app = express();
+app.use(express.json());
+
+app.use('/ehr', ehrService);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`EHR Service running on port ${PORT}`);
+});

@@ -1,0 +1,49 @@
+name: Risk and compliance
+description: Track security, privacy, compliance, or operational risk.
+title: "[Risk]: "
+labels:
+  - risk
+  - compliance
+  - triage
+body:
+  - type: dropdown
+    id: risk_type
+    attributes:
+      label: Risk type
+      options:
+        - Security vulnerability
+        - Privacy/data exposure
+        - Regulatory/compliance gap
+        - Reliability/availability
+        - Third-party dependency risk
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the risk and where it exists.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact assessment
+      description: Patient, operational, legal, and financial impact.
+    validations:
+      required: true
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Mitigation plan
+      description: Proposed controls and deadlines.
+      placeholder: Include owner and due date.
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Risk owner
+      placeholder: "@username"
+    validations:
+      required: true

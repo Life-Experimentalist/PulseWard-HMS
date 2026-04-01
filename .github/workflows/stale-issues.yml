@@ -1,0 +1,28 @@
+name: Stale Issue Management
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale items
+        uses: actions/stale@v9
+        with:
+          stale-issue-message: "This issue has been inactive for 21 days. Please update it to keep it open."
+          close-issue-message: "Closed due to inactivity. Reopen with updated details if this is still relevant."
+          stale-pr-message: "This pull request has been inactive for 14 days. Please update it to keep it active."
+          close-pr-message: "Closed due to inactivity. Reopen when you are ready to continue."
+          days-before-issue-stale: 21
+          days-before-issue-close: 14
+          days-before-pr-stale: 14
+          days-before-pr-close: 14
+          exempt-issue-labels: "severity:critical,security,risk"
+          exempt-pr-labels: "do-not-close"

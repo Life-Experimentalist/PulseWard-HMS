@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security disclosure
+    url: https://github.com/Life-Experimentalist/PulseWard-HMS/security/advisories/new
+    about: Report sensitive security issues privately.
+  - name: Incident response runbook
+    url: https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/docs/runbooks/incident-response.md
+    about: Use this guide before or while filing incidents.
+  - name: Branding configuration guide
+    url: https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/docs/architecture/hospital-branding-config.md
+    about: Understand tenant branding configuration before opening branding requests.

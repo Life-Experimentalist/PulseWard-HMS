@@ -1,0 +1,161 @@
+openapi: 3.0.0
+info:
+  title: PulseWard API Gateway
+  description: API Gateway for the PulseWard Hospital Management System, routing requests to various microservices.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+paths:
+  /auth:
+    post:
+      summary: Authenticate a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "401":
+          description: Unauthorized
+  /patients:
+    get:
+      summary: Retrieve a list of patients
+      responses:
+        "200":
+          description: A list of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    age:
+                      type: integer
+                    gender:
+                      type: string
+    post:
+      summary: Add a new patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                gender:
+                  type: string
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /appointments:
+    get:
+      summary: Retrieve a list of appointments
+      responses:
+        "200":
+          description: A list of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    patientId:
+                      type: string
+                    clinicianId:
+                      type: string
+                    date:
+                      type: string
+                      format: date-time
+    post:
+      summary: Schedule a new appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patientId:
+                  type: string
+                clinicianId:
+                  type: string
+                date:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Appointment scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        age:
+          type: integer
+        gender:
+          type: string
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        clinicianId:
+          type: string
+        date:
+          type: string
+          format: date-time

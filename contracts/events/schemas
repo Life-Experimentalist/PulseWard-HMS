@@ -1,0 +1,58 @@
+{
+  "schemas": {
+    "PatientAdmission": {
+      "type": "object",
+      "properties": {
+        "patientId": {
+          "type": "string",
+          "description": "Unique identifier for the patient."
+        },
+        "admissionDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date and time of admission."
+        },
+        "ward": {
+          "type": "string",
+          "description": "Ward where the patient is admitted."
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Identifier of the doctor responsible for the patient."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for admission."
+        }
+      },
+      "required": ["patientId", "admissionDate", "ward", "doctorId", "reason"]
+    },
+    "PatientDischarge": {
+      "type": "object",
+      "properties": {
+        "patientId": {
+          "type": "string",
+          "description": "Unique identifier for the patient."
+        },
+        "dischargeDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date and time of discharge."
+        },
+        "ward": {
+          "type": "string",
+          "description": "Ward from which the patient is discharged."
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Identifier of the doctor responsible for the patient."
+        },
+        "dischargeSummary": {
+          "type": "string",
+          "description": "Summary of the patient's treatment and condition at discharge."
+        }
+      },
+      "required": ["patientId", "dischargeDate", "ward", "doctorId", "dischargeSummary"]
+    }
+  }
+}

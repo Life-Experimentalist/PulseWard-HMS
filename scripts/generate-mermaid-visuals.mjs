@@ -7,6 +7,7 @@ const docsDir = path.join(repoRoot, "docs");
 const sourceDir = path.join(docsDir, "visuals", "source");
 const outputDir = path.join(docsDir, "visuals", "generated");
 const manifestPath = path.join(docsDir, "visuals", "manifest.json");
+const puppeteerConfigPath = path.join(repoRoot, "scripts", "mermaid-puppeteer-config.json");
 
 function walk(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -61,7 +62,7 @@ for (const filePath of markdownFiles) {
     writeFileSync(mmdFile, `${mermaidBody}\n`, "utf8");
 
     execSync(
-      `npx -y @mermaid-js/mermaid-cli@11.4.2 -i "${mmdFile}" -o "${svgFile}" -t neutral -b white`,
+      `npx -y @mermaid-js/mermaid-cli@11.4.2 -i "${mmdFile}" -o "${svgFile}" -t neutral -b white -p "${puppeteerConfigPath}"`,
       {
         stdio: "inherit",
       }

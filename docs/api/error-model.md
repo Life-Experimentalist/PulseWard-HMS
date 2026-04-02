@@ -1,63 +1,74 @@
-# Error Model Documentation for PulseWard Hospital Management System
+# PulseWard API Error Model
 
-## Overview
+## Scope
 
-The error model documentation outlines the structure and format of error responses returned by the PulseWard Hospital Management System APIs. This model ensures consistency across all services and provides clear information to clients when errors occur.
+This document describes:
 
-## Error Response Structure
+1. Current runtime error behavior used by services today.
+2. The normalized contract expected for new or refactored endpoints.
 
-All error responses from the API will follow a standard structure as outlined below:
+## Current Runtime Behavior
+
+Current services primarily return simple JSON payloads with HTTP status codes.
+Typical responses are shaped as one of these:
+
+```json
+{ "message": "email, password, and role are required" }
+```
+
+```json
+{ "accepted": false, "detail": "Provider credentials are missing" }
+```
+
+```json
+{ "reachable": false, "detail": "ABHA gateway check failed", "statusCode": 0 }
+```
+
+This behavior is valid for the current release track and is reflected in service OpenAPI specs.
+
+## Target Normalized Error Envelope
+
+For new API surfaces, prefer this envelope while preserving backward compatibility:
 
 ```json
 {
-  "status": "error",
-  "code": "ERROR_CODE",
-  "message": "A descriptive error message.",
-  "details": {
-    "field": "The specific field that caused the error.",
-    "issue": "A description of the issue with the field."
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "email, password, and role are required",
+    "details": {
+      "field": "role"
+    }
   },
-  "timestamp": "2023-10-01T12:00:00Z"
+  "requestId": "01HV8Q5C3MMN3X7KQ4PQ1Q9VJY",
+  "timestamp": "2026-04-02T08:15:30.000Z"
 }
 ```
 
-### Fields Description
+## Required Semantics
 
-- **status**: A string indicating the status of the response. This will always be "error" for error responses.
-- **code**: A unique error code that identifies the type of error. This code can be used for programmatic error handling.
-- **message**: A human-readable message that describes the error. This message should be clear and concise.
-- **details**: An optional object that provides additional context about the error. This can include:
-  - **field**: The specific input field that caused the error, if applicable.
-  - **issue**: A description of the issue related to the field.
-- **timestamp**: The time at which the error occurred, formatted in ISO 8601.
+- Keep HTTP status codes authoritative.
+- Keep `message` human readable and safe for logs/UI.
+- Do not include PII or secrets in error payloads.
+- Include stable machine-friendly `code` values for client automation.
+- Include `requestId` where tracing is available.
 
-## Common Error Codes
+## Suggested Error Code Families
 
-| Code  | Message               | Description                                               |
-| ----- | --------------------- | --------------------------------------------------------- |
-| `400` | Bad Request           | The request was invalid or cannot be processed.           |
-| `401` | Unauthorized          | Authentication failed or user does not have access.       |
-| `403` | Forbidden             | The user does not have permission to access the resource. |
-| `404` | Not Found             | The requested resource could not be found.                |
-| `500` | Internal Server Error | An unexpected error occurred on the server.               |
+| HTTP | Code | Meaning |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Input shape or value is invalid. |
+| 401 | `AUTH_REQUIRED` | Missing or invalid auth token. |
+| 403 | `AUTH_FORBIDDEN` | Authenticated but not authorized. |
+| 404 | `RESOURCE_NOT_FOUND` | Resource does not exist. |
+| 409 | `CONFLICT` | State conflict (booking, version, idempotency). |
+| 422 | `UNPROCESSABLE_ENTITY` | Semantically invalid request body. |
+| 429 | `RATE_LIMITED` | Request throttled. |
+| 502 | `UPSTREAM_FAILURE` | Provider or upstream call failed. |
+| 503 | `SERVICE_UNAVAILABLE` | Service temporarily unavailable. |
 
-## Example Error Response
+## Migration Guidance
 
-Here is an example of an error response for a failed authentication attempt:
-
-```json
-{
-  "status": "error",
-  "code": "401",
-  "message": "Unauthorized",
-  "details": {
-    "field": "token",
-    "issue": "The provided authentication token is invalid."
-  },
-  "timestamp": "2023-10-01T12:00:00Z"
-}
-```
-
-## Conclusion
-
-This error model documentation serves as a guideline for developers to implement consistent error handling across the PulseWard Hospital Management System APIs. By adhering to this model, we can ensure that clients receive clear and actionable error messages, improving the overall user experience.
+1. Do not break existing response shapes in-place on stable endpoints.
+2. For contract changes, add migration notes in release docs.
+3. Keep OpenAPI responses updated for both success and failure paths.
+4. Add tests that assert status code plus response body keys for expected failures.

@@ -1,142 +1,97 @@
-# API Catalog for PulseWard Hospital Management System
+# PulseWard API Catalog
 
-## Overview
+## Purpose
 
-The PulseWard Hospital Management System (HMS) provides a comprehensive suite of applications and services designed to streamline hospital operations, enhance patient care, and facilitate efficient management of healthcare resources. This document serves as a catalog for the APIs available within the PulseWard HMS, detailing the endpoints, request/response formats, and relevant information for developers.
+This document is a quick-reference map of currently implemented API surfaces.
+For field-level schemas, always use each service OpenAPI file as the canonical contract.
 
-## API Endpoints
+## Canonical Contract Sources
 
-### 1. Authentication Service
+- `services/api-gateway/openapi.yaml`
+- `services/auth-service/openapi.yaml`
+- `services/appointment-service/openapi.yaml`
+- `services/notification-service/openapi.yaml`
+- `services/patient-service/openapi.yaml`
+- `services/ehr-service/openapi.yaml`
+- `services/lab-service/openapi.yaml`
+- `services/pharmacy-service/openapi.yaml`
+- `services/billing-service/openapi.yaml`
 
-- **Base URL**: `/api/v1/auth`
+## API Base Paths
 
-| Method | Endpoint                 | Description                                 |
-| ------ | ------------------------ | ------------------------------------------- |
-| GET    | `/roles`                 | List supported role keys.                   |
-| POST   | `/register`              | Register a new user in a tenant role.       |
-| POST   | `/login`                 | Authenticate role user and return JWT.      |
-| GET    | `/oauth/providers`       | List OAuth providers and enablement status. |
-| GET    | `/oauth/google/start`    | Build Google OAuth URL for tenant and role. |
-| POST   | `/oauth/google/callback` | Exchange callback payload for platform JWT. |
-| GET    | `/oauth/clerk/start`     | Return Clerk setup metadata.                |
+| Service | Primary base path | Notes |
+| --- | --- | --- |
+| API Gateway | `/` | Routes traffic to service backends. |
+| Auth Service | `/api/v1` | Also mounted at `/api` in local runtime. |
+| Appointment Service | `/api/v1` | Also mounted at `/api` in local runtime. |
+| Notification Service | `/api/v1` | Also mounted at `/api` in local runtime. |
+| Patient Service | `/api/patients` | CRUD patient profile routes. |
+| EHR Service | `/ehr` and `/api/ehr` | Runtime/spec aligned in M1.3. |
+| Lab Service | `/api/lab-tests` | Runtime/spec aligned in M1.3. |
+| Pharmacy Service | `/api/pharmacy` | CRUD pharmacy routes. |
+| Billing Service | `/billing` and `/api/billing` | Runtime/spec aligned in M1.3. |
 
-Additional platform endpoints under `/api/v1/platform`:
+## Auth Service Highlights
 
-- `GET /domain-config`
-- `POST /domain-config/validate`
-- `GET /domain-config/all`
+Under `/api/v1`:
 
-### 2. Patient Service
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/auth/roles` | List supported role keys. |
+| POST | `/auth/register` | Register role-scoped user. |
+| POST | `/auth/login` | Role login and JWT issue. |
+| GET | `/auth/oauth/providers` | OAuth provider readiness list. |
+| GET | `/auth/oauth/google/start` | Google OAuth bootstrap URL. |
+| POST | `/auth/oauth/google/callback` | Exchange callback payload for JWT. |
+| GET | `/auth/oauth/clerk/start` | Clerk bootstrap metadata. |
+| GET | `/auth/oauth/google/config-status` | Google OAuth env readiness probe. |
+| GET | `/platform/abha/config-status` | ABHA config readiness probe. |
+| GET | `/platform/abha/health-check` | ABHA gateway reachability check. |
+| GET | `/admin/settings/storage` | Admin settings store metadata. |
+| GET | `/admin/settings` | Read tenant admin settings. |
+| PUT | `/admin/settings` | Persist tenant admin settings. |
+| GET | `/platform/domain-config` | Resolve tenant domain config. |
+| POST | `/platform/domain-config/validate` | Validate origin for tenant. |
+| GET | `/platform/domain-config/all` | Return full domain config model. |
 
-- **Base URL**: `/api/patients`
+## Notification Service Highlights
 
-| Method | Endpoint | Description                     |
-| ------ | -------- | ------------------------------- |
-| GET    | `/`      | Retrieve a list of patients.    |
-| GET    | `/{id}`  | Retrieve patient details by ID. |
-| POST   | `/`      | Create a new patient record.    |
-| PUT    | `/{id}`  | Update patient details by ID.   |
-| DELETE | `/{id}`  | Delete patient record by ID.    |
+Under `/api/v1`:
 
-### 3. Appointment Service
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/notifications` | List notifications. |
+| POST | `/notifications` | Create notification. |
+| GET | `/notifications/{id}` | Fetch notification by id. |
+| DELETE | `/notifications/{id}` | Delete notification by id. |
+| GET | `/integrations/messaging/providers` | List tenant messaging providers. |
+| POST | `/integrations/messaging/test` | Trigger provider test delivery (dry run or live). |
+| GET | `/integrations/messaging/telegram/setup` | Telegram bootstrap checklist. |
+| GET | `/integrations/messaging/telegram/config-status` | Telegram secret/config readiness. |
+| GET | `/integrations/messaging/email/config-status` | SMTP secret/config readiness. |
 
-- **Base URL**: `/api/v1`
+## Appointment Service Highlights
 
-| Method | Endpoint                            | Description                            |
-| ------ | ----------------------------------- | -------------------------------------- |
-| GET    | `/appointments`                     | Retrieve a list of appointments.       |
-| GET    | `/appointments/{id}`                | Retrieve appointment details by ID.    |
-| POST   | `/appointments`                     | Schedule a new appointment.            |
-| PUT    | `/appointments/{id}`                | Update appointment details by ID.      |
-| DELETE | `/appointments/{id}`                | Cancel appointment by ID.              |
-| GET    | `/integrations/calendars/providers` | List tenant calendar providers.        |
-| POST   | `/integrations/calendars/test`      | Test tenant calendar provider booking. |
+Under `/api/v1`:
 
-### 4. EHR Service
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/appointments` | List appointments. |
+| GET | `/appointments/{id}` | Fetch appointment by id. |
+| POST | `/appointments` | Create appointment. |
+| PUT | `/appointments/{id}` | Update appointment. |
+| DELETE | `/appointments/{id}` | Cancel appointment. |
+| GET | `/integrations/calendars/providers` | List calendar providers. |
+| POST | `/integrations/calendars/test` | Test calendar booking flow. |
 
-- **Base URL**: `/api/ehr`
+## ABHA References
 
-| Method | Endpoint       | Description                                   |
-| ------ | -------------- | --------------------------------------------- |
-| GET    | `/`            | Retrieve a list of electronic health records. |
-| GET    | `/{patientId}` | Retrieve EHR for a specific patient.          |
-| POST   | `/`            | Create a new electronic health record.        |
-| PUT    | `/{id}`        | Update existing EHR by ID.                    |
-| DELETE | `/{id}`        | Delete EHR by ID.                             |
+- ABHA integration SOP reference PDF: `docs/api/abha/ABDM_ABHA_V3_AP_Is_SOP_V1_1_4_faef8099bd.pdf`
+- ABHA OpenAPI reference source: `docs/api/abha/ehrn-abdmc.v1.yaml`
 
-### 5. Billing Service
+## Contract and Drift Guardrails
 
-- **Base URL**: `/api/billing`
-
-| Method | Endpoint | Description                     |
-| ------ | -------- | ------------------------------- |
-| GET    | `/`      | Retrieve billing records.       |
-| GET    | `/{id}`  | Retrieve billing details by ID. |
-| POST   | `/`      | Create a new billing record.    |
-| PUT    | `/{id}`  | Update billing details by ID.   |
-| DELETE | `/{id}`  | Delete billing record by ID.    |
-
-### 6. Pharmacy Service
-
-- **Base URL**: `/api/pharmacy`
-
-| Method | Endpoint | Description                        |
-| ------ | -------- | ---------------------------------- |
-| GET    | `/`      | Retrieve a list of medications.    |
-| GET    | `/{id}`  | Retrieve medication details by ID. |
-| POST   | `/`      | Add a new medication.              |
-| PUT    | `/{id}`  | Update medication details by ID.   |
-| DELETE | `/{id}`  | Delete medication by ID.           |
-
-### 7. Lab Service
-
-- **Base URL**: `/api/lab`
-
-| Method | Endpoint | Description                      |
-| ------ | -------- | -------------------------------- |
-| GET    | `/`      | Retrieve a list of lab tests.    |
-| GET    | `/{id}`  | Retrieve lab test details by ID. |
-| POST   | `/`      | Create a new lab test record.    |
-| PUT    | `/{id}`  | Update lab test details by ID.   |
-| DELETE | `/{id}`  | Delete lab test by ID.           |
-
-### 8. Notification Service
-
-- **Base URL**: `/api/v1`
-
-| Method | Endpoint                                 | Description                              |
-| ------ | ---------------------------------------- | ---------------------------------------- |
-| GET    | `/notifications`                         | Retrieve a list of notifications.        |
-| GET    | `/notifications/{id}`                    | Retrieve notification details by ID.     |
-| POST   | `/notifications`                         | Create a new notification.               |
-| DELETE | `/notifications/{id}`                    | Delete notification by ID.               |
-| GET    | `/integrations/messaging/providers`      | List tenant messaging providers.         |
-| POST   | `/integrations/messaging/test`           | Test tenant messaging provider delivery. |
-| GET    | `/integrations/messaging/telegram/setup` | Get Telegram setup checklist.            |
-
-## API Versioning Policy
-
-All APIs are versioned to ensure backward compatibility. The version is included in the base URL as follows: `/api/v1/...`.
-
-## Error Model
-
-The API follows a standard error response format:
-
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Error message describing the issue.",
-    "details": "Additional details if necessary."
-  }
-}
-```
-
-## Conclusion
-
-This API catalog provides a comprehensive overview of the available endpoints within the PulseWard Hospital Management System. For further details, please refer to the individual service documentation and OpenAPI specifications.
-
-## M1 Contract Coverage
-
-- Endpoint-level contract coverage matrix: `docs/api/endpoint-contract-coverage-matrix.md`
-- CI-compatible contract source check command: `npm run contracts:check`
+- Coverage and parity matrix: `docs/api/endpoint-contract-coverage-matrix.md`
+- Semantic parity check: `npm run contracts:check`
+- Strict CI parity check: `npm run contracts:check -- --strict`
+- Regression suite: `tests/contracts/parity-regression.test.js`

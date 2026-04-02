@@ -118,6 +118,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Appointment runtime now exposes `GET /integrations/calendars/interoperability/diagnostics` with routing-order, fallback, unresolved-provider, and interoperability-health diagnostics.
 - Regression tests cover WhatsApp setup/config readiness paths and calendar interoperability diagnostics for default and citycare tenant configurations.
 
+## M5.2 Webhook Diagnostics And ABHA Runbook Readiness Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/webhook/diagnostics` for website-hook endpoint validity, routing coverage, and signing-secret readiness checks.
+- Auth runtime now exposes `GET /platform/abha/operational-readiness` with config checks, diagnostics links, and runbook setup/rollback checklist references.
+- Runbook coverage now includes `docs/runbooks/abha-operational-readiness.md` and updated integration operations references for webhook and ABHA readiness workflows.
+- Regression tests cover webhook diagnostics healthy/degraded states and ABHA operational-readiness status behavior under incomplete config paths.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

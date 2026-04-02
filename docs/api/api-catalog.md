@@ -51,6 +51,7 @@ Under `/api/v1`:
 | GET    | `/auth/oauth/google/config-status`     | Google OAuth env readiness probe.                                                                                           |
 | GET    | `/platform/abha/config-status`         | ABHA config readiness probe.                                                                                                |
 | GET    | `/platform/abha/health-check`          | ABHA gateway reachability check.                                                                                            |
+| GET    | `/platform/abha/operational-readiness` | ABHA operational readiness summary with runbook-linked setup and rollback checklists.                                      |
 | GET    | `/admin/settings/storage`              | Admin settings store metadata.                                                                                              |
 | GET    | `/admin/settings`                      | Read tenant admin settings.                                                                                                 |
 | PUT    | `/admin/settings`                      | Persist tenant admin settings.                                                                                              |
@@ -79,6 +80,7 @@ Under `/api/v1`:
 | GET    | `/integrations/messaging/whatsapp/setup`         | WhatsApp Cloud onboarding checklist.              |
 | GET    | `/integrations/messaging/whatsapp/config-status` | WhatsApp secret/config readiness.                 |
 | GET    | `/integrations/messaging/email/config-status`    | SMTP secret/config readiness.                     |
+| GET    | `/integrations/messaging/webhook/diagnostics`    | Website webhook routing, endpoint, and signing-secret diagnostics summary. |
 
 ## Appointment Service Highlights
 
@@ -112,6 +114,7 @@ Lifecycle reliability notes:
 - Dispatch dead-letter records now capture endpoint-not-configured, retry-exhausted, and late-delivery reminder outcomes.
 - Dispatch telemetry counters now report missed and delayed reminder trends for operational alerting workflows.
 - Calendar interoperability diagnostics now expose default/fallback routing readiness and cross-provider handoff signals.
+- Webhook diagnostics now expose website-hook routing coverage, endpoint URL validity, and signing-secret readiness.
 
 ## EHR Service Highlights
 

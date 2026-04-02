@@ -303,4 +303,6 @@ Exit criteria:
 26. M4.4 evidence checkpoint: dispatch telemetry endpoint now exposes missed/delayed reminder counters, dead-letter totals, and event-type reliability summaries for operational monitoring.
 27. M5.1 completed: connector diagnostics now include WhatsApp setup/config-status readiness paths and calendar interoperability diagnostics for default/fallback routing health.
 28. M5.1 evidence checkpoint: regression coverage now validates WhatsApp onboarding/config readiness and calendar interoperability diagnostics for both default and citycare tenant configs.
-29. M5.2 active next slice: harden website webhook delivery diagnostics and ABHA adapter operational readiness runbook coverage.
+29. M5.2 completed: website webhook diagnostics now expose routing coverage, endpoint validity, and signing-secret readiness status for integration operations.
+30. M5.2 evidence checkpoint: ABHA operational-readiness API and runbook coverage now provide setup/rollback diagnostics and operational checklists linked for daily and weekly runbook execution.
+31. M5.3 active next slice: harden website webhook signed delivery verification and ABHA gateway incident drill evidence automation.

@@ -86,17 +86,17 @@ OPD management alignment:
 - OPD registration and frontdesk scheduling flows should be implemented on top of the appointment lifecycle endpoints below.
 - OPD workflow milestones should treat create/update/cancel appointment operations as the canonical scheduling surface.
 
-| Method | Endpoint                            | Purpose                                                                                            |
-| ------ | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/appointments`                     | List appointments.                                                                                 |
-| GET    | `/appointments/{id}`                | Fetch appointment by id.                                                                           |
-| POST   | `/appointments`                     | Create appointment with role checks, idempotent retry handling, and slot-conflict validation.      |
-| PUT    | `/appointments/{id}`                | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
-| DELETE | `/appointments/{id}`                | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics).           |
-| GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.                                         |
-| POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.                                    |
-| GET    | `/integrations/calendars/providers` | List calendar providers.                                                                           |
-| POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                                                        |
+| Method | Endpoint                                      | Purpose                                                                                            |
+| ------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/appointments`                               | List appointments.                                                                                 |
+| GET    | `/appointments/{id}`                          | Fetch appointment by id.                                                                           |
+| POST   | `/appointments`                               | Create appointment with role checks, idempotent retry handling, and slot-conflict validation.      |
+| PUT    | `/appointments/{id}`                          | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
+| DELETE | `/appointments/{id}`                          | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics).           |
+| GET    | `/opd/entries`                                | List OPD intake entries with tenant/status/triage filters.                                         |
+| POST   | `/opd/entries`                                | Create OPD intake entry and optional appointment draft handoff.                                    |
+| GET    | `/integrations/calendars/providers`           | List calendar providers.                                                                           |
+| POST   | `/integrations/calendars/test`                | Test calendar booking flow.                                                                        |
 | GET    | `/integrations/notifications/dispatch-events` | List lifecycle notification dispatch attempts for delivery audit/debug.                            |
 
 Lifecycle reliability notes:
@@ -182,3 +182,5 @@ Under `/billing` (also supported through gateway mounts):
 - Semantic parity check: `npm run contracts:check`
 - Strict CI parity check: `npm run contracts:check -- --strict`
 - Regression suite: `tests/contracts/parity-regression.test.js`
+- Coverage gate check: `npm run test` (Jest global thresholds enforced)
+- M4.3 route-edge and integration reliability suites: `tests/appointment/*edge*`, `tests/notification/*`, `tests/ehr/*edge*`, `tests/lab/*edge*`, `tests/auth/*surface*`, `tests/integrations/*`, and `tests/shared-utils/*`

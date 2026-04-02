@@ -1,6 +1,6 @@
 # PulseWard Production Roadmap and Milestones
 
-This roadmap is the primary execution plan to take PulseWard HMS from current state to production readiness.
+This roadmap is the primary execution plan to take `PulseWard HMS` from current state to production readiness.
 
 ## Planning Baseline
 
@@ -141,12 +141,14 @@ Scope:
 - Add retries, dead-letter behavior, and deduplication for notification dispatch paths.
 - Wire appointment-service events to notification-service with correlation IDs.
 - Add failure telemetry and operational counters for missed/late notifications.
+- Add milestone-level test hardening so each newly added function and critical branch has unit tests, and each cross-service workflow has integration coverage.
 
 Exit criteria:
 
 - Appointment create/reschedule/cancel flow passes end-to-end reliability tests.
 - Notification fanout behavior is deterministic under retries and partial failures.
 - Operational dashboard shows delivery success/failure and latency trends.
+- New milestone code paths ship with unit and integration tests in the same slice PR (no deferred backlog for new functions).
 
 ### M5 Connector and Adapter Completion (Weeks 15-18)
 
@@ -261,6 +263,7 @@ Exit criteria:
 5. Performance and resilience test evidence captured.
 6. Runbooks and rollback plans are current and reviewed.
 7. Release notes and operational communications are published.
+8. For each active slice, newly introduced functions and decision branches have unit coverage, and affected service interactions have integration coverage.
 
 ## Locked Decisions
 
@@ -294,4 +297,6 @@ Exit criteria:
 20. M3.6 completed: billing-service now receives and processes clinical trigger hooks from lab and prescription workflows with idempotent correlation handling.
 21. M4.1 completed: appointment-service now enforces lifecycle state transitions, slot-conflict detection, idempotent create retries, and optimistic version checks.
 22. M4.2 completed: appointment-service now emits lifecycle events to notification-service with correlation-id propagation, bounded retries, and dispatch audit visibility.
-23. Active next slice (M4.3): add notification dead-letter behavior and delivery telemetry counters for missed or delayed appointment reminders.
+23. M4.3 completed (Test Coverage Completion Module): expanded route-edge, provider-adapter, shared-utils, and cross-service dispatch/ingestion test coverage so new functions and critical branches ship with unit and integration validation.
+24. M4.3 evidence checkpoint: full suite now reports 21 passing suites, 70 passing tests, and approximately 63.10% statements / 59.68% branches / 65.01% functions / 63.77% lines coverage.
+25. M4.4 active next slice: add notification dead-letter behavior and delivery telemetry counters for missed or delayed appointment reminders.

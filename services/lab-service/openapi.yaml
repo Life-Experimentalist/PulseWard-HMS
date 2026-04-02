@@ -1,14 +1,15 @@
 openapi: 3.0.0
 info:
   title: Lab Service API
-  description: API for managing lab tests and results in the PulseWard Hospital Management System.
-  version: 1.0.0
+  description: API for lab catalog, test orders, result reporting, and clinical trigger alignment.
+  version: 1.2.0
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:5107/api
+    description: Development server
 paths:
-  /api/lab-tests:
+  /lab-tests:
     get:
-      summary: Retrieve a list of lab tests
+      summary: Retrieve a list of lab test catalog entries
       responses:
         "200":
           description: A list of lab tests
@@ -17,96 +18,573 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      example: "test123"
-                    name:
-                      type: string
-                      example: "Complete Blood Count"
-                    description:
-                      type: string
-                      example: "A test to evaluate overall health and detect a variety of disorders."
-                    price:
-                      type: number
-                      format: float
-                      example: 50.0
+                  $ref: "#/components/schemas/LabTestCatalogItem"
     post:
-      summary: Create a new lab test
+      summary: Create a new lab test catalog entry
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  example: "Complete Blood Count"
-                description:
-                  type: string
-                  example: "A test to evaluate overall health and detect a variety of disorders."
-                price:
-                  type: number
-                  format: float
-                  example: 50.0
+              $ref: "#/components/schemas/LabTestCatalogCreateRequest"
       responses:
         "201":
           description: Lab test created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: "test123"
-  /api/lab-tests/{id}:
+                $ref: "#/components/schemas/LabTestCatalogItem"
+        "400":
+          description: Invalid test catalog payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/{id}:
     put:
-      summary: Update a lab test
+      summary: Update a lab test catalog entry
       parameters:
         - name: id
           in: path
           required: true
-          description: The ID of the lab test
           schema:
             type: string
-            example: "test123"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  example: "Complete Blood Count"
-                description:
-                  type: string
-                  example: "A test to evaluate overall health and detect a variety of disorders."
-                price:
-                  type: number
-                  format: float
-                  example: 50.0
+              $ref: "#/components/schemas/LabTestCatalogUpdateRequest"
       responses:
         "200":
           description: Lab test updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabTestCatalogItem"
         "404":
           description: Lab test not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
     delete:
-      summary: Delete a lab test
+      summary: Delete a lab test catalog entry
       parameters:
         - name: id
           in: path
           required: true
-          description: The ID of the lab test
           schema:
             type: string
-            example: "test123"
       responses:
         "204":
           description: Lab test deleted successfully
         "404":
           description: Lab test not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders:
+    get:
+      summary: List lab test orders
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ordered, sample-collected, processing, result-ready, reported, cancelled]
+      responses:
+        "200":
+          description: Lab order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrderListResponse"
+    post:
+      summary: Create lab order with aligned clinical trigger metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabOrderCreateRequest"
+      responses:
+        "201":
+          description: Lab order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrder"
+        "400":
+          description: Invalid lab order payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders/{id}:
+    get:
+      summary: Retrieve lab order by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lab order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrder"
+        "404":
+          description: Lab order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders/{id}/status:
+    put:
+      summary: Update lab order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabOrderStatusUpdateRequest"
+      responses:
+        "200":
+          description: Lab order status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrder"
+        "400":
+          description: Invalid status update payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+        "404":
+          description: Lab order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders/{id}/result:
+    post:
+      summary: Record lab result payload and mark order result-ready
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabResultCreateRequest"
+      responses:
+        "200":
+          description: Lab result recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrder"
+        "400":
+          description: Invalid result payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+        "404":
+          description: Lab order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders/{id}/report:
+    post:
+      summary: Mark lab result as reported and emit downstream clinical triggers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabReportRequest"
+      responses:
+        "200":
+          description: Lab result reported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrder"
+        "400":
+          description: Missing result or invalid report payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+        "404":
+          description: Lab order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+  /lab-tests/orders/{id}/triggers:
+    get:
+      summary: Retrieve clinical trigger alignment events for a lab order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trigger list for order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabOrderTriggerListResponse"
+        "404":
+          description: Lab order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabErrorResponse"
+components:
+  schemas:
+    LabTestCatalogItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: test-cbc-1001
+        code:
+          type: string
+          example: cbc
+        name:
+          type: string
+          example: Complete Blood Count
+        description:
+          type: string
+          example: Evaluates blood components for diagnostic baseline.
+        price:
+          type: number
+          format: float
+          example: 50.0
+        turnaroundHours:
+          type: integer
+          example: 24
+    LabTestCatalogCreateRequest:
+      type: object
+      required:
+        - name
+        - description
+        - price
+      properties:
+        id:
+          type: string
+          example: test-cbc-1001
+        code:
+          type: string
+          example: cbc
+        name:
+          type: string
+          example: Complete Blood Count
+        description:
+          type: string
+          example: Evaluates blood components for diagnostic baseline.
+        price:
+          type: number
+          format: float
+          example: 50.0
+        turnaroundHours:
+          type: integer
+          example: 24
+    LabTestCatalogUpdateRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: cbc
+        name:
+          type: string
+          example: Complete Blood Count
+        description:
+          type: string
+          example: Updated panel description
+        price:
+          type: number
+          format: float
+          example: 55.0
+        turnaroundHours:
+          type: integer
+          example: 18
+    LabOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ord-lab-1001
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        ehrRecordId:
+          type: string
+          example: rec-1001
+        testCode:
+          type: string
+          example: cbc
+        requestedByClinicianId:
+          type: string
+          example: cln-42
+        priority:
+          type: string
+          enum: [routine, urgent, stat]
+          example: urgent
+        status:
+          type: string
+          enum: [ordered, sample-collected, processing, result-ready, reported, cancelled]
+          example: ordered
+        orderedAt:
+          type: string
+          format: date-time
+        result:
+          $ref: "#/components/schemas/LabResult"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabOrderHistoryEvent"
+        clinicalTriggers:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabClinicalTrigger"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LabResult:
+      type: object
+      nullable: true
+      properties:
+        summary:
+          type: string
+          example: Hemoglobin slightly low
+        values:
+          type: object
+          additionalProperties: true
+          example:
+            hemoglobin: 10.8
+            wbc: 7000
+        observedAt:
+          type: string
+          format: date-time
+        reportedBy:
+          type: string
+          example: technician-01
+        attachments:
+          type: array
+          items:
+            type: string
+          example:
+            - report-ord-lab-1001.pdf
+    LabOrderHistoryEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          example: evt-1001
+        eventType:
+          type: string
+          example: lab.result.recorded
+        actorRole:
+          type: string
+          example: technician
+        occurredAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: true
+    LabClinicalTrigger:
+      type: object
+      properties:
+        triggerId:
+          type: string
+          example: trg-1001
+        triggerType:
+          type: string
+          example: clinical.lab.result.reported
+        targetService:
+          type: string
+          example: ehr-service
+        status:
+          type: string
+          example: queued
+        correlationId:
+          type: string
+          example: corr-1001
+        createdAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: true
+    LabOrderListResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabOrder"
+        total:
+          type: integer
+          example: 1
+    LabOrderCreateRequest:
+      type: object
+      required:
+        - actorRole
+        - patientId
+        - testCode
+        - requestedByClinicianId
+        - orderedAt
+      properties:
+        id:
+          type: string
+          example: ord-lab-1001
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations, technician]
+          example: doctor
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        ehrRecordId:
+          type: string
+          example: rec-1001
+        testCode:
+          type: string
+          example: cbc
+        requestedByClinicianId:
+          type: string
+          example: cln-42
+        priority:
+          type: string
+          enum: [routine, urgent, stat]
+          example: urgent
+        orderedAt:
+          type: string
+          format: date-time
+          example: "2026-04-02T15:00:00Z"
+    LabOrderStatusUpdateRequest:
+      type: object
+      required:
+        - actorRole
+        - status
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations, technician]
+          example: technician
+        status:
+          type: string
+          enum: [ordered, sample-collected, processing, result-ready, reported, cancelled]
+          example: processing
+    LabResultCreateRequest:
+      type: object
+      required:
+        - actorRole
+        - summary
+        - observedAt
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations, technician]
+          example: technician
+        summary:
+          type: string
+          example: Hemoglobin slightly low
+        values:
+          type: object
+          additionalProperties: true
+        observedAt:
+          type: string
+          format: date-time
+          example: "2026-04-02T16:00:00Z"
+        reportedBy:
+          type: string
+          example: technician-01
+        attachments:
+          type: array
+          items:
+            type: string
+    LabReportRequest:
+      type: object
+      required:
+        - actorRole
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations, technician]
+          example: operations
+    LabOrderTriggerListResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          example: ord-lab-1001
+        total:
+          type: integer
+          example: 2
+        triggers:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabClinicalTrigger"
+    LabErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Lab order not found
+        code:
+          type: string
+          example: LAB_ORDER_NOT_FOUND
+        details:
+          type: object
+          additionalProperties: true

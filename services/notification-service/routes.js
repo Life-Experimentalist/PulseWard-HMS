@@ -73,6 +73,13 @@ router.post("/integrations/messaging/test", function (req, res) {
   var payload = req.body || {};
   var tenantKey = payload.tenantKey || "default";
   var config = loadTenantIntegrationConfig(tenantKey);
+  var dryRun = true;
+
+  if (typeof payload.dryRun === "string") {
+    dryRun = payload.dryRun.toLowerCase() !== "false";
+  } else if (payload.dryRun === false) {
+    dryRun = false;
+  }
 
   sendNotificationWithRouting(
     {
@@ -81,7 +88,8 @@ router.post("/integrations/messaging/test", function (req, res) {
       recipient: payload.recipient || "demo@example.com",
       message: payload.message || "PulseWard integration test message",
       preferredProvider: payload.providerKey,
-      dryRun: payload.dryRun !== false,
+      credentialsOverride: payload.credentialsOverride || null,
+      dryRun: dryRun,
     },
     config
   )
@@ -113,6 +121,68 @@ router.get("/integrations/messaging/telegram/setup", function (req, res) {
       "Configure endpoint in tenant integration config",
       "Run POST /api/v1/integrations/messaging/test with providerKey=telegram-bot",
     ],
+  });
+});
+
+router.get("/integrations/messaging/telegram/config-status", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = config.messagingProviders.find(function (item) {
+    return item.key === "telegram-bot";
+  });
+
+  var secretKey =
+    provider && provider.credentialsRef
+      ? provider.credentialsRef.secretKey
+      : "INTEGRATION_TELEGRAM_CREDENTIALS";
+  var raw = process.env[secretKey];
+
+  var parsed = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_error) {
+      parsed = { raw: raw };
+    }
+  }
+
+  res.json({
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    secretKey: secretKey,
+    configured: Boolean(parsed && parsed.botToken),
+    hasChatId: Boolean(parsed && parsed.chatId),
+  });
+});
+
+router.get("/integrations/messaging/email/config-status", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = config.messagingProviders.find(function (item) {
+    return item.key === "email-smtp";
+  });
+
+  var secretKey =
+    provider && provider.credentialsRef
+      ? provider.credentialsRef.secretKey
+      : "INTEGRATION_EMAIL_SMTP_CREDENTIALS";
+  var raw = process.env[secretKey];
+
+  var parsed = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_error) {
+      parsed = { raw: raw };
+    }
+  }
+
+  res.json({
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    secretKey: secretKey,
+    configured: Boolean(parsed && parsed.host && parsed.user && parsed.pass),
+    hasFromAddress: Boolean(parsed && parsed.from),
   });
 });
 

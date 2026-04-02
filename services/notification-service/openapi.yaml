@@ -166,6 +166,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TelegramSetupResponse"
+  /integrations/messaging/telegram/config-status:
+    get:
+      summary: Get Telegram configuration status from environment secret reference
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Telegram configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramConfigStatusResponse"
+  /integrations/messaging/email/config-status:
+    get:
+      summary: Get SMTP email configuration status from environment secret reference
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Email configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailConfigStatusResponse"
 components:
   schemas:
     Notification:
@@ -214,7 +248,6 @@ components:
       type: object
       required:
         - tenantKey
-        - recipient
         - message
       properties:
         tenantKey:
@@ -241,6 +274,10 @@ components:
           type: boolean
           default: true
           example: true
+        credentialsOverride:
+          type: object
+          description: Optional one-time provider credentials payload for setup tests.
+          additionalProperties: true
     MessagingProviderTestResponse:
       type: object
       properties:
@@ -266,3 +303,39 @@ components:
           type: array
           items:
             type: string
+    TelegramConfigStatusResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        providerEnabled:
+          type: boolean
+          example: true
+        secretKey:
+          type: string
+          example: INTEGRATION_TELEGRAM_CREDENTIALS
+        configured:
+          type: boolean
+          example: false
+        hasChatId:
+          type: boolean
+          example: false
+    EmailConfigStatusResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        providerEnabled:
+          type: boolean
+          example: true
+        secretKey:
+          type: string
+          example: INTEGRATION_EMAIL_SMTP_CREDENTIALS
+        configured:
+          type: boolean
+          example: false
+        hasFromAddress:
+          type: boolean
+          example: false

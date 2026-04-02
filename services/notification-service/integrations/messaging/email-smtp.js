@@ -8,7 +8,9 @@ class EmailSmtpProvider {
   }
 
   async send(request) {
-    const secretPayload = resolveSecretRef(this.providerConfig.credentialsRef);
+    const override = request && request.credentialsOverride ? request.credentialsOverride : null;
+    const secretPayload =
+      override || resolveSecretRef(this.providerConfig && this.providerConfig.credentialsRef);
     const dryRun = request.dryRun === true;
 
     if (!secretPayload || dryRun) {
@@ -20,6 +22,14 @@ class EmailSmtpProvider {
           to: request.recipient,
           subject: "PulseWard Notification",
         },
+      };
+    }
+
+    if (!secretPayload.host || !secretPayload.user || !secretPayload.pass) {
+      return {
+        provider: this.key,
+        accepted: false,
+        detail: "SMTP credentials are incomplete. host/user/pass are required.",
       };
     }
 

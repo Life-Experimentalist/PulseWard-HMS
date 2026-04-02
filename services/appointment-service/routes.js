@@ -241,12 +241,16 @@ function findAppointmentByClientRequestId(tenantKey, clientRequestId) {
 
 function getNotificationDispatchEndpoint() {
   return String(
-    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT || process.env.APPOINTMENT_NOTIFICATION_ENDPOINT || ""
+    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT ||
+      process.env.APPOINTMENT_NOTIFICATION_ENDPOINT ||
+      ""
   ).trim();
 }
 
 function getNotificationDispatchMaxAttempts() {
-  var parsed = Number(process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES || NOTIFICATION_DISPATCH_MAX_ATTEMPTS);
+  var parsed = Number(
+    process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES || NOTIFICATION_DISPATCH_MAX_ATTEMPTS
+  );
   if (!Number.isFinite(parsed) || parsed < 1) {
     return NOTIFICATION_DISPATCH_MAX_ATTEMPTS;
   }
@@ -255,7 +259,9 @@ function getNotificationDispatchMaxAttempts() {
 }
 
 function getNotificationDispatchTimeoutMs() {
-  var parsed = Number(process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS || NOTIFICATION_DISPATCH_TIMEOUT_MS);
+  var parsed = Number(
+    process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS || NOTIFICATION_DISPATCH_TIMEOUT_MS
+  );
   if (!Number.isFinite(parsed) || parsed < 200) {
     return NOTIFICATION_DISPATCH_TIMEOUT_MS;
   }
@@ -368,7 +374,8 @@ async function dispatchLifecycleNotificationEvent(eventPayload) {
       dispatchRecord.lastError = "notification endpoint returned status " + response.status;
     } catch (error) {
       clearTimeout(timeout);
-      dispatchRecord.lastError = error && error.message ? error.message : "notification dispatch error";
+      dispatchRecord.lastError =
+        error && error.message ? error.message : "notification dispatch error";
     }
   }
 
@@ -377,7 +384,14 @@ async function dispatchLifecycleNotificationEvent(eventPayload) {
   return dispatchRecord;
 }
 
-async function emitAppointmentLifecycleEvent(req, payload, appointment, actorRole, eventType, details) {
+async function emitAppointmentLifecycleEvent(
+  req,
+  payload,
+  appointment,
+  actorRole,
+  eventType,
+  details
+) {
   var eventPayload = {
     tenantKey: appointment.tenantKey,
     appointmentId: appointment.id,
@@ -836,14 +850,21 @@ router.put("/appointments/:id", async function (req, res) {
     appointments[index].clinicianId !== nextClinicianId ||
     appointments[index].durationMinutes !== nextDurationMinutes
   ) {
-    await emitAppointmentLifecycleEvent(req, payload, updated, access.actorRole, "appointment.rescheduled", {
-      previousDateTime: appointments[index].appointmentDate,
-      nextDateTime: nextAppointmentDate,
-      previousClinicianId: appointments[index].clinicianId,
-      nextClinicianId: nextClinicianId,
-      previousDurationMinutes: appointments[index].durationMinutes || 30,
-      nextDurationMinutes: nextDurationMinutes,
-    });
+    await emitAppointmentLifecycleEvent(
+      req,
+      payload,
+      updated,
+      access.actorRole,
+      "appointment.rescheduled",
+      {
+        previousDateTime: appointments[index].appointmentDate,
+        nextDateTime: nextAppointmentDate,
+        previousClinicianId: appointments[index].clinicianId,
+        nextClinicianId: nextClinicianId,
+        previousDurationMinutes: appointments[index].durationMinutes || 30,
+        nextDurationMinutes: nextDurationMinutes,
+      }
+    );
   }
 
   appointments[index] = updated;

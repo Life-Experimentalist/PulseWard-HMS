@@ -39,8 +39,7 @@ describe("M4.2 appointment lifecycle notification wiring", () => {
     notificationServer = notificationRuntime.server;
     notificationBaseUrl = notificationRuntime.baseUrl;
 
-    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT =
-      `${notificationBaseUrl}/api/v1/integrations/appointments/events`;
+    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT = `${notificationBaseUrl}/api/v1/integrations/appointments/events`;
     process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES = "2";
     process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS = "1200";
 
@@ -125,7 +124,9 @@ describe("M4.2 appointment lifecycle notification wiring", () => {
 
     const receiptList = await requestJson(
       notificationBaseUrl,
-      `/api/v1/integrations/appointments/events?correlationId=${encodeURIComponent(expectedCorrelationId)}`,
+      `/api/v1/integrations/appointments/events?correlationId=${encodeURIComponent(
+        expectedCorrelationId
+      )}`,
       {
         method: "GET",
       }
@@ -159,19 +160,23 @@ describe("M4.2 appointment lifecycle notification wiring", () => {
 
     const updateCorrelationSeed = "m42-update-correlation";
 
-    const updated = await requestJson(appointmentBaseUrl, `/api/v1/appointments/${created.body.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "x-correlation-id": updateCorrelationSeed,
-      },
-      body: JSON.stringify({
-        actorRole: "operations",
-        expectedVersion: created.body.version,
-        status: "checked-in",
-        appointmentDate: "2026-05-02T11:30:00Z",
-      }),
-    });
+    const updated = await requestJson(
+      appointmentBaseUrl,
+      `/api/v1/appointments/${created.body.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-correlation-id": updateCorrelationSeed,
+        },
+        body: JSON.stringify({
+          actorRole: "operations",
+          expectedVersion: created.body.version,
+          status: "checked-in",
+          appointmentDate: "2026-05-02T11:30:00Z",
+        }),
+      }
+    );
 
     expect(updated.status).toBe(200);
     expect(updated.body.status).toBe("checked-in");
@@ -247,24 +252,32 @@ describe("M4.2 appointment lifecycle notification wiring", () => {
       },
     };
 
-    const accepted = await requestJson(notificationBaseUrl, "/api/v1/integrations/appointments/events", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(replayPayload),
-    });
+    const accepted = await requestJson(
+      notificationBaseUrl,
+      "/api/v1/integrations/appointments/events",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(replayPayload),
+      }
+    );
 
     expect(accepted.status).toBe(201);
     expect(accepted.body.duplicate).toBe(false);
 
-    const replay = await requestJson(notificationBaseUrl, "/api/v1/integrations/appointments/events", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(replayPayload),
-    });
+    const replay = await requestJson(
+      notificationBaseUrl,
+      "/api/v1/integrations/appointments/events",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(replayPayload),
+      }
+    );
 
     expect(replay.status).toBe(200);
     expect(replay.body.duplicate).toBe(true);

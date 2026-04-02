@@ -143,6 +143,22 @@ describe("auth-service route surface coverage", () => {
     expect(abhaHealthMissing.status).toBe(400);
     expect(abhaHealthMissing.body.reachable).toBe(false);
 
+    const abhaOperationalReadiness = await requestJson(
+      "/api/v1/platform/abha/operational-readiness",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(abhaOperationalReadiness.status).toBe(200);
+    expect(abhaOperationalReadiness.body.enabled).toBe(true);
+    expect(abhaOperationalReadiness.body.configured).toBe(false);
+    expect(abhaOperationalReadiness.body.readinessStatus).toBe("at-risk");
+    expect(abhaOperationalReadiness.body.runbook.document).toBe(
+      "docs/runbooks/abha-operational-readiness.md"
+    );
+    expect(Array.isArray(abhaOperationalReadiness.body.runbook.setupChecklist)).toBe(true);
+
     const storageMeta = await requestJson("/api/v1/admin/settings/storage", {
       method: "GET",
     });

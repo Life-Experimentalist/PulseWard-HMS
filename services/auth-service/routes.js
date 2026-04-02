@@ -924,6 +924,53 @@ router.get("/platform/abha/health-check", async function (req, res) {
   }
 });
 
+router.get("/platform/abha/operational-readiness", function (_req, res) {
+  var enabled = process.env.ABHA_ENABLED === "true";
+  var hasClientId = hasRealConfigValue(process.env.ABHA_CLIENT_ID);
+  var hasClientSecret = hasRealConfigValue(process.env.ABHA_CLIENT_SECRET);
+  var hasGatewayBaseUrl = hasRealConfigValue(process.env.ABHA_GATEWAY_BASE_URL);
+  var configured = hasClientId && hasClientSecret && hasGatewayBaseUrl;
+
+  var readinessStatus = "disabled";
+  if (enabled && configured) {
+    readinessStatus = "healthy";
+  } else if (enabled && !configured) {
+    readinessStatus = "at-risk";
+  }
+
+  res.json({
+    enabled: enabled,
+    configured: configured,
+    readinessStatus: readinessStatus,
+    mode: process.env.ABHA_ENVIRONMENT || "sandbox",
+    checks: {
+      hasClientId: hasClientId,
+      hasClientSecret: hasClientSecret,
+      hasGatewayBaseUrl: hasGatewayBaseUrl,
+      gatewayBaseUrl: process.env.ABHA_GATEWAY_BASE_URL || "",
+    },
+    diagnostics: {
+      configStatusEndpoint: "GET /api/v1/platform/abha/config-status",
+      gatewayHealthEndpoint: "GET /api/v1/platform/abha/health-check",
+      healthCheckTimeoutMsDefault: 4000,
+    },
+    runbook: {
+      document: "docs/runbooks/abha-operational-readiness.md",
+      setupChecklist: [
+        "Enable ABHA integration for tenant and set ABHA_ENABLED=true",
+        "Provision ABHA client credentials in secret manager",
+        "Set ABHA_GATEWAY_BASE_URL to reachable sandbox or production host",
+        "Validate config-status and health-check before enabling live workflows",
+      ],
+      rollbackChecklist: [
+        "Disable ABHA feature flag for affected tenant",
+        "Switch to baseline compliance workflow for impacted journeys",
+        "Re-run ABHA config and gateway diagnostics after remediation",
+      ],
+    },
+  });
+});
+
 router.get("/admin/settings/storage", function (_req, res) {
   res.json(getStorageMetadata());
 });

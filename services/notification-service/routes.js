@@ -44,6 +44,82 @@ function getProviderSecretStatus(provider, defaultSecretKey) {
   };
 }
 
+function getWebhookEndpoint(provider) {
+  var override = String(process.env.INTEGRATION_WEBHOOK_ENDPOINT || "").trim();
+  if (override) {
+    return override;
+  }
+
+  return String((provider && provider.endpoint) || "").trim();
+}
+
+function isWebhookEndpointUrlValid(endpoint) {
+  if (!endpoint) {
+    return false;
+  }
+
+  try {
+    var parsed = new URL(endpoint);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function getWebhookChannelCoverage(config) {
+  var coverage = {
+    defaultChannels: [],
+    fallbackChannels: [],
+  };
+
+  if (!config || !Array.isArray(config.messagingRouting)) {
+    return coverage;
+  }
+
+  config.messagingRouting.forEach(function (route) {
+    if (!route || !route.channel) {
+      return;
+    }
+
+    if (route.defaultProvider === "generic-webhook") {
+      coverage.defaultChannels.push(route.channel);
+    }
+
+    if (
+      Array.isArray(route.fallbackProviders) &&
+      route.fallbackProviders.indexOf("generic-webhook") >= 0
+    ) {
+      coverage.fallbackChannels.push(route.channel);
+    }
+  });
+
+  return coverage;
+}
+
+function getWebhookReadinessStatus(providerEnabled, endpointConfigured, endpointUrlValid) {
+  if (!providerEnabled) {
+    return "disabled";
+  }
+
+  if (!endpointConfigured) {
+    return "at-risk";
+  }
+
+  if (!endpointUrlValid) {
+    return "degraded";
+  }
+
+  return "healthy";
+}
+
+function hasWebhookSigningSecret(parsedSecret) {
+  if (!parsedSecret) {
+    return false;
+  }
+
+  return Boolean(parsedSecret.signingSecret || parsedSecret.secret || parsedSecret.raw);
+}
+
 function findAppointmentReceiptByCorrelationId(correlationId) {
   if (!correlationId) {
     return null;
@@ -402,6 +478,53 @@ router.get("/integrations/messaging/whatsapp/config-status", function (req, res)
     hasAccessToken: Boolean(secretStatus.parsed && secretStatus.parsed.accessToken),
     hasPhoneNumberId: Boolean(secretStatus.parsed && secretStatus.parsed.phoneNumberId),
     hasSenderNumber: Boolean(secretStatus.parsed && secretStatus.parsed.senderNumber),
+  });
+});
+
+router.get("/integrations/messaging/webhook/diagnostics", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, "generic-webhook");
+  var endpoint = getWebhookEndpoint(provider);
+  var endpointConfigured = Boolean(endpoint);
+  var endpointUrlValid = isWebhookEndpointUrlValid(endpoint);
+  var channelCoverage = getWebhookChannelCoverage(config);
+
+  var signingSecretStatus = getProviderSecretStatus(
+    provider,
+    "INTEGRATION_WEBHOOK_SIGNING_SECRET"
+  );
+  var readinessStatus = getWebhookReadinessStatus(
+    Boolean(provider && provider.enabled),
+    endpointConfigured,
+    endpointUrlValid
+  );
+
+  res.json({
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    endpoint: endpoint,
+    endpointConfigured: endpointConfigured,
+    endpointUrlValid: endpointUrlValid,
+    readinessStatus: readinessStatus,
+    routeCoverage: {
+      defaultChannels: channelCoverage.defaultChannels,
+      fallbackChannels: channelCoverage.fallbackChannels,
+      defaultChannelCount: channelCoverage.defaultChannels.length,
+      fallbackChannelCount: channelCoverage.fallbackChannels.length,
+    },
+    signingSecret: {
+      secretKey: signingSecretStatus.secretKey,
+      configured: hasWebhookSigningSecret(signingSecretStatus.parsed),
+    },
+    deliveryTest: {
+      endpoint: "POST /api/v1/integrations/messaging/test",
+      recommendedPayload: {
+        tenantKey: tenantKey,
+        channel: "website-hook",
+        dryRun: false,
+      },
+    },
   });
 });
 

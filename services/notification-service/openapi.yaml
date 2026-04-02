@@ -268,6 +268,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EmailConfigStatusResponse"
+  /integrations/messaging/webhook/diagnostics:
+    get:
+      summary: Get website webhook delivery diagnostics and readiness status
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Website webhook diagnostics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDiagnosticsResponse"
 components:
   schemas:
     Notification:
@@ -592,3 +609,69 @@ components:
         hasFromAddress:
           type: boolean
           example: false
+    WebhookRouteCoverage:
+      type: object
+      properties:
+        defaultChannels:
+          type: array
+          items:
+            type: string
+        fallbackChannels:
+          type: array
+          items:
+            type: string
+        defaultChannelCount:
+          type: integer
+          example: 1
+        fallbackChannelCount:
+          type: integer
+          example: 2
+    WebhookSigningSecretStatus:
+      type: object
+      properties:
+        secretKey:
+          type: string
+          example: INTEGRATION_WEBHOOK_SIGNING_SECRET
+        configured:
+          type: boolean
+          example: false
+    WebhookDeliveryTestHint:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/test
+        recommendedPayload:
+          type: object
+          additionalProperties: true
+    WebhookDiagnosticsResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        providerEnabled:
+          type: boolean
+          example: true
+        endpoint:
+          type: string
+          example: https://example-hospital.local/api/notify
+        endpointConfigured:
+          type: boolean
+          example: true
+        endpointUrlValid:
+          type: boolean
+          example: true
+        readinessStatus:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - at-risk
+            - disabled
+        routeCoverage:
+          $ref: "#/components/schemas/WebhookRouteCoverage"
+        signingSecret:
+          $ref: "#/components/schemas/WebhookSigningSecretStatus"
+        deliveryTest:
+          $ref: "#/components/schemas/WebhookDeliveryTestHint"

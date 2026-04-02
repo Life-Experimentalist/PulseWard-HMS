@@ -391,6 +391,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/AbhaHealthCheckResponse"
 
+  /platform/abha/operational-readiness:
+    get:
+      summary: Get ABHA operational readiness checklist and diagnostics summary
+      tags:
+        - Platform Domains
+      responses:
+        "200":
+          description: ABHA operational readiness summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaOperationalReadinessResponse"
+
   /admin/settings/storage:
     get:
       summary: Get admin settings storage metadata
@@ -1099,6 +1112,72 @@ components:
           type: string
           nullable: true
           example: connect ETIMEDOUT
+    AbhaOperationalReadinessChecks:
+      type: object
+      properties:
+        hasClientId:
+          type: boolean
+          example: true
+        hasClientSecret:
+          type: boolean
+          example: true
+        hasGatewayBaseUrl:
+          type: boolean
+          example: true
+        gatewayBaseUrl:
+          type: string
+          example: https://abha-gateway.example.com
+    AbhaOperationalReadinessDiagnostics:
+      type: object
+      properties:
+        configStatusEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/config-status
+        gatewayHealthEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check
+        healthCheckTimeoutMsDefault:
+          type: integer
+          example: 4000
+    AbhaOperationalReadinessRunbook:
+      type: object
+      properties:
+        document:
+          type: string
+          example: docs/runbooks/abha-operational-readiness.md
+        setupChecklist:
+          type: array
+          items:
+            type: string
+        rollbackChecklist:
+          type: array
+          items:
+            type: string
+    AbhaOperationalReadinessResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        configured:
+          type: boolean
+          example: false
+        readinessStatus:
+          type: string
+          enum:
+            - healthy
+            - at-risk
+            - disabled
+          example: at-risk
+        mode:
+          type: string
+          example: sandbox
+        checks:
+          $ref: "#/components/schemas/AbhaOperationalReadinessChecks"
+        diagnostics:
+          $ref: "#/components/schemas/AbhaOperationalReadinessDiagnostics"
+        runbook:
+          $ref: "#/components/schemas/AbhaOperationalReadinessRunbook"
     AdminSettingsStorageResponse:
       type: object
       properties:

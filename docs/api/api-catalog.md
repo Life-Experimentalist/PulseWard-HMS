@@ -135,3 +135,8 @@ The API follows a standard error response format:
 ## Conclusion
 
 This API catalog provides a comprehensive overview of the available endpoints within the PulseWard Hospital Management System. For further details, please refer to the individual service documentation and OpenAPI specifications.
+
+## M1 Contract Coverage
+
+- Endpoint-level contract coverage matrix: `docs/api/endpoint-contract-coverage-matrix.md`
+- CI-compatible contract source check command: `npm run contracts:check`

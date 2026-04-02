@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Check contract compatibility (M1)
+        run: pnpm run contracts:check
+
       - name: Run tests
         run: pnpm test
 

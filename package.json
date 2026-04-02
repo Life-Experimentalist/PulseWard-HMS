@@ -35,6 +35,7 @@
     "test": "jest",
     "test:smoke": "node ./scripts/smoke-test-platform.mjs",
     "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); console.log('Route modules loaded');\"",
+    "contracts:check": "node ./scripts/check-contract-coverage.mjs",
     "build": "tsc",
     "lint": "eslint . --ext .js,.mjs",
     "lint:fix": "npm run lint -- --fix",

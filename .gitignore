@@ -16,3 +16,6 @@ logs/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Runtime service data
+services/auth-service/data/*.json

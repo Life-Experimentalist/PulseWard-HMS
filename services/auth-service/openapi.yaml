@@ -153,6 +153,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClerkStartResponse"
 
+  /auth/oauth/google/config-status:
+    get:
+      summary: Get Google OAuth environment configuration readiness
+      tags:
+        - OAuth
+      responses:
+        "200":
+          description: Google OAuth configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleOAuthConfigStatusResponse"
+
+  /platform/abha/config-status:
+    get:
+      summary: Get ABHA integration environment readiness
+      tags:
+        - Platform Domains
+      responses:
+        "200":
+          description: ABHA configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaConfigStatusResponse"
+
+  /platform/abha/health-check:
+    get:
+      summary: Check ABHA gateway reachability
+      tags:
+        - Platform Domains
+      parameters:
+        - name: timeoutMs
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4000
+      responses:
+        "200":
+          description: ABHA gateway check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaHealthCheckResponse"
+        "400":
+          description: ABHA gateway configuration missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaHealthCheckResponse"
+        "502":
+          description: ABHA gateway check failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaHealthCheckResponse"
+
+  /admin/settings/storage:
+    get:
+      summary: Get admin settings storage metadata
+      tags:
+        - Admin Settings
+      responses:
+        "200":
+          description: Settings storage details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettingsStorageResponse"
+
+  /admin/settings:
+    get:
+      summary: Get admin dashboard settings for a tenant
+      tags:
+        - Admin Settings
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Tenant settings payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettingsResponse"
+    put:
+      summary: Save admin dashboard settings for a tenant
+      tags:
+        - Admin Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSettingsUpdateRequest"
+      responses:
+        "200":
+          description: Settings persisted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettingsResponse"
+
   /platform/domain-config:
     get:
       summary: Resolve platform and tenant domain config
@@ -351,6 +459,145 @@ components:
         publishableKeyConfigured:
           type: boolean
           example: false
+    GoogleOAuthConfigStatusResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: google-oauth
+        configured:
+          type: boolean
+          example: false
+        redirectUri:
+          type: string
+          example: http://localhost:8081/api/v1/auth/oauth/google/callback
+        hasClientId:
+          type: boolean
+          example: false
+        hasClientSecret:
+          type: boolean
+          example: false
+    AbhaConfigStatusResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: false
+        configured:
+          type: boolean
+          example: false
+        hasClientId:
+          type: boolean
+          example: false
+        hasClientSecret:
+          type: boolean
+          example: false
+        hasGatewayBaseUrl:
+          type: boolean
+          example: false
+        gatewayBaseUrl:
+          type: string
+          example: https://abha-gateway.example.com
+        mode:
+          type: string
+          example: sandbox
+    AbhaHealthCheckResponse:
+      type: object
+      properties:
+        reachable:
+          type: boolean
+          example: true
+        statusCode:
+          type: integer
+          example: 200
+        checkedUrl:
+          type: string
+          example: https://abha-gateway.example.com/
+        latencyMs:
+          type: integer
+          example: 142
+        timeoutMs:
+          type: integer
+          example: 4000
+        detail:
+          type: string
+          example: ABHA gateway responded successfully
+        error:
+          type: string
+          nullable: true
+          example: connect ETIMEDOUT
+    AdminSettingsStorageResponse:
+      type: object
+      properties:
+        source:
+          type: string
+          example: auth-service-json-store
+        path:
+          type: string
+          example: services/auth-service/data/admin-console-settings.json
+        tenantCount:
+          type: integer
+          example: 2
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AdminSettingsRouting:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        authBaseUrl:
+          type: string
+          format: uri
+          example: http://localhost:5101
+        notificationBaseUrl:
+          type: string
+          format: uri
+          example: http://localhost:5102
+        appointmentBaseUrl:
+          type: string
+          format: uri
+          example: http://localhost:5103
+    AdminSettingsUi:
+      type: object
+      properties:
+        lastTab:
+          type: string
+          example: overview
+    AdminSettingsPayload:
+      type: object
+      properties:
+        routing:
+          $ref: "#/components/schemas/AdminSettingsRouting"
+        ui:
+          $ref: "#/components/schemas/AdminSettingsUi"
+    AdminSettingsResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        settings:
+          $ref: "#/components/schemas/AdminSettingsPayload"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        storage:
+          $ref: "#/components/schemas/AdminSettingsStorageResponse"
+    AdminSettingsUpdateRequest:
+      type: object
+      required:
+        - tenantKey
+        - settings
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        settings:
+          $ref: "#/components/schemas/AdminSettingsPayload"
     DomainValidationRequest:
       type: object
       required:

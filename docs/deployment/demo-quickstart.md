@@ -6,12 +6,12 @@ This guide gets a working PulseWard demo up with the fewest steps.
 
 - Docker Desktop installed and running
 - Node.js 20+
-- pnpm 9+
+- npm 10+ (pnpm is optional)
 
 ## One-Time Setup
 
 ```powershell
-pnpm install
+npm install
 ```
 
 Copy environment template and set required values:
@@ -23,7 +23,7 @@ Copy-Item .env.example .env
 ## Start Demo Stack
 
 ```powershell
-pnpm demo:up
+npm run demo:up
 ```
 
 ## Check Services
@@ -37,46 +37,62 @@ docker compose ps
 Run each command in a separate terminal:
 
 ```powershell
-pnpm start:auth
+npm run start:auth
 ```
 
 ```powershell
-pnpm start:notification
+npm run start:notification
 ```
 
 ```powershell
-pnpm start:appointment
+npm run start:appointment
 ```
 
 ## Start Landing Page
 
 ```powershell
-pnpm start:landing
+npm run start:landing
+```
+
+## Start Admin Console
+
+Build once, then serve static runtime:
+
+```powershell
+npm run install:admin
+npm run build:admin
+npm run start:admin
 ```
 
 ## Validate Runtime Contracts
 
 ```powershell
-pnpm integrations:validate
-pnpm test:routes
-pnpm test:smoke
+npm run contracts:check -- --strict
+npm run integrations:validate
+npm run test:routes
+npm run test
+npm run test:smoke
 ```
 
 ## Stop Demo Stack
 
 ```powershell
-pnpm demo:down
+npm run demo:down
 ```
 
 ## If Something Fails
 
 1. Restart Docker Desktop.
-2. Re-run `pnpm demo:up`.
+2. Re-run `npm run demo:up`.
 3. Check logs with:
 
 ```powershell
 docker compose logs --tail=100
 ```
+
+## Optional pnpm Equivalents
+
+If you prefer pnpm in this repository, all commands above can be run with `pnpm` equivalents.
 
 ## Cloud Demo Path (Easy Upgrade)
 

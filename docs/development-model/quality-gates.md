@@ -1,42 +1,57 @@
-# Quality Gates for PulseWard Hospital Management System
+# PulseWard Quality Gates
 
-## Overview
+## Purpose
 
-Quality gates are critical checkpoints in the development process that ensure the software meets predefined quality standards before moving to the next phase. In the PulseWard Hospital Management System (HMS), quality gates will be implemented at various stages of the iterative development model to maintain high standards of software quality, reliability, and performance.
+Quality gates define the minimum evidence required before merging and before release tagging.
 
-## Quality Gate Criteria
+## Merge Gate (Required for Feature PRs)
 
-### 1. Code Quality
+Run from repository root:
 
-- **Static Code Analysis**: Utilize tools like ESLint for JavaScript/TypeScript and Pylint for Python to enforce coding standards.
-- **Code Coverage**: Ensure a minimum of 80% code coverage for all services and applications using testing frameworks like Jest for JavaScript and pytest for Python.
+```powershell
+npm run lint
+npm run format:check
+npm run test:routes
+npm run test
+npm run contracts:check -- --strict
+```
 
-### 2. Performance Metrics
+Required outcomes:
 
-- **Response Time**: All API endpoints must respond within 200ms under normal load conditions.
-- **Load Testing**: Conduct load testing using tools like JMeter or Locust to ensure the system can handle expected user traffic.
+- No lint or formatting violations.
+- Route modules load without runtime import failures.
+- Unit and regression tests pass.
+- Contract parity reports no runtime/spec drift.
 
-### 3. Security Standards
+## Integration Gate (Required for Service-Integration Changes)
 
-- **Vulnerability Scanning**: Regularly scan the codebase for vulnerabilities using tools like Snyk or OWASP ZAP.
-- **Dependency Management**: Ensure all dependencies are up-to-date and free from known vulnerabilities.
+```powershell
+npm run integrations:validate
+npm run test:smoke
+```
 
-### 4. Compliance Checks
+Required outcomes:
 
-- **Regulatory Compliance**: Ensure that the system complies with healthcare regulations such as HIPAA and GDPR.
-- **Data Privacy**: Implement data encryption and access controls to protect sensitive patient information.
+- Tenant integration configuration passes schema validation.
+- Smoke tests pass for active platform routes.
 
-### 5. User Acceptance Testing (UAT)
+## Release Gate (Required Before Release Note Promotion)
 
-- **Stakeholder Review**: Conduct UAT sessions with stakeholders to gather feedback and ensure the system meets user needs.
-- **Bug Triage**: Establish a process for triaging and addressing bugs identified during UAT.
+1. Merge gate passed on release branch head.
+2. Integration gate passed on release branch head.
+3. Runbooks updated for any operational behavior change.
+4. API docs updated for any endpoint, payload, or error-shape change.
+5. Rollback notes documented in release note file.
 
-## Implementation Process
+## Milestone-Specific Gate Additions
 
-1. **Define Quality Gates**: Clearly outline the quality gates for each iteration and communicate them to the development team.
-2. **Integrate into CI/CD Pipeline**: Automate quality gate checks within the CI/CD pipeline using tools like GitHub Actions or Jenkins.
-3. **Monitor and Report**: Continuously monitor quality metrics and generate reports for stakeholders to review.
+- M1 contract hardening work must include parity matrix updates in `docs/api/endpoint-contract-coverage-matrix.md`.
+- M2+ auth/config work must include admin and ABHA readiness API docs updates.
+- M5 adapter work must include provider readiness and test-run instructions in deployment/runbook docs.
+- M6 experience surface work must include web/mobile operational startup documentation.
 
-## Conclusion
+## Operational Safety Rules
 
-Implementing quality gates in the PulseWard HMS will help ensure that the software is robust, secure, and meets the needs of its users. By adhering to these quality standards, the project aims to deliver a reliable and efficient hospital management system that enhances patient care and operational efficiency.
+- Never merge changes that expose credentials or patient identifiers in logs, fixtures, or docs.
+- Keep provider-specific logic in adapter modules, not domain cores.
+- Prefer additive API changes; if breaking behavior is unavoidable, include migration and rollback guidance.

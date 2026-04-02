@@ -1,44 +1,55 @@
-# Release Trains Documentation for PulseWard Hospital Management System
+# PulseWard Release Trains
 
-## Overview
+## Scope
 
-Release trains are a key component of the iterative development model used in the PulseWard Hospital Management System (HMS). This document outlines the structure, schedule, and processes involved in managing release trains to ensure timely and efficient delivery of features and improvements.
+PulseWard uses milestone-driven release trains aligned to `docs/ROADMAP-TODO.md`.
 
-## What are Release Trains?
+## Train Cadence
 
-Release trains are a method of organizing and scheduling software releases in a predictable manner. Each release train operates on a fixed schedule, allowing teams to plan their work around these timelines. This approach helps in managing dependencies, coordinating efforts across teams, and ensuring that all components of the system are ready for deployment.
+- Roadmap window: 20-28 weeks across M0 to M9.
+- Operational cadence: weekly integration checkpoints and milestone-bound release notes.
+- Contract parity checks run continuously in CI, not only at release time.
 
-## Objectives of Release Trains
+## Train Structure
 
-1. **Predictability**: Establish a regular release schedule that stakeholders can rely on.
-2. **Coordination**: Facilitate collaboration among different teams (e.g., development, QA, operations) to ensure all parts of the system are aligned for each release.
-3. **Quality Assurance**: Implement quality gates to ensure that only thoroughly tested and validated features are included in each release.
-4. **Feedback Loop**: Incorporate user feedback from each release to inform future development cycles.
+For each active milestone:
 
-## Release Train Schedule
+1. Slice planning and assumptions recorded.
+2. Implementation in small, verifiable commits.
+3. Tests and contract checks enforced.
+4. Docs updated in same milestone slice.
+5. Milestone summary committed and tagged where applicable.
 
-- **Frequency**: Release trains will occur every four weeks.
-- **Milestones**:
-  - **Week 1**: Feature freeze and code complete.
-  - **Week 2**: Testing and quality assurance.
-  - **Week 3**: User acceptance testing (UAT) and final adjustments.
-  - **Week 4**: Deployment to production and retrospective.
+## Commit and Tagging Policy
 
-## Roles and Responsibilities
+- Keep commits scoped to one logical slice (for example: M1 parity, M2 auth settings seed, M5 provider checks).
+- Use milestone-oriented commit messages:
+  - `feat(m1): ...`
+  - `test(m1): ...`
+  - `docs(m5): ...`
+- Tag major milestone checkpoints.
+  Existing examples:
+  - `m1.2-contract-parity`
+  - `m1.3-drift-reconciliation`
+  - `m1.4-strict-ci-parity`
+  - `m1.5-parity-regression-tests`
 
-- **Product Owner**: Defines the features and priorities for each release train.
-- **Development Team**: Responsible for implementing features and fixing bugs.
-- **QA Team**: Conducts testing to ensure quality and functionality.
-- **Operations Team**: Manages deployment and infrastructure readiness.
+## Entry Criteria for a Milestone Slice
 
-## Integration with AI Project Manager Agent
+- Contract and dependency impact is understood.
+- Affected service and adapter boundaries are identified.
+- Validation plan is defined before coding.
 
-The AI project manager agent will assist in managing the release trains by:
+## Exit Criteria for a Milestone Slice
 
-- **Tracking Progress**: Monitoring the status of tasks and milestones.
-- **Identifying Risks**: Analyzing potential risks and suggesting mitigation strategies.
-- **Facilitating Communication**: Ensuring that all stakeholders are informed of progress and changes.
+- Feature works across service boundaries.
+- Required quality gates pass.
+- API/runbook/release docs are updated.
+- Rollback path is documented when behavior changed.
 
-## Conclusion
+## Roles
 
-The implementation of release trains in the PulseWard HMS will enhance the development process by providing structure and predictability. By adhering to this model, the project aims to deliver high-quality software that meets the needs of its users while fostering collaboration among teams.
+- Product and architecture owner: approves scope and policy decisions.
+- Service owners: implement and validate runtime behavior.
+- Operations owner: validates runbooks, smoke readiness, and rollback safety.
+- AI delivery agent: accelerates implementation while preserving contracts and documentation parity.

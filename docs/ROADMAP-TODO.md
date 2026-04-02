@@ -286,4 +286,5 @@ Exit criteria:
 12. M2.4 completed: role/provider compatibility and tenant policy-driven session controls are enforced with regression coverage.
 13. M2.5 completed: OTP provider execution path and MFA policy enforcement for selected roles are implemented with regression coverage.
 14. M3.1 completed: auth policy outcomes now gate patient/clinical workflow entry and emit role-scoped session observability events with query filters.
-15. Active next slice (M3.2): deliver OPD management and appointments foundation by hardening patient profile lifecycle plus OPD intake and appointment-entry access semantics.
+15. M3.2 completed: OPD intake management and appointment-entry role semantics are implemented with contract and regression coverage.
+16. Active next slice (M3.3): harden EHR service CRUD and timeline/history integrity for clinical write paths.

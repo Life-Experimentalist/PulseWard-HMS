@@ -53,6 +53,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Workflow-entry policy outcomes (allow, role-denied, MFA-required, provider-policy-denied) are covered by auth regression tests.
 - Session event filtering by tenant, role, action, and outcome is covered by auth regression tests.
 
+## M3.2 OPD Management And Appointment Entry Coverage
+
+- Critical schema assertions include `POST /opd/entries` for OPD intake and draft appointment handoff in `appointment-service`.
+- Critical schema assertions for `POST /appointments` and `PUT /appointments/{id}` now enforce error-schema coverage for invalid payload and role-blocked entry semantics.
+- Regression tests cover OPD intake creation, OPD-to-appointment draft handoff, and appointment update role-access denial paths.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

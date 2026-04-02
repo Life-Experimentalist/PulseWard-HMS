@@ -1,7 +1,10 @@
 # PulseWard Landing Demo Console
 
-This folder now provides a fully interactive demo console for first-run setup, admin configuration,
-data interaction, backup/restore, and PWA notification testing.
+This folder contains the comprehensive landing demo with:
+
+- Interactive setup and tenant controls on the main console
+- Multi-page demo navigation for role and operations walkthroughs
+- Shared demo state hydration across pages using browser storage
 
 ## Run For Full Demo
 
@@ -11,15 +14,23 @@ data interaction, backup/restore, and PWA notification testing.
    - `npm run start:appointment`
 2. Start landing UI:
    - `npm run start:landing`
-3. Open:
+3. Open the landing page:
    - `http://localhost:4173`
+
+## Multi-Page Demo Routes
+
+- `index.html` (main console)
+- `pages/overview.html`
+- `pages/patient-journey.html`
+- `pages/clinician-journey.html`
+- `pages/operations-command.html`
 
 ## First-Time Test Flow
 
-1. Complete setup wizard with generic placeholders.
+1. Complete setup wizard with synthetic values.
 2. Select local mode for browser-only demo, or live mode for API-backed demo.
 3. Use Admin Configuration Center to toggle providers and endpoints.
-4. Create appointments and notifications from Data Lab.
+4. Open Demo Pages and validate role-based walkthroughs.
 5. Export backup JSON, then restore it.
 6. Enable browser notifications and run Simulate Server Push.
 

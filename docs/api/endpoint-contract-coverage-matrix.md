@@ -125,6 +125,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Runbook coverage now includes `docs/runbooks/abha-operational-readiness.md` and updated integration operations references for webhook and ABHA readiness workflows.
 - Regression tests cover webhook diagnostics healthy/degraded states and ABHA operational-readiness status behavior under incomplete config paths.
 
+## M5.3 Webhook Signature Verification And ABHA Evidence Automation Coverage
+
+- Notification runtime now exposes `POST /integrations/messaging/webhook/signature/verify` for tenant-scoped HMAC signature verification using configured webhook signing-secret references.
+- Notification webhook diagnostics now include a signature verification hint section with endpoint path, header contract, and signature format guidance.
+- Auth runtime now records ABHA health-check outcomes with stable `checkId` identifiers and exposes `GET /platform/abha/health-check/evidence` for incident drill evidence feeds.
+- Regression tests cover webhook signature verification pass/fail branches and ABHA health-check evidence retrieval under unreachable gateway conditions.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

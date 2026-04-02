@@ -10,6 +10,7 @@
 	- `GET /api/v1/integrations/messaging/whatsapp/config-status?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/email/config-status?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
+	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
 ## Weekly checks
 
@@ -19,6 +20,7 @@
 - For ABHA-enabled tenants, run:
 	- `GET /api/v1/platform/abha/config-status`
 	- `GET /api/v1/platform/abha/health-check`
+	- `GET /api/v1/platform/abha/health-check/evidence`
 	- `GET /api/v1/platform/abha/operational-readiness`
 
 ## Incident handling
@@ -38,7 +40,9 @@
 - Notification routing:
 	- `GET /api/v1/integrations/messaging/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
+	- `POST /api/v1/integrations/messaging/webhook/signature/verify`
 	- `POST /api/v1/integrations/messaging/test`
+	- `GET /api/v1/platform/abha/health-check/evidence`
 - Calendar routing:
 	- `GET /api/v1/integrations/calendars/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/calendars/interoperability/diagnostics?tenantKey={tenantKey}`

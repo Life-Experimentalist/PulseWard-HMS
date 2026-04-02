@@ -1,5 +1,6 @@
+var crypto = require("crypto");
 var express = require("express");
-var randomUUID = require("crypto").randomUUID;
+var randomUUID = crypto.randomUUID;
 var sendNotificationWithRouting =
   require("./integrations/send-notification-with-routing").sendNotificationWithRouting;
 var loadTenantIntegrationConfig =
@@ -118,6 +119,63 @@ function hasWebhookSigningSecret(parsedSecret) {
   }
 
   return Boolean(parsedSecret.signingSecret || parsedSecret.secret || parsedSecret.raw);
+}
+
+function getWebhookSigningSecret(parsedSecret) {
+  if (!parsedSecret) {
+    return "";
+  }
+
+  return String(parsedSecret.signingSecret || parsedSecret.secret || parsedSecret.raw || "").trim();
+}
+
+function normalizeWebhookSignatureInput(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function serializeWebhookPayload(payload) {
+  if (payload === undefined || payload === null) {
+    return "";
+  }
+
+  if (typeof payload === "string") {
+    return payload;
+  }
+
+  try {
+    return JSON.stringify(payload);
+  } catch (_error) {
+    return "";
+  }
+}
+
+function buildWebhookSignature(payloadString, signingSecret) {
+  return (
+    "sha256=" +
+    crypto
+      .createHmac("sha256", signingSecret)
+      .update(payloadString, "utf8")
+      .digest("hex")
+  );
+}
+
+function areWebhookSignaturesEqual(actualSignature, expectedSignature) {
+  var actual = normalizeWebhookSignatureInput(actualSignature);
+  var expected = normalizeWebhookSignatureInput(expectedSignature);
+
+  if (!actual || !expected) {
+    return false;
+  }
+
+  var actualBuffer = Buffer.from(actual, "utf8");
+  var expectedBuffer = Buffer.from(expected, "utf8");
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
 function findAppointmentReceiptByCorrelationId(correlationId) {
@@ -490,10 +548,7 @@ router.get("/integrations/messaging/webhook/diagnostics", function (req, res) {
   var endpointUrlValid = isWebhookEndpointUrlValid(endpoint);
   var channelCoverage = getWebhookChannelCoverage(config);
 
-  var signingSecretStatus = getProviderSecretStatus(
-    provider,
-    "INTEGRATION_WEBHOOK_SIGNING_SECRET"
-  );
+  var signingSecretStatus = getProviderSecretStatus(provider, "INTEGRATION_WEBHOOK_SIGNING_SECRET");
   var readinessStatus = getWebhookReadinessStatus(
     Boolean(provider && provider.enabled),
     endpointConfigured,
@@ -525,6 +580,67 @@ router.get("/integrations/messaging/webhook/diagnostics", function (req, res) {
         dryRun: false,
       },
     },
+    signatureVerification: {
+      endpoint: "POST /api/v1/integrations/messaging/webhook/signature/verify",
+      signatureHeader: "x-pulseward-signature",
+      signatureFormat: "sha256=<hex-hmac>",
+      samplePayload: {
+        eventType: "appointment.created",
+        appointmentId: "apt-1001",
+      },
+    },
+  });
+});
+
+router.post("/integrations/messaging/webhook/signature/verify", function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = payload.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, "generic-webhook");
+  var signingSecretStatus = getProviderSecretStatus(provider, "INTEGRATION_WEBHOOK_SIGNING_SECRET");
+  var signingSecret = getWebhookSigningSecret(signingSecretStatus.parsed);
+
+  if (!signingSecret) {
+    res.status(400).json({
+      valid: false,
+      tenantKey: tenantKey,
+      providerEnabled: Boolean(provider && provider.enabled),
+      secretKey: signingSecretStatus.secretKey,
+      detail: "Webhook signing secret is not configured",
+    });
+    return;
+  }
+
+  var providedSignature =
+    payload.signature || req.headers["x-pulseward-signature"] || req.headers["x-webhook-signature"];
+  if (!String(providedSignature || "").trim()) {
+    res.status(400).json({
+      valid: false,
+      tenantKey: tenantKey,
+      providerEnabled: Boolean(provider && provider.enabled),
+      secretKey: signingSecretStatus.secretKey,
+      detail: "signature is required in body.signature or x-pulseward-signature header",
+    });
+    return;
+  }
+
+  var serializedPayload = serializeWebhookPayload(payload.payload);
+  var expectedSignature = buildWebhookSignature(serializedPayload, signingSecret);
+  var valid = areWebhookSignaturesEqual(providedSignature, expectedSignature);
+
+  res.json({
+    valid: valid,
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    secretKey: signingSecretStatus.secretKey,
+    algorithm: "sha256",
+    signatureHeader: "x-pulseward-signature",
+    payloadBytes: Buffer.byteLength(serializedPayload, "utf8"),
+    expectedSignature: expectedSignature,
+    providedSignature: String(providedSignature),
+    detail: valid
+      ? "Signature is valid for configured webhook signing secret"
+      : "Signature verification failed",
   });
 });
 

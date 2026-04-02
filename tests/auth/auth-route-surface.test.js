@@ -141,7 +141,24 @@ describe("auth-service route surface coverage", () => {
     });
 
     expect(abhaHealthMissing.status).toBe(400);
+    expect(abhaHealthMissing.body.checkId).toBeTruthy();
     expect(abhaHealthMissing.body.reachable).toBe(false);
+
+    const abhaEvidence = await requestJson(
+      "/api/v1/platform/abha/health-check/evidence?limit=5&outcome=unreachable",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(abhaEvidence.status).toBe(200);
+    expect(abhaEvidence.body.outcomeFilter).toBe("unreachable");
+    expect(abhaEvidence.body.totalRecorded).toBeGreaterThan(0);
+    expect(abhaEvidence.body.summary.unreachableCount).toBeGreaterThan(0);
+    expect(Array.isArray(abhaEvidence.body.events)).toBe(true);
+    expect(abhaEvidence.body.automation.relatedEndpoints.healthCheck).toBe(
+      "GET /api/v1/platform/abha/health-check"
+    );
 
     const abhaOperationalReadiness = await requestJson(
       "/api/v1/platform/abha/operational-readiness",
@@ -154,6 +171,9 @@ describe("auth-service route surface coverage", () => {
     expect(abhaOperationalReadiness.body.enabled).toBe(true);
     expect(abhaOperationalReadiness.body.configured).toBe(false);
     expect(abhaOperationalReadiness.body.readinessStatus).toBe("at-risk");
+    expect(abhaOperationalReadiness.body.diagnostics.healthCheckEvidenceEndpoint).toBe(
+      "GET /api/v1/platform/abha/health-check/evidence"
+    );
     expect(abhaOperationalReadiness.body.runbook.document).toBe(
       "docs/runbooks/abha-operational-readiness.md"
     );

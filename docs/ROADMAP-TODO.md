@@ -305,4 +305,6 @@ Exit criteria:
 28. M5.1 evidence checkpoint: regression coverage now validates WhatsApp onboarding/config readiness and calendar interoperability diagnostics for both default and citycare tenant configs.
 29. M5.2 completed: website webhook diagnostics now expose routing coverage, endpoint validity, and signing-secret readiness status for integration operations.
 30. M5.2 evidence checkpoint: ABHA operational-readiness API and runbook coverage now provide setup/rollback diagnostics and operational checklists linked for daily and weekly runbook execution.
-31. M5.3 active next slice: harden website webhook signed delivery verification and ABHA gateway incident drill evidence automation.
+31. M5.3 completed: webhook signature verification endpoint now validates signed payloads against tenant signing-secret configuration, with diagnostics-linked verification guidance.
+32. M5.3 evidence checkpoint: ABHA health-check now records checkId-scoped outcomes and exposes `/platform/abha/health-check/evidence` for incident drill artifact automation.
+33. M5.4 active next slice: extend provider adapters with production delivery retry-policy controls and ABHA consent-flow simulation checkpoints.

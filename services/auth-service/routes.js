@@ -18,6 +18,8 @@ var users = [];
 var otpChallenges = new Map();
 var authSessionEvents = [];
 var maxAuthSessionEvents = 500;
+var abhaHealthCheckEvents = [];
+var maxAbhaHealthCheckEvents = 200;
 var roles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
 var workflowRoleMatrix = {
   "patient.profile.view": ["admin", "doctor", "nurse", "patient", "frontdesk"],
@@ -85,6 +87,47 @@ function recordAuthSessionEvent(entry) {
   }
 
   return event;
+}
+
+function recordAbhaHealthCheckEvent(entry) {
+  var event = {
+    checkId: randomUUID(),
+    checkedAt: new Date().toISOString(),
+    reachable: Boolean(entry && entry.reachable),
+    statusCode: Number(entry && entry.statusCode) || 0,
+    checkedUrl: (entry && entry.checkedUrl) || "",
+    latencyMs: Number(entry && entry.latencyMs) || 0,
+    timeoutMs: Number(entry && entry.timeoutMs) || 0,
+    detail: (entry && entry.detail) || "ABHA gateway check completed",
+    error: (entry && entry.error) || null,
+  };
+
+  abhaHealthCheckEvents.push(event);
+  if (abhaHealthCheckEvents.length > maxAbhaHealthCheckEvents) {
+    abhaHealthCheckEvents.shift();
+  }
+
+  return event;
+}
+
+function summarizeAbhaHealthCheckEvents(events) {
+  var reachableCount = 0;
+  var unreachableCount = 0;
+
+  events.forEach(function (event) {
+    if (event.reachable) {
+      reachableCount += 1;
+    } else {
+      unreachableCount += 1;
+    }
+  });
+
+  return {
+    reachableCount: reachableCount,
+    unreachableCount: unreachableCount,
+    totalCount: events.length,
+    lastCheckedAt: events.length > 0 ? events[0].checkedAt : null,
+  };
 }
 
 function getWorkflowAllowedRoles(workflowKey) {
@@ -862,7 +905,16 @@ router.get("/platform/abha/health-check", async function (req, res) {
     : 4000;
 
   if (!hasRealConfigValue(baseUrl)) {
+    var missingConfigResult = recordAbhaHealthCheckEvent({
+      reachable: false,
+      checkedUrl: baseUrl,
+      timeoutMs: boundedTimeout,
+      detail: "ABHA_GATEWAY_BASE_URL is not configured with a real gateway URL",
+      error: "ABHA_GATEWAY_BASE_URL_INVALID",
+    });
+
     res.status(400).json({
+      checkId: missingConfigResult.checkId,
       reachable: false,
       detail: "ABHA_GATEWAY_BASE_URL is not configured with a real gateway URL",
       checkedUrl: baseUrl,
@@ -875,7 +927,16 @@ router.get("/platform/abha/health-check", async function (req, res) {
   try {
     checkUrl = new URL("/", baseUrl).toString();
   } catch (_error) {
+    var invalidUrlResult = recordAbhaHealthCheckEvent({
+      reachable: false,
+      checkedUrl: baseUrl,
+      timeoutMs: boundedTimeout,
+      detail: "ABHA gateway URL is invalid",
+      error: "ABHA_GATEWAY_URL_INVALID",
+    });
+
     res.status(400).json({
+      checkId: invalidUrlResult.checkId,
       reachable: false,
       detail: "ABHA gateway URL is invalid",
       checkedUrl: baseUrl,
@@ -900,7 +961,7 @@ router.get("/platform/abha/health-check", async function (req, res) {
     });
     clearTimeout(timer);
 
-    res.json({
+    var successResult = recordAbhaHealthCheckEvent({
       reachable: response.ok,
       statusCode: response.status,
       checkedUrl: checkUrl,
@@ -909,10 +970,24 @@ router.get("/platform/abha/health-check", async function (req, res) {
       detail: response.ok
         ? "ABHA gateway responded successfully"
         : "ABHA gateway responded with non-2xx status",
+      error: null,
+    });
+
+    res.json({
+      checkId: successResult.checkId,
+      reachable: response.ok,
+      statusCode: response.status,
+      checkedUrl: checkUrl,
+      latencyMs: successResult.latencyMs,
+      timeoutMs: boundedTimeout,
+      detail: response.ok
+        ? "ABHA gateway responded successfully"
+        : "ABHA gateway responded with non-2xx status",
     });
   } catch (error) {
     clearTimeout(timer);
-    res.status(502).json({
+
+    var failedResult = recordAbhaHealthCheckEvent({
       reachable: false,
       statusCode: 0,
       checkedUrl: checkUrl,
@@ -921,7 +996,55 @@ router.get("/platform/abha/health-check", async function (req, res) {
       detail: "ABHA gateway check failed",
       error: error && error.message ? error.message : "Unknown ABHA health-check error",
     });
+
+    res.status(502).json({
+      checkId: failedResult.checkId,
+      reachable: false,
+      statusCode: 0,
+      checkedUrl: checkUrl,
+      latencyMs: failedResult.latencyMs,
+      timeoutMs: boundedTimeout,
+      detail: "ABHA gateway check failed",
+      error: error && error.message ? error.message : "Unknown ABHA health-check error",
+    });
   }
+});
+
+router.get("/platform/abha/health-check/evidence", function (req, res) {
+  var limit = Number(req.query.limit || 20);
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 20;
+  var outcome = String(req.query.outcome || "all")
+    .trim()
+    .toLowerCase();
+
+  var filtered = abhaHealthCheckEvents.filter(function (event) {
+    if (outcome === "reachable") {
+      return event.reachable;
+    }
+
+    if (outcome === "unreachable") {
+      return !event.reachable;
+    }
+
+    return true;
+  });
+
+  var items = filtered.slice(-boundedLimit).reverse();
+
+  res.json({
+    totalRecorded: abhaHealthCheckEvents.length,
+    returned: items.length,
+    outcomeFilter: outcome,
+    summary: summarizeAbhaHealthCheckEvents(filtered),
+    events: items,
+    automation: {
+      captureHint: "Export this payload into ABHA incident drill evidence artifacts",
+      relatedEndpoints: {
+        healthCheck: "GET /api/v1/platform/abha/health-check",
+        operationalReadiness: "GET /api/v1/platform/abha/operational-readiness",
+      },
+    },
+  });
 });
 
 router.get("/platform/abha/operational-readiness", function (_req, res) {
@@ -952,6 +1075,7 @@ router.get("/platform/abha/operational-readiness", function (_req, res) {
     diagnostics: {
       configStatusEndpoint: "GET /api/v1/platform/abha/config-status",
       gatewayHealthEndpoint: "GET /api/v1/platform/abha/health-check",
+      healthCheckEvidenceEndpoint: "GET /api/v1/platform/abha/health-check/evidence",
       healthCheckTimeoutMsDefault: 4000,
     },
     runbook: {

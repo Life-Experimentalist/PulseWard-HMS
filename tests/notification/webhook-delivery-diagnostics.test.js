@@ -1,4 +1,5 @@
 const express = require("express");
+const { createHmac } = require("crypto");
 
 const notificationRoutes = require("../../services/notification-service/routes");
 
@@ -84,5 +85,52 @@ describe("notification webhook delivery diagnostics", () => {
     expect(diagnostics.body.endpointUrlValid).toBe(false);
     expect(diagnostics.body.readinessStatus).toBe("degraded");
     expect(diagnostics.body.signingSecret.configured).toBe(false);
+  });
+
+  test("verifies webhook signatures against configured secret", async () => {
+    delete process.env.INTEGRATION_WEBHOOK_ENDPOINT;
+    process.env.INTEGRATION_WEBHOOK_SIGNING_SECRET = "m5-3-signing-secret";
+
+    const payload = {
+      eventType: "appointment.created",
+      appointmentId: "apt-1001",
+      tenantKey: "default",
+    };
+    const signature = `sha256=${createHmac("sha256", "m5-3-signing-secret")
+      .update(JSON.stringify(payload), "utf8")
+      .digest("hex")}`;
+
+    const verified = await requestJson("/api/v1/integrations/messaging/webhook/signature/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey: "default",
+        payload,
+        signature,
+      }),
+    });
+
+    expect(verified.status).toBe(200);
+    expect(verified.body.valid).toBe(true);
+    expect(verified.body.algorithm).toBe("sha256");
+    expect(verified.body.signatureHeader).toBe("x-pulseward-signature");
+
+    const invalid = await requestJson("/api/v1/integrations/messaging/webhook/signature/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey: "default",
+        payload,
+        signature: "sha256=invalid-signature",
+      }),
+    });
+
+    expect(invalid.status).toBe(200);
+    expect(invalid.body.valid).toBe(false);
+    expect(invalid.body.detail).toContain("failed");
   });
 });

@@ -285,6 +285,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookDiagnosticsResponse"
+  /integrations/messaging/webhook/signature/verify:
+    post:
+      summary: Verify website webhook signature against configured signing secret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSignatureVerifyRequest"
+      responses:
+        "200":
+          description: Signature verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSignatureVerifyResponse"
+        "400":
+          description: Missing signing secret or missing signature input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSignatureVerifyResponse"
 components:
   schemas:
     Notification:
@@ -644,6 +666,72 @@ components:
         recommendedPayload:
           type: object
           additionalProperties: true
+    WebhookSignatureVerificationHint:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/webhook/signature/verify
+        signatureHeader:
+          type: string
+          example: x-pulseward-signature
+        signatureFormat:
+          type: string
+          example: sha256=<hex-hmac>
+        samplePayload:
+          type: object
+          additionalProperties: true
+    WebhookSignatureVerifyRequest:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        signature:
+          type: string
+          example: sha256=ab12cd34
+        payload:
+          description: Raw string or JSON object used for HMAC verification.
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: true
+      required:
+        - payload
+        - signature
+    WebhookSignatureVerifyResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: true
+        tenantKey:
+          type: string
+          example: default
+        providerEnabled:
+          type: boolean
+          example: true
+        secretKey:
+          type: string
+          example: INTEGRATION_WEBHOOK_SIGNING_SECRET
+        algorithm:
+          type: string
+          example: sha256
+        signatureHeader:
+          type: string
+          example: x-pulseward-signature
+        payloadBytes:
+          type: integer
+          example: 78
+        expectedSignature:
+          type: string
+          example: sha256=ab12cd34
+        providedSignature:
+          type: string
+          example: sha256=ab12cd34
+        detail:
+          type: string
+          example: Signature is valid for configured webhook signing secret
     WebhookDiagnosticsResponse:
       type: object
       properties:
@@ -675,3 +763,5 @@ components:
           $ref: "#/components/schemas/WebhookSigningSecretStatus"
         deliveryTest:
           $ref: "#/components/schemas/WebhookDeliveryTestHint"
+        signatureVerification:
+          $ref: "#/components/schemas/WebhookSignatureVerificationHint"

@@ -391,6 +391,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/AbhaHealthCheckResponse"
 
+  /platform/abha/health-check/evidence:
+    get:
+      summary: Retrieve ABHA gateway health-check evidence for incident drills
+      tags:
+        - Platform Domains
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: outcome
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - reachable
+              - unreachable
+            default: all
+      responses:
+        "200":
+          description: ABHA health-check evidence feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaHealthCheckEvidenceResponse"
+
   /platform/abha/operational-readiness:
     get:
       summary: Get ABHA operational readiness checklist and diagnostics summary
@@ -1090,6 +1122,10 @@ components:
     AbhaHealthCheckResponse:
       type: object
       properties:
+        checkId:
+          type: string
+          format: uuid
+          example: 8f727f84-6d14-40cb-8d85-ff6c4d52fe61
         reachable:
           type: boolean
           example: true
@@ -1112,6 +1148,85 @@ components:
           type: string
           nullable: true
           example: connect ETIMEDOUT
+    AbhaHealthCheckEvidenceEvent:
+      type: object
+      properties:
+        checkId:
+          type: string
+          format: uuid
+        checkedAt:
+          type: string
+          format: date-time
+        reachable:
+          type: boolean
+        statusCode:
+          type: integer
+          example: 200
+        checkedUrl:
+          type: string
+          example: https://abha-gateway.example.com/
+        latencyMs:
+          type: integer
+          example: 142
+        timeoutMs:
+          type: integer
+          example: 4000
+        detail:
+          type: string
+        error:
+          type: string
+          nullable: true
+    AbhaHealthCheckEvidenceSummary:
+      type: object
+      properties:
+        reachableCount:
+          type: integer
+          example: 6
+        unreachableCount:
+          type: integer
+          example: 2
+        totalCount:
+          type: integer
+          example: 8
+        lastCheckedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AbhaHealthCheckEvidenceAutomation:
+      type: object
+      properties:
+        captureHint:
+          type: string
+          example: Export this payload into ABHA incident drill evidence artifacts
+        relatedEndpoints:
+          type: object
+          properties:
+            healthCheck:
+              type: string
+              example: GET /api/v1/platform/abha/health-check
+            operationalReadiness:
+              type: string
+              example: GET /api/v1/platform/abha/operational-readiness
+    AbhaHealthCheckEvidenceResponse:
+      type: object
+      properties:
+        totalRecorded:
+          type: integer
+          example: 12
+        returned:
+          type: integer
+          example: 5
+        outcomeFilter:
+          type: string
+          example: all
+        summary:
+          $ref: "#/components/schemas/AbhaHealthCheckEvidenceSummary"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbhaHealthCheckEvidenceEvent"
+        automation:
+          $ref: "#/components/schemas/AbhaHealthCheckEvidenceAutomation"
     AbhaOperationalReadinessChecks:
       type: object
       properties:
@@ -1136,6 +1251,9 @@ components:
         gatewayHealthEndpoint:
           type: string
           example: GET /api/v1/platform/abha/health-check
+        healthCheckEvidenceEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check/evidence
         healthCheckTimeoutMsDefault:
           type: integer
           example: 4000

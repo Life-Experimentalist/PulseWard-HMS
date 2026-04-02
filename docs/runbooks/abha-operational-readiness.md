@@ -21,6 +21,8 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
   - `GET /api/v1/platform/abha/config-status`
 - Gateway reachability:
   - `GET /api/v1/platform/abha/health-check`
+- Incident-drill evidence feed:
+  - `GET /api/v1/platform/abha/health-check/evidence`
 - Operational readiness summary:
   - `GET /api/v1/platform/abha/operational-readiness`
 
@@ -35,7 +37,8 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
 1. Run operational-readiness endpoint and archive output in ops notes.
 2. Run health-check with bounded timeout:
    - `GET /api/v1/platform/abha/health-check?timeoutMs=4000`
-3. Confirm no secret-key drift between tenant config and deployment secret store.
+3. Capture `checkId` from each health-check and verify evidence feed includes the same check outcomes.
+4. Confirm no secret-key drift between tenant config and deployment secret store.
 
 ## Incident Triage
 
@@ -53,5 +56,6 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
 ## Evidence To Capture
 
 - Timestamped output from all readiness endpoints.
+- Health-check `checkId` values plus corresponding `/health-check/evidence` records.
 - Environment mode (`sandbox` or `production`) at incident time.
 - Applied remediation and post-fix health-check evidence.

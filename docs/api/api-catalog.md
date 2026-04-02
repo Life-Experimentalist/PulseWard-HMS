@@ -83,17 +83,30 @@ OPD management alignment:
 - OPD registration and frontdesk scheduling flows should be implemented on top of the appointment lifecycle endpoints below.
 - OPD workflow milestones should treat create/update/cancel appointment operations as the canonical scheduling surface.
 
-| Method | Endpoint                            | Purpose                                                                 |
-| ------ | ----------------------------------- | ----------------------------------------------------------------------- |
-| GET    | `/appointments`                     | List appointments.                                                      |
-| GET    | `/appointments/{id}`                | Fetch appointment by id.                                                |
+| Method | Endpoint                            | Purpose                                                                   |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------- |
+| GET    | `/appointments`                     | List appointments.                                                        |
+| GET    | `/appointments/{id}`                | Fetch appointment by id.                                                  |
 | POST   | `/appointments`                     | Create appointment with role-scoped entry checks and OPD linkage support. |
-| PUT    | `/appointments/{id}`                | Update appointment with role-scoped entry checks.                       |
-| DELETE | `/appointments/{id}`                | Cancel appointment with role-scoped entry checks.                       |
-| GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.             |
-| POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.         |
-| GET    | `/integrations/calendars/providers` | List calendar providers.                                                |
-| POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                             |
+| PUT    | `/appointments/{id}`                | Update appointment with role-scoped entry checks.                         |
+| DELETE | `/appointments/{id}`                | Cancel appointment with role-scoped entry checks.                         |
+| GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.                |
+| POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.           |
+| GET    | `/integrations/calendars/providers` | List calendar providers.                                                  |
+| POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                               |
+
+## EHR Service Highlights
+
+Under `/ehr` (also mounted at `/api/ehr`):
+
+| Method | Endpoint                 | Purpose                                                                       |
+| ------ | ------------------------ | ----------------------------------------------------------------------------- |
+| GET    | `/records`               | List EHR records with patient/tenant filters and deleted-record controls.     |
+| POST   | `/records`               | Create EHR record with actor-role validation and timeline seed event.         |
+| GET    | `/records/{id}`          | Retrieve EHR record by record id (with optional deleted-record visibility).   |
+| PUT    | `/records/{id}`          | Update EHR record with optimistic version checks for write-path integrity.    |
+| DELETE | `/records/{id}`          | Soft-delete EHR record while preserving timeline continuity.                  |
+| GET    | `/records/{id}/timeline` | Fetch immutable timeline/history events for clinical create/update/delete flow. |
 
 ## ABHA References
 

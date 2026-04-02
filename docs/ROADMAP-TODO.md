@@ -287,5 +287,6 @@ Exit criteria:
 13. M2.5 completed: OTP provider execution path and MFA policy enforcement for selected roles are implemented with regression coverage.
 14. M3.1 completed: auth policy outcomes now gate patient/clinical workflow entry and emit role-scoped session observability events with query filters.
 15. M3.2 completed: OPD intake management and appointment-entry role semantics are implemented with contract and regression coverage.
-16. Active next slice (M3.3): harden EHR service CRUD and timeline/history integrity for clinical write paths.
+16. M3.3 completed: EHR CRUD now enforces version-safe clinical write semantics with immutable timeline/history integrity.
 17. Demo checkpoint: rudimentary OPD and appointments demo is available after M3.2 via `npm run demo:opd` once appointment-service is running.
+18. Active next slice (M3.4): implement prescription lifecycle handoff across EHR and pharmacy integration touchpoints.

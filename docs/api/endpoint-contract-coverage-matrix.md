@@ -9,7 +9,7 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 | appointment-service  | /api/v1 (also mounted at /api)  | services/appointment-service/routes.js  | services/appointment-service/openapi.yaml  | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
 | notification-service | /api/v1 (also mounted at /api)  | services/notification-service/routes.js | services/notification-service/openapi.yaml | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
 | patient-service      | /api/patients                   | services/patient-service/src            | services/patient-service/openapi.yaml      | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
-| ehr-service          | /ehr/records/{id}               | services/ehr-service/src                | services/ehr-service/openapi.yaml          | covered         | parity pass   | Runtime routes and OpenAPI are reconciled on /ehr/records/{id}.                        |
+| ehr-service          | /ehr/records/{id}               | services/ehr-service/routes.js          | services/ehr-service/openapi.yaml          | covered         | parity pass   | Runtime routes and OpenAPI are reconciled for EHR CRUD and timeline history paths.      |
 | lab-service          | /api/lab-tests                  | services/lab-service/src                | services/lab-service/openapi.yaml          | covered         | parity pass   | Runtime paths and OpenAPI model are reconciled under /api/lab-tests.                   |
 | pharmacy-service     | /api/pharmacy                   | services/pharmacy-service/src           | services/pharmacy-service/openapi.yaml     | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
 | billing-service      | /billing                        | services/billing-service/src            | services/billing-service/openapi.yaml      | covered         | parity pass   | Runtime CRUD endpoints and OpenAPI are reconciled for /billing and /billing/{id}.      |
@@ -58,6 +58,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Critical schema assertions include `POST /opd/entries` for OPD intake and draft appointment handoff in `appointment-service`.
 - Critical schema assertions for `POST /appointments` and `PUT /appointments/{id}` now enforce error-schema coverage for invalid payload and role-blocked entry semantics.
 - Regression tests cover OPD intake creation, OPD-to-appointment draft handoff, and appointment update role-access denial paths.
+
+## M3.3 EHR Clinical Write Integrity Coverage
+
+- Critical schema assertions include `POST /ehr/records`, `PUT /ehr/records/{id}`, and `GET /ehr/records/{id}/timeline` in `ehr-service`.
+- EHR runtime now enforces actor-role requirements and optimistic version checks for clinical write paths.
+- Regression tests cover create/update/delete timeline sequence integrity and version-conflict behavior.
 
 ## Current Allowlisted Drifts
 

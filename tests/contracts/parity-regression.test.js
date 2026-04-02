@@ -13,7 +13,9 @@ describe("M1 parity regression guard", () => {
 
     expect(result.status).toBe(0);
     expect(combinedOutput).toContain("Mode: strict");
-    expect(combinedOutput).toContain("Contract check passed: presence and parity checks are within baseline.");
+    expect(combinedOutput).toContain(
+      "Contract check passed: presence and parity checks are within baseline."
+    );
   });
 
   test("previously drifted services remain parity clean", () => {

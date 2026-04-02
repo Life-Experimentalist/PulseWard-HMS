@@ -13,7 +13,8 @@ const serviceChecks = [
     openapiSpecSource: "services/api-gateway/openapi.yaml",
     coverageStatus: "covered",
     parityPractical: true,
-    notes: "Runtime gateway handlers and OpenAPI operations are aligned for core auth, patient, and appointment routes.",
+    notes:
+      "Runtime gateway handlers and OpenAPI operations are aligned for core auth, patient, and appointment routes.",
   },
   {
     service: "auth-service",

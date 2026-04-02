@@ -46,6 +46,7 @@
     "audit:fix": "npm audit fix",
     "demo:up": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-up.ps1",
     "demo:down": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-down.ps1",
+    "demo:opd": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-opd-flow.ps1",
     "visuals:generate": "node ./scripts/generate-mermaid-visuals.mjs",
     "integrations:validate": "node ./scripts/validate-integration-config.mjs"
   },

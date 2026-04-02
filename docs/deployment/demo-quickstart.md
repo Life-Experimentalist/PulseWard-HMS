@@ -2,6 +2,14 @@
 
 This guide gets a working PulseWard demo up with the fewest steps.
 
+## Demo Readiness By Milestone
+
+- M2.5: Identity and policy demo (login, OAuth policy checks, OTP/MFA flow).
+- M3.2: Rudimentary OPD and appointments demo (OPD intake, appointment draft handoff, role-scoped appointment entry).
+- M4+: Scheduling reliability and notification resilience demo.
+
+Recommended answer for rudimentary demo start point: M3.2.
+
 ## Prerequisites
 
 - Docker Desktop installed and running
@@ -46,6 +54,26 @@ npm run start:notification
 
 ```powershell
 npm run start:appointment
+```
+
+## Rudimentary OPD Demo (M3.2)
+
+After appointment service is running, run:
+
+```powershell
+npm run demo:opd
+```
+
+What this demo shows:
+
+- OPD intake creation using `POST /api/v1/opd/entries`.
+- Automatic appointment draft handoff from OPD intake.
+- Role-scoped access behavior on appointment updates (blocked and allowed paths).
+
+If you are running via Docker port mapping, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ./scripts/demo-opd-flow.ps1 -BaseUrl "http://localhost:8083/api/v1"
 ```
 
 ## Start Landing Page

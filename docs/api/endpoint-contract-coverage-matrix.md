@@ -32,6 +32,11 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `notification-service`
 - Any missing critical schema block fails the contract check and CI.
 
+## M2.3 Auth Policy Guardrail Coverage
+
+- Critical schema assertions now include auth policy-enforced login and OAuth flow endpoints in `auth-service`.
+- Policy enforcement denial responses are documented and verified with schema checks for `403` paths.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -298,7 +298,9 @@ Exit criteria:
 21. M4.1 completed: appointment-service now enforces lifecycle state transitions, slot-conflict detection, idempotent create retries, and optimistic version checks.
 22. M4.2 completed: appointment-service now emits lifecycle events to notification-service with correlation-id propagation, bounded retries, and dispatch audit visibility.
 23. M4.3 completed (Test Coverage Completion Module): expanded route-edge, provider-adapter, shared-utils, and cross-service dispatch/ingestion test coverage so new functions and critical branches ship with unit and integration validation.
-24. M4.3 evidence checkpoint: full suite now reports 21 passing suites, 70 passing tests, and approximately 63.10% statements / 59.68% branches / 65.01% functions / 63.77% lines coverage.
+24. M4.3 evidence checkpoint: full suite now reports 23 passing suites, 74 passing tests, and approximately 65.08% statements / 60.86% branches / 67.98% functions / 65.71% lines coverage.
 25. M4.4 completed: appointment-service now records dead-letter entries for skipped, failed, and delayed reminder dispatches with queryable dead-letter filters and bounded retention controls.
 26. M4.4 evidence checkpoint: dispatch telemetry endpoint now exposes missed/delayed reminder counters, dead-letter totals, and event-type reliability summaries for operational monitoring.
-27. M5.1 active next slice: complete connector adapter hardening for Telegram/WhatsApp onboarding and calendar interoperability diagnostics.
+27. M5.1 completed: connector diagnostics now include WhatsApp setup/config-status readiness paths and calendar interoperability diagnostics for default/fallback routing health.
+28. M5.1 evidence checkpoint: regression coverage now validates WhatsApp onboarding/config readiness and calendar interoperability diagnostics for both default and citycare tenant configs.
+29. M5.2 active next slice: harden website webhook delivery diagnostics and ABHA adapter operational readiness runbook coverage.

@@ -76,6 +76,8 @@ Under `/api/v1`:
 | POST   | `/integrations/messaging/test`                   | Trigger provider test delivery (dry run or live). |
 | GET    | `/integrations/messaging/telegram/setup`         | Telegram bootstrap checklist.                     |
 | GET    | `/integrations/messaging/telegram/config-status` | Telegram secret/config readiness.                 |
+| GET    | `/integrations/messaging/whatsapp/setup`         | WhatsApp Cloud onboarding checklist.              |
+| GET    | `/integrations/messaging/whatsapp/config-status` | WhatsApp secret/config readiness.                 |
 | GET    | `/integrations/messaging/email/config-status`    | SMTP secret/config readiness.                     |
 
 ## Appointment Service Highlights
@@ -86,20 +88,21 @@ OPD management alignment:
 - OPD registration and frontdesk scheduling flows should be implemented on top of the appointment lifecycle endpoints below.
 - OPD workflow milestones should treat create/update/cancel appointment operations as the canonical scheduling surface.
 
-| Method | Endpoint                                      | Purpose                                                                                            |
-| ------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/appointments`                               | List appointments.                                                                                 |
-| GET    | `/appointments/{id}`                          | Fetch appointment by id.                                                                           |
-| POST   | `/appointments`                               | Create appointment with role checks, idempotent retry handling, and slot-conflict validation.      |
-| PUT    | `/appointments/{id}`                          | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
-| DELETE | `/appointments/{id}`                          | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics).           |
-| GET    | `/opd/entries`                                | List OPD intake entries with tenant/status/triage filters.                                         |
-| POST   | `/opd/entries`                                | Create OPD intake entry and optional appointment draft handoff.                                    |
-| GET    | `/integrations/calendars/providers`           | List calendar providers.                                                                           |
-| POST   | `/integrations/calendars/test`                | Test calendar booking flow.                                                                        |
-| GET    | `/integrations/notifications/dispatch-events` | List lifecycle notification dispatch attempts for delivery audit/debug.                            |
-| GET    | `/integrations/notifications/dead-letter`     | List dead-letter records for missed or delayed reminder dispatch workflows.                        |
-| GET    | `/integrations/notifications/dispatch-telemetry` | Return dispatch reliability counters and missed/delayed reminder telemetry summaries.            |
+| Method | Endpoint                                         | Purpose                                                                                            |
+| ------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| GET    | `/appointments`                                  | List appointments.                                                                                 |
+| GET    | `/appointments/{id}`                             | Fetch appointment by id.                                                                           |
+| POST   | `/appointments`                                  | Create appointment with role checks, idempotent retry handling, and slot-conflict validation.      |
+| PUT    | `/appointments/{id}`                             | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
+| DELETE | `/appointments/{id}`                             | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics).           |
+| GET    | `/opd/entries`                                   | List OPD intake entries with tenant/status/triage filters.                                         |
+| POST   | `/opd/entries`                                   | Create OPD intake entry and optional appointment draft handoff.                                    |
+| GET    | `/integrations/calendars/providers`              | List calendar providers.                                                                           |
+| POST   | `/integrations/calendars/test`                   | Test calendar booking flow.                                                                        |
+| GET    | `/integrations/calendars/interoperability/diagnostics` | Report calendar routing fallback and interoperability readiness diagnostics.                 |
+| GET    | `/integrations/notifications/dispatch-events`    | List lifecycle notification dispatch attempts for delivery audit/debug.                            |
+| GET    | `/integrations/notifications/dead-letter`        | List dead-letter records for missed or delayed reminder dispatch workflows.                        |
+| GET    | `/integrations/notifications/dispatch-telemetry` | Return dispatch reliability counters and missed/delayed reminder telemetry summaries.              |
 
 Lifecycle reliability notes:
 - Appointment lifecycle states are transition-guarded (`pending-triage -> scheduled -> checked-in -> in-consultation -> completed`) with controlled cancel/no-show paths.
@@ -108,6 +111,7 @@ Lifecycle reliability notes:
 - Lifecycle events are dispatched to notification-service with propagated correlation-id and retry-safe delivery semantics.
 - Dispatch dead-letter records now capture endpoint-not-configured, retry-exhausted, and late-delivery reminder outcomes.
 - Dispatch telemetry counters now report missed and delayed reminder trends for operational alerting workflows.
+- Calendar interoperability diagnostics now expose default/fallback routing readiness and cross-provider handoff signals.
 
 ## EHR Service Highlights
 

@@ -111,6 +111,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Appointment runtime now exposes `GET /integrations/notifications/dispatch-telemetry` with counters for total, delivered, failed, skipped, dead-lettered, missed reminders, and delayed reminders plus event-type summaries.
 - Regression tests cover skipped endpoint-not-configured behavior, failed retry-exhausted behavior, delayed-delivery telemetry counters, and late-delivery dead-letter records.
 
+## M5.1 Connector Diagnostics Hardening Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/whatsapp/setup` and `GET /integrations/messaging/whatsapp/config-status` to validate WhatsApp onboarding readiness and secret-backed config state.
+- Notification runtime now centralizes provider secret-ref parsing for Telegram, WhatsApp, and SMTP status checks to reduce diagnostics drift across connectors.
+- Appointment runtime now exposes `GET /integrations/calendars/interoperability/diagnostics` with routing-order, fallback, unresolved-provider, and interoperability-health diagnostics.
+- Regression tests cover WhatsApp setup/config readiness paths and calendar interoperability diagnostics for default and citycare tenant configurations.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

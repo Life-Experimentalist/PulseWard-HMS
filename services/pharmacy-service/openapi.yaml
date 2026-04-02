@@ -1,10 +1,11 @@
 openapi: 3.0.0
 info:
   title: PulseWard Pharmacy Service API
-  description: API for managing medication prescriptions and inventory in the PulseWard Hospital Management System.
-  version: 1.0.0
+  description: API for medication inventory and prescription handoff lifecycle operations.
+  version: 1.2.0
 servers:
-  - url: http://localhost:5000/api/v1
+  - url: http://localhost:5106/api/pharmacy
+    description: Development server
 paths:
   /medications:
     get:
@@ -25,7 +26,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Medication"
+              $ref: "#/components/schemas/MedicationCreateRequest"
       responses:
         "201":
           description: Medication created
@@ -40,7 +41,6 @@ paths:
         - name: id
           in: path
           required: true
-          description: The ID of the medication
           schema:
             type: string
       responses:
@@ -52,13 +52,16 @@ paths:
                 $ref: "#/components/schemas/Medication"
         "404":
           description: Medication not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
     put:
       summary: Update a medication
       parameters:
         - name: id
           in: path
           required: true
-          description: The ID of the medication
           schema:
             type: string
       requestBody:
@@ -66,7 +69,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Medication"
+              $ref: "#/components/schemas/MedicationCreateRequest"
       responses:
         "200":
           description: Medication updated
@@ -76,13 +79,16 @@ paths:
                 $ref: "#/components/schemas/Medication"
         "404":
           description: Medication not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
     delete:
       summary: Delete a medication
       parameters:
         - name: id
           in: path
           required: true
-          description: The ID of the medication
           schema:
             type: string
       responses:
@@ -90,6 +96,116 @@ paths:
           description: Medication deleted
         "404":
           description: Medication not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
+  /prescriptions:
+    get:
+      summary: List prescription orders in pharmacy queue
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [received, accepted, dispensing, ready, fulfilled, rejected, cancelled]
+      responses:
+        "200":
+          description: Prescription orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPrescriptionListResponse"
+  /prescriptions/{id}:
+    get:
+      summary: Get prescription order details by order id or prescription id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Prescription order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPrescriptionOrder"
+        "404":
+          description: Prescription order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
+  /prescriptions/handoff:
+    post:
+      summary: Receive prescription handoff from EHR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PharmacyPrescriptionHandoffRequest"
+      responses:
+        "201":
+          description: Prescription order created in pharmacy queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPrescriptionOrder"
+        "400":
+          description: Invalid handoff payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
+        "409":
+          description: Prescription handoff already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
+  /prescriptions/{id}/status:
+    put:
+      summary: Update prescription lifecycle status in pharmacy queue
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PharmacyPrescriptionStatusRequest"
+      responses:
+        "200":
+          description: Prescription status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPrescriptionOrder"
+        "400":
+          description: Invalid status payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
+        "404":
+          description: Prescription order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyErrorResponse"
 components:
   schemas:
     Medication:
@@ -97,17 +213,189 @@ components:
       properties:
         id:
           type: string
-          example: "med123"
+          example: med-1001
         name:
           type: string
-          example: "Aspirin"
+          example: Aspirin
         dosage:
           type: string
-          example: "500mg"
+          example: 500mg
         quantity:
           type: integer
           example: 100
         expirationDate:
           type: string
           format: date
-          example: "2025-12-31"
+          nullable: true
+          example: "2026-12-31"
+    MedicationCreateRequest:
+      type: object
+      required:
+        - name
+        - dosage
+        - quantity
+      properties:
+        id:
+          type: string
+          example: med-1001
+        name:
+          type: string
+          example: Aspirin
+        dosage:
+          type: string
+          example: 500mg
+        quantity:
+          type: integer
+          example: 100
+        expirationDate:
+          type: string
+          format: date
+          example: "2026-12-31"
+    PharmacyPrescriptionOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ord-1001
+        prescriptionId:
+          type: string
+          example: rx-1001
+        ehrRecordId:
+          type: string
+          example: rec-1001
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        medicationName:
+          type: string
+          example: Amoxicillin
+        dosage:
+          type: string
+          example: 500mg
+        frequency:
+          type: string
+          example: twice daily
+        durationDays:
+          type: integer
+          example: 5
+        notes:
+          type: string
+          example: Take after meals
+        status:
+          type: string
+          enum: [received, accepted, dispensing, ready, fulfilled, rejected, cancelled]
+          example: received
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyPrescriptionHistoryEvent"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PharmacyPrescriptionHistoryEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          example: evt-1001
+        status:
+          type: string
+          enum: [received, accepted, dispensing, ready, fulfilled, rejected, cancelled]
+          example: accepted
+        actorRole:
+          type: string
+          example: pharmacist
+        occurredAt:
+          type: string
+          format: date-time
+    PharmacyPrescriptionListResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyPrescriptionOrder"
+        total:
+          type: integer
+          example: 1
+    PharmacyPrescriptionHandoffRequest:
+      type: object
+      required:
+        - actorRole
+        - prescriptionId
+        - ehrRecordId
+        - patientId
+        - medicationName
+      properties:
+        orderId:
+          type: string
+          example: ord-1001
+        actorRole:
+          type: string
+          enum: [doctor, nurse, admin, operations]
+          example: doctor
+        prescriptionId:
+          type: string
+          example: rx-1001
+        ehrRecordId:
+          type: string
+          example: rec-1001
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        medicationName:
+          type: string
+          example: Amoxicillin
+        dosage:
+          type: string
+          example: 500mg
+        frequency:
+          type: string
+          example: twice daily
+        durationDays:
+          type: integer
+          example: 5
+        notes:
+          type: string
+          example: Take after meals
+    PharmacyPrescriptionStatusRequest:
+      type: object
+      required:
+        - actorRole
+        - status
+      properties:
+        actorRole:
+          type: string
+          enum: [pharmacist, admin, operations]
+          example: pharmacist
+        status:
+          type: string
+          enum: [received, accepted, dispensing, ready, fulfilled, rejected, cancelled]
+          example: fulfilled
+    PharmacyErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Prescription order not found
+        code:
+          type: string
+          example: PHARMACY_PRESCRIPTION_NOT_FOUND
+        details:
+          type: object
+          additionalProperties: true

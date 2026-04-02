@@ -5,6 +5,7 @@ var router = express.Router();
 
 var recordsById = new Map();
 var timelineByRecordId = new Map();
+var prescriptionsByRecordId = new Map();
 
 var updatableFields = [
   "clinicalSummary",
@@ -114,6 +115,25 @@ function requireActorRole(req, res, payload, action) {
 
 function getRecord(recordId) {
   return recordsById.get(recordId) || null;
+}
+
+function getPrescriptionList(recordId) {
+  return prescriptionsByRecordId.get(recordId) || [];
+}
+
+function savePrescriptionList(recordId, list) {
+  prescriptionsByRecordId.set(recordId, list);
+}
+
+function getPrescriptionById(recordId, prescriptionId) {
+  var list = getPrescriptionList(recordId);
+  for (var index = 0; index < list.length; index += 1) {
+    if (list[index].id === prescriptionId) {
+      return { list: list, item: list[index], index: index };
+    }
+  }
+
+  return { list: list, item: null, index: -1 };
 }
 
 router.get("/records", function (req, res) {
@@ -376,6 +396,207 @@ router.get("/records/:id/timeline", function (req, res) {
     totalEvents: events.length,
     events: events,
   });
+});
+
+router.get("/records/:id/prescriptions", function (req, res) {
+  var record = getRecord(req.params.id);
+  if (!record) {
+    res.status(404).json({
+      message: "Record not found",
+      code: "EHR_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  var list = getPrescriptionList(record.id);
+  res.json({
+    recordId: record.id,
+    total: list.length,
+    prescriptions: list,
+  });
+});
+
+router.post("/records/:id/prescriptions", function (req, res) {
+  var payload = req.body || {};
+  var actorRole = requireActorRole(req, res, payload, "ehr.prescription.create");
+  if (!actorRole) {
+    return;
+  }
+
+  var record = getRecord(req.params.id);
+  if (!record) {
+    res.status(404).json({
+      message: "Record not found",
+      code: "EHR_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  if (!payload.medicationName || !payload.dosage || !payload.frequency || !payload.durationDays) {
+    res.status(400).json({
+      message: "medicationName, dosage, frequency, and durationDays are required",
+      code: "EHR_PRESCRIPTION_PAYLOAD_INVALID",
+    });
+    return;
+  }
+
+  var now = new Date().toISOString();
+  var prescription = {
+    id: payload.id || randomUUID(),
+    recordId: record.id,
+    tenantKey: record.tenantKey,
+    patientId: record.patientId,
+    clinicianId: payload.clinicianId || record.clinicianId || "",
+    medicationName: payload.medicationName,
+    dosage: payload.dosage,
+    frequency: payload.frequency,
+    durationDays: Number(payload.durationDays),
+    notes: payload.notes || "",
+    status: "drafted",
+    handoff: {
+      sent: false,
+      target: null,
+      referenceId: null,
+      sentAt: null,
+    },
+    createdAt: now,
+    updatedAt: now,
+    createdByRole: actorRole,
+    updatedByRole: actorRole,
+  };
+
+  var list = getPrescriptionList(record.id);
+  list.push(prescription);
+  savePrescriptionList(record.id, list);
+
+  appendTimelineEvent(record.id, "ehr.prescription.created", actorRole, {
+    prescriptionId: prescription.id,
+    status: prescription.status,
+    medicationName: prescription.medicationName,
+  });
+
+  res.status(201).json(prescription);
+});
+
+router.post("/records/:id/prescriptions/:prescriptionId/handoff", function (req, res) {
+  var payload = req.body || {};
+  var actorRole = requireActorRole(req, res, payload, "ehr.prescription.handoff");
+  if (!actorRole) {
+    return;
+  }
+
+  var record = getRecord(req.params.id);
+  if (!record) {
+    res.status(404).json({
+      message: "Record not found",
+      code: "EHR_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  var lookup = getPrescriptionById(record.id, req.params.prescriptionId);
+  if (!lookup.item) {
+    res.status(404).json({
+      message: "Prescription not found",
+      code: "EHR_PRESCRIPTION_NOT_FOUND",
+      details: {
+        prescriptionId: req.params.prescriptionId,
+      },
+    });
+    return;
+  }
+
+  var target = payload.target || "pharmacy-service";
+  var referenceId = payload.referenceId || randomUUID();
+  lookup.item.status = "handed-off";
+  lookup.item.handoff = {
+    sent: true,
+    target: target,
+    referenceId: referenceId,
+    sentAt: new Date().toISOString(),
+  };
+  lookup.item.updatedAt = lookup.item.handoff.sentAt;
+  lookup.item.updatedByRole = actorRole;
+  lookup.list[lookup.index] = lookup.item;
+  savePrescriptionList(record.id, lookup.list);
+
+  appendTimelineEvent(record.id, "ehr.prescription.handoff", actorRole, {
+    prescriptionId: lookup.item.id,
+    target: target,
+    referenceId: referenceId,
+  });
+
+  res.json({
+    prescription: lookup.item,
+    handoffTouchpoint: {
+      endpoint: "/api/pharmacy/prescriptions/handoff",
+      referenceId: referenceId,
+      target: target,
+    },
+  });
+});
+
+router.patch("/records/:id/prescriptions/:prescriptionId/status", function (req, res) {
+  var payload = req.body || {};
+  var actorRole = requireActorRole(req, res, payload, "ehr.prescription.status");
+  if (!actorRole) {
+    return;
+  }
+
+  var record = getRecord(req.params.id);
+  if (!record) {
+    res.status(404).json({
+      message: "Record not found",
+      code: "EHR_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  var status = String(payload.status || "").trim().toLowerCase();
+  var allowedStatuses = [
+    "drafted",
+    "handed-off",
+    "accepted",
+    "dispensing",
+    "fulfilled",
+    "cancelled",
+    "rejected",
+  ];
+  if (!status || allowedStatuses.indexOf(status) === -1) {
+    res.status(400).json({
+      message: "status is invalid",
+      code: "EHR_PRESCRIPTION_STATUS_INVALID",
+      details: {
+        allowedStatuses: allowedStatuses,
+      },
+    });
+    return;
+  }
+
+  var lookup = getPrescriptionById(record.id, req.params.prescriptionId);
+  if (!lookup.item) {
+    res.status(404).json({
+      message: "Prescription not found",
+      code: "EHR_PRESCRIPTION_NOT_FOUND",
+      details: {
+        prescriptionId: req.params.prescriptionId,
+      },
+    });
+    return;
+  }
+
+  lookup.item.status = status;
+  lookup.item.updatedAt = new Date().toISOString();
+  lookup.item.updatedByRole = actorRole;
+  lookup.list[lookup.index] = lookup.item;
+  savePrescriptionList(record.id, lookup.list);
+
+  appendTimelineEvent(record.id, "ehr.prescription.status-updated", actorRole, {
+    prescriptionId: lookup.item.id,
+    status: status,
+  });
+
+  res.json(lookup.item);
 });
 
 module.exports = router;

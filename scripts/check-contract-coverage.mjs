@@ -216,6 +216,22 @@ const criticalSchemaChecks = [
     requiredResponseCodes: ["200", "404"],
   },
   {
+    service: "ehr-service",
+    specSource: "services/ehr-service/openapi.yaml",
+    method: "POST",
+    path: "/ehr/records/{id}/prescriptions",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201", "400", "404"],
+  },
+  {
+    service: "ehr-service",
+    specSource: "services/ehr-service/openapi.yaml",
+    method: "POST",
+    path: "/ehr/records/{id}/prescriptions/{prescriptionId}/handoff",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200", "400", "404"],
+  },
+  {
     service: "appointment-service",
     specSource: "services/appointment-service/openapi.yaml",
     method: "POST",
@@ -254,6 +270,22 @@ const criticalSchemaChecks = [
     path: "/integrations/messaging/test",
     requireRequestBody: true,
     requiredResponseCodes: ["200"],
+  },
+  {
+    service: "pharmacy-service",
+    specSource: "services/pharmacy-service/openapi.yaml",
+    method: "POST",
+    path: "/prescriptions/handoff",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201", "400", "409"],
+  },
+  {
+    service: "pharmacy-service",
+    specSource: "services/pharmacy-service/openapi.yaml",
+    method: "PUT",
+    path: "/prescriptions/{id}/status",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200", "400", "404"],
   },
 ];
 

@@ -1,72 +1,264 @@
-// pharmacyService.js
+require("dotenv").config();
 
-const express = require('express');
-const router = express.Router();
+var express = require("express");
+var randomUUID = require("crypto").randomUUID;
 
-// Mock database for demonstration purposes
-let medications = [];
+var router = express.Router();
+var pharmacyService = router;
+var app = express();
 
-// Get all medications
-router.get('/medications', (req, res) => {
+var medications = [];
+var prescriptionOrders = [];
+
+var allowedPrescriptionStatuses = [
+    "received",
+    "accepted",
+    "dispensing",
+    "ready",
+    "fulfilled",
+    "rejected",
+    "cancelled",
+];
+
+function normalizeRole(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+}
+
+function getActorRole(req, payload) {
+    return normalizeRole(req.headers["x-actor-role"] || payload.actorRole || "");
+}
+
+function getOrder(identifier) {
+    var id = String(identifier || "");
+    for (var index = 0; index < prescriptionOrders.length; index += 1) {
+        var item = prescriptionOrders[index];
+        if (item.id === id || item.prescriptionId === id) {
+            return { item: item, index: index };
+        }
+    }
+
+    return { item: null, index: -1 };
+}
+
+router.get("/medications", function (_req, res) {
     res.json(medications);
 });
 
-// Get medication by ID
-router.get('/medications/:id', (req, res) => {
-    const medication = medications.find(med => med.id === parseInt(req.params.id));
-    if (!medication) return res.status(404).send('Medication not found');
+router.get("/medications/:id", function (req, res) {
+    var medication = medications.find(function (item) {
+        return String(item.id) === String(req.params.id);
+    });
+    if (!medication) {
+        res.status(404).json({ message: "Medication not found" });
+        return;
+    }
+
     res.json(medication);
 });
 
-// Add new medication
-router.post('/medications', (req, res) => {
-    const { name, dosage, quantity } = req.body;
-    const newMedication = {
-        id: medications.length + 1,
-        name,
-        dosage,
-        quantity
+router.post("/medications", function (req, res) {
+    var payload = req.body || {};
+    var newMedication = {
+        id: payload.id || randomUUID(),
+        name: payload.name,
+        dosage: payload.dosage,
+        quantity: Number(payload.quantity || 0),
+        expirationDate: payload.expirationDate || null,
     };
+
     medications.push(newMedication);
     res.status(201).json(newMedication);
 });
 
-// Update medication
-router.put('/medications/:id', (req, res) => {
-    const medication = medications.find(med => med.id === parseInt(req.params.id));
-    if (!medication) return res.status(404).send('Medication not found');
+router.put("/medications/:id", function (req, res) {
+    var index = medications.findIndex(function (item) {
+        return String(item.id) === String(req.params.id);
+    });
 
-    const { name, dosage, quantity } = req.body;
-    medication.name = name;
-    medication.dosage = dosage;
-    medication.quantity = quantity;
+    if (index < 0) {
+        res.status(404).json({ message: "Medication not found" });
+        return;
+    }
 
-    res.json(medication);
+    var payload = req.body || {};
+    medications[index] = {
+        id: medications[index].id,
+        name: payload.name || medications[index].name,
+        dosage: payload.dosage || medications[index].dosage,
+        quantity:
+            payload.quantity !== undefined ? Number(payload.quantity) : Number(medications[index].quantity),
+        expirationDate: payload.expirationDate || medications[index].expirationDate,
+    };
+
+    res.json(medications[index]);
 });
 
-// Delete medication
-router.delete('/medications/:id', (req, res) => {
-    const medicationIndex = medications.findIndex(med => med.id === parseInt(req.params.id));
-    if (medicationIndex === -1) return res.status(404).send('Medication not found');
+router.delete("/medications/:id", function (req, res) {
+    var index = medications.findIndex(function (item) {
+        return String(item.id) === String(req.params.id);
+    });
+    if (index < 0) {
+        res.status(404).json({ message: "Medication not found" });
+        return;
+    }
 
-    medications.splice(medicationIndex, 1);
+    medications.splice(index, 1);
     res.status(204).send();
 });
 
-// Export the router
-module.exports = router;
+router.get("/prescriptions", function (req, res) {
+    var tenantKey = String(req.query.tenantKey || "").trim();
+    var status = String(req.query.status || "").trim().toLowerCase();
 
-// server.js
+    var result = prescriptionOrders.filter(function (item) {
+        if (tenantKey && item.tenantKey !== tenantKey) {
+            return false;
+        }
 
-const express = require('express');
-const pharmacyService = require('./pharmacyService');
+        if (status && item.status !== status) {
+            return false;
+        }
 
-const app = express();
-app.use(express.json());
+        return true;
+    });
 
-app.use('/api/pharmacy', pharmacyService);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Pharmacy service running on port ${PORT}`);
+    res.json({
+        orders: result,
+        total: result.length,
+    });
 });
+
+router.get("/prescriptions/:id", function (req, res) {
+    var lookup = getOrder(req.params.id);
+    if (!lookup.item) {
+        res.status(404).json({
+            message: "Prescription order not found",
+            code: "PHARMACY_PRESCRIPTION_NOT_FOUND",
+        });
+        return;
+    }
+
+    res.json(lookup.item);
+});
+
+router.post("/prescriptions/handoff", function (req, res) {
+    var payload = req.body || {};
+
+    if (!payload.prescriptionId || !payload.ehrRecordId || !payload.patientId || !payload.medicationName) {
+        res.status(400).json({
+            message: "prescriptionId, ehrRecordId, patientId, and medicationName are required",
+            code: "PHARMACY_HANDOFF_PAYLOAD_INVALID",
+        });
+        return;
+    }
+
+    var actorRole = getActorRole(req, payload);
+    if (!actorRole) {
+        res.status(400).json({
+            message: "actorRole is required",
+            code: "PHARMACY_ACTOR_ROLE_REQUIRED",
+        });
+        return;
+    }
+
+    var existing = getOrder(payload.prescriptionId);
+    if (existing.item) {
+        res.status(409).json({
+            message: "Prescription order already exists",
+            code: "PHARMACY_PRESCRIPTION_EXISTS",
+            details: {
+                prescriptionId: payload.prescriptionId,
+            },
+        });
+        return;
+    }
+
+    var now = new Date().toISOString();
+    var order = {
+        id: payload.orderId || randomUUID(),
+        prescriptionId: payload.prescriptionId,
+        ehrRecordId: payload.ehrRecordId,
+        tenantKey: String(payload.tenantKey || "default").trim() || "default",
+        patientId: payload.patientId,
+        clinicianId: payload.clinicianId || "",
+        medicationName: payload.medicationName,
+        dosage: payload.dosage || "",
+        frequency: payload.frequency || "",
+        durationDays: Number(payload.durationDays || 0),
+        notes: payload.notes || "",
+        status: "received",
+        history: [
+            {
+                eventId: randomUUID(),
+                status: "received",
+                actorRole: actorRole,
+                occurredAt: now,
+            },
+        ],
+        createdAt: now,
+        updatedAt: now,
+    };
+
+    prescriptionOrders.push(order);
+    res.status(201).json(order);
+});
+
+router.put("/prescriptions/:id/status", function (req, res) {
+    var payload = req.body || {};
+    var actorRole = getActorRole(req, payload);
+    if (!actorRole) {
+        res.status(400).json({
+            message: "actorRole is required",
+            code: "PHARMACY_ACTOR_ROLE_REQUIRED",
+        });
+        return;
+    }
+
+    var nextStatus = String(payload.status || "").trim().toLowerCase();
+    if (!nextStatus || allowedPrescriptionStatuses.indexOf(nextStatus) === -1) {
+        res.status(400).json({
+            message: "status is invalid",
+            code: "PHARMACY_PRESCRIPTION_STATUS_INVALID",
+            details: {
+                allowedStatuses: allowedPrescriptionStatuses,
+            },
+        });
+        return;
+    }
+
+    var lookup = getOrder(req.params.id);
+    if (!lookup.item) {
+        res.status(404).json({
+            message: "Prescription order not found",
+            code: "PHARMACY_PRESCRIPTION_NOT_FOUND",
+        });
+        return;
+    }
+
+    lookup.item.status = nextStatus;
+    lookup.item.updatedAt = new Date().toISOString();
+    lookup.item.history.push({
+        eventId: randomUUID(),
+        status: nextStatus,
+        actorRole: actorRole,
+        occurredAt: lookup.item.updatedAt,
+    });
+    prescriptionOrders[lookup.index] = lookup.item;
+
+    res.json(lookup.item);
+});
+
+app.use(express.json());
+app.use("/api/pharmacy", pharmacyService);
+
+var PORT = Number(process.env.PHARMACY_SERVICE_PORT || process.env.PORT || 5106);
+
+if (require.main === module) {
+    app.listen(PORT, function () {
+        console.log("Pharmacy service running on port " + PORT);
+    });
+}
+
+module.exports = app;

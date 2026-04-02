@@ -187,6 +187,139 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EhrErrorResponse"
+  /ehr/records/{id}/prescriptions:
+    get:
+      summary: List prescriptions linked to an EHR record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Linked prescription list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrPrescriptionListResponse"
+        "404":
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+    post:
+      summary: Create prescription linked to EHR record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EhrPrescriptionCreateRequest"
+      responses:
+        "201":
+          description: Prescription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrPrescription"
+        "400":
+          description: Invalid prescription payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+        "404":
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+  /ehr/records/{id}/prescriptions/{prescriptionId}/handoff:
+    post:
+      summary: Mark EHR prescription as handed off to pharmacy touchpoint
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EhrPrescriptionHandoffRequest"
+      responses:
+        "200":
+          description: Prescription handoff metadata generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrPrescriptionHandoffResponse"
+        "400":
+          description: Invalid handoff payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+        "404":
+          description: Record or prescription not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+  /ehr/records/{id}/prescriptions/{prescriptionId}/status:
+    patch:
+      summary: Update EHR prescription lifecycle status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EhrPrescriptionStatusRequest"
+      responses:
+        "200":
+          description: Prescription status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrPrescription"
+        "400":
+          description: Invalid status payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
+        "404":
+          description: Record or prescription not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EhrErrorResponse"
 components:
   schemas:
     EhrRecord:
@@ -416,6 +549,168 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EhrTimelineEvent"
+    EhrPrescription:
+      type: object
+      properties:
+        id:
+          type: string
+          example: rx-1001
+        recordId:
+          type: string
+          example: rec-1001
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        medicationName:
+          type: string
+          example: Amoxicillin
+        dosage:
+          type: string
+          example: 500mg
+        frequency:
+          type: string
+          example: twice daily
+        durationDays:
+          type: integer
+          example: 5
+        notes:
+          type: string
+          example: Take after meals
+        status:
+          type: string
+          enum: [drafted, handed-off, accepted, dispensing, fulfilled, cancelled, rejected]
+          example: handed-off
+        handoff:
+          $ref: "#/components/schemas/EhrPrescriptionHandoffMetadata"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdByRole:
+          type: string
+          example: doctor
+        updatedByRole:
+          type: string
+          example: operations
+    EhrPrescriptionHandoffMetadata:
+      type: object
+      properties:
+        sent:
+          type: boolean
+          example: true
+        target:
+          type: string
+          nullable: true
+          example: pharmacy-service
+        referenceId:
+          type: string
+          nullable: true
+          example: handoff-1001
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+    EhrPrescriptionListResponse:
+      type: object
+      properties:
+        recordId:
+          type: string
+          example: rec-1001
+        total:
+          type: integer
+          example: 1
+        prescriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/EhrPrescription"
+    EhrPrescriptionCreateRequest:
+      type: object
+      required:
+        - actorRole
+        - medicationName
+        - dosage
+        - frequency
+        - durationDays
+      properties:
+        id:
+          type: string
+          example: rx-1001
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations]
+          example: doctor
+        clinicianId:
+          type: string
+          example: cln-42
+        medicationName:
+          type: string
+          example: Amoxicillin
+        dosage:
+          type: string
+          example: 500mg
+        frequency:
+          type: string
+          example: twice daily
+        durationDays:
+          type: integer
+          example: 5
+        notes:
+          type: string
+          example: Take after meals
+    EhrPrescriptionHandoffRequest:
+      type: object
+      required:
+        - actorRole
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations]
+          example: doctor
+        target:
+          type: string
+          example: pharmacy-service
+        referenceId:
+          type: string
+          example: handoff-1001
+    EhrPrescriptionHandoffResponse:
+      type: object
+      properties:
+        prescription:
+          $ref: "#/components/schemas/EhrPrescription"
+        handoffTouchpoint:
+          type: object
+          properties:
+            endpoint:
+              type: string
+              example: /api/pharmacy/prescriptions/handoff
+            referenceId:
+              type: string
+              example: handoff-1001
+            target:
+              type: string
+              example: pharmacy-service
+    EhrPrescriptionStatusRequest:
+      type: object
+      required:
+        - actorRole
+        - status
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, doctor, nurse, operations]
+          example: operations
+        status:
+          type: string
+          enum: [drafted, handed-off, accepted, dispensing, fulfilled, cancelled, rejected]
+          example: fulfilled
     EhrErrorResponse:
       type: object
       properties:

@@ -120,6 +120,14 @@ const criticalSchemaChecks = [
     requiredResponseCodes: ["200", "400"],
   },
   {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
+    method: "POST",
+    path: "/admin/settings/auth-policy/validate",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200", "400"],
+  },
+  {
     service: "appointment-service",
     specSource: "services/appointment-service/openapi.yaml",
     method: "POST",
@@ -190,7 +198,9 @@ function getSpecLines(specPath) {
 function findOperationBlock(lines, targetPath, method) {
   let inPaths = false;
   let currentPath = "";
-  const methodPattern = new RegExp(`^\\s{4}${escapeRegExp(String(method || "").toLowerCase())}:\\s*$`);
+  const methodPattern = new RegExp(
+    `^\\s{4}${escapeRegExp(String(method || "").toLowerCase())}:\\s*$`
+  );
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];

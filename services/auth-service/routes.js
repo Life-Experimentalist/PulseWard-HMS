@@ -3,12 +3,15 @@ var jwt = require("jsonwebtoken");
 var randomUUID = require("crypto").randomUUID;
 var domainConfigUtils = require("../../packages/shared-utils/load-domain-config");
 var adminSettingsStore = require("./admin-settings-store");
+var authPolicySchema = require("./auth-policy-schema");
 var loadDomainConfig = domainConfigUtils.loadDomainConfig;
 var resolveTenantDomain = domainConfigUtils.resolveTenantDomain;
 var isOriginAllowed = domainConfigUtils.isOriginAllowed;
 var getTenantSettings = adminSettingsStore.getTenantSettings;
 var setTenantSettings = adminSettingsStore.setTenantSettings;
 var getStorageMetadata = adminSettingsStore.getStorageMetadata;
+var getDefaultAuthPolicy = authPolicySchema.getDefaultAuthPolicy;
+var validateAndNormalizeAuthPolicy = authPolicySchema.validateAndNormalizeAuthPolicy;
 
 var router = express.Router();
 var users = [];
@@ -279,15 +282,36 @@ router.get("/admin/settings", function (req, res) {
         ui: {
           lastTab: "overview",
         },
+        authPolicy: getDefaultAuthPolicy(),
       },
       storage: getStorageMetadata(),
     });
     return;
   }
 
+  var normalizedPolicy = validateAndNormalizeAuthPolicy(
+    persisted.settings ? persisted.settings.authPolicy : null
+  );
+
+  var nextSettings = {
+    routing: persisted.settings && persisted.settings.routing ? persisted.settings.routing : {
+      tenantKey: tenantKey,
+      authBaseUrl: process.env.AUTH_SERVICE_BASE_URL || "http://localhost:5101",
+      notificationBaseUrl: process.env.NOTIFICATION_SERVICE_BASE_URL || "http://localhost:5102",
+      appointmentBaseUrl: process.env.APPOINTMENT_SERVICE_BASE_URL || "http://localhost:5103",
+    },
+    ui:
+      persisted.settings && persisted.settings.ui
+        ? persisted.settings.ui
+        : {
+            lastTab: "overview",
+          },
+    authPolicy: normalizedPolicy.authPolicy,
+  };
+
   res.json({
     tenantKey: tenantKey,
-    settings: persisted.settings,
+    settings: nextSettings,
     updatedAt: persisted.updatedAt,
     storage: getStorageMetadata(),
   });
@@ -303,6 +327,16 @@ router.put("/admin/settings", function (req, res) {
   }
 
   var routing = payload.settings.routing || {};
+  var authPolicyValidation = validateAndNormalizeAuthPolicy(payload.settings.authPolicy);
+  if (!authPolicyValidation.valid) {
+    res.status(400).json({
+      message: "Invalid auth policy settings",
+      errors: authPolicyValidation.errors,
+      authPolicy: authPolicyValidation.authPolicy,
+    });
+    return;
+  }
+
   var nextSettings = {
     routing: {
       tenantKey: tenantKey,
@@ -316,6 +350,7 @@ router.put("/admin/settings", function (req, res) {
           ? String(payload.settings.ui.lastTab)
           : "overview",
     },
+    authPolicy: authPolicyValidation.authPolicy,
   };
 
   var saved = setTenantSettings(tenantKey, nextSettings);
@@ -324,6 +359,29 @@ router.put("/admin/settings", function (req, res) {
     settings: saved.settings,
     updatedAt: saved.updatedAt,
     storage: getStorageMetadata(),
+  });
+});
+
+router.post("/admin/settings/auth-policy/validate", function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = (payload.tenantKey || "default").trim() || "default";
+  var validation = validateAndNormalizeAuthPolicy(payload.authPolicy);
+
+  if (!validation.valid) {
+    res.status(400).json({
+      valid: false,
+      tenantKey: tenantKey,
+      authPolicy: validation.authPolicy,
+      errors: validation.errors,
+    });
+    return;
+  }
+
+  res.json({
+    valid: true,
+    tenantKey: tenantKey,
+    authPolicy: validation.authPolicy,
+    errors: [],
   });
 });
 

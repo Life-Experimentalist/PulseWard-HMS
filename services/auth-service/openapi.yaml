@@ -260,6 +260,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminSettingsResponse"
+        "400":
+          description: Invalid admin settings payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthPolicyValidationResponse"
+
+  /admin/settings/auth-policy/validate:
+    post:
+      summary: Validate tenant auth policy payload without persisting
+      tags:
+        - Admin Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminAuthPolicyValidationRequest"
+      responses:
+        "200":
+          description: Auth policy payload is valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthPolicyValidationResponse"
+        "400":
+          description: Auth policy payload is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthPolicyValidationResponse"
 
   /platform/domain-config:
     get:
@@ -566,6 +597,54 @@ components:
         lastTab:
           type: string
           example: overview
+    AdminAuthPolicy:
+      type: object
+      properties:
+        enabledProviders:
+          type: array
+          items:
+            type: string
+            enum:
+              - email-password
+              - otp
+              - google-oauth
+              - clerk
+          example:
+            - email-password
+            - otp
+            - google-oauth
+            - clerk
+        primaryProvider:
+          type: string
+          enum:
+            - email-password
+            - otp
+            - google-oauth
+            - clerk
+          example: email-password
+        otpChannel:
+          type: string
+          enum:
+            - email
+            - phone
+            - both
+          example: email
+        mfaRequired:
+          type: boolean
+          example: false
+        sessionTtlMinutes:
+          type: integer
+          minimum: 15
+          maximum: 1440
+          example: 60
+        passwordMinLength:
+          type: integer
+          minimum: 8
+          maximum: 128
+          example: 8
+        allowSelfRegistration:
+          type: boolean
+          example: false
     AdminSettingsPayload:
       type: object
       properties:
@@ -573,6 +652,8 @@ components:
           $ref: "#/components/schemas/AdminSettingsRouting"
         ui:
           $ref: "#/components/schemas/AdminSettingsUi"
+        authPolicy:
+          $ref: "#/components/schemas/AdminAuthPolicy"
     AdminSettingsResponse:
       type: object
       properties:
@@ -598,6 +679,32 @@ components:
           example: default
         settings:
           $ref: "#/components/schemas/AdminSettingsPayload"
+    AdminAuthPolicyValidationRequest:
+      type: object
+      required:
+        - authPolicy
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        authPolicy:
+          $ref: "#/components/schemas/AdminAuthPolicy"
+    AdminAuthPolicyValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: true
+        tenantKey:
+          type: string
+          example: default
+        authPolicy:
+          $ref: "#/components/schemas/AdminAuthPolicy"
+        errors:
+          type: array
+          items:
+            type: string
+          example: []
     DomainValidationRequest:
       type: object
       required:

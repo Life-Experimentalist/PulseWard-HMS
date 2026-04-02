@@ -1,9 +1,22 @@
 var fs = require("fs");
 var path = require("path");
 
-var storePath = path.join(__dirname, "data", "admin-console-settings.json");
+var defaultStorePath = path.join(__dirname, "data", "admin-console-settings.json");
+
+function resolveStorePath() {
+  var overridePath = process.env.AUTH_ADMIN_SETTINGS_STORE_PATH;
+  if (!overridePath || !String(overridePath).trim()) {
+    return defaultStorePath;
+  }
+
+  var normalized = String(overridePath).trim();
+  return path.isAbsolute(normalized)
+    ? normalized
+    : path.resolve(process.cwd(), normalized);
+}
 
 function ensureStore() {
+  var storePath = resolveStorePath();
   var dir = path.dirname(storePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -26,6 +39,7 @@ function ensureStore() {
 }
 
 function readStore() {
+  var storePath = resolveStorePath();
   ensureStore();
   try {
     var raw = fs.readFileSync(storePath, "utf8");
@@ -45,6 +59,7 @@ function readStore() {
 }
 
 function writeStore(store) {
+  var storePath = resolveStorePath();
   ensureStore();
   fs.writeFileSync(storePath, JSON.stringify(store, null, 2), "utf8");
 }
@@ -77,7 +92,7 @@ function getStorageMetadata() {
   var store = readStore();
   return {
     source: "auth-service-json-store",
-    path: storePath,
+    path: resolveStorePath(),
     tenantCount: Object.keys(store.tenants || {}).length,
     updatedAt: store.updatedAt,
   };

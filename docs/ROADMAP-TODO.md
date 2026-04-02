@@ -12,7 +12,7 @@ This roadmap is the primary execution plan to take PulseWard HMS from current st
 - **Additional core scope from stakeholder input**: `patient electronic health record` and `prescription management` must be `first-release` capable.
 - **Configuration principle**: `hospital admins` can choose `auth` and `policy` options per `tenant` where feasible.
 - **Default compliance profile for new tenants**: combined baseline privacy controls plus ABHA-ready controls.
-- **Default auth set for new tenants**: email/password, phone/email OTP, Google OAuth, and Clerk mode, all implemented as modular interchangeable providers.
+- **Default auth set for new tenants**: `email/password`, `phone/email OTP`, `Google OAuth`, and `Clerk mode`, all implemented as modular interchangeable providers.
 - **ABHA connector default**: enabled by default with tenant-level controls retained.
 - **Pilot target**: `1` hospital with `100-300` active users.
 - **Notification priority under channel constraints**: appointment reminders first.
@@ -291,4 +291,5 @@ Exit criteria:
 17. Demo checkpoint: rudimentary OPD and appointments demo is available after M3.2 via `npm run demo:opd` once appointment-service is running.
 18. M3.4 completed: prescription lifecycle handoff and status synchronization are implemented across EHR and pharmacy touchpoints.
 19. M3.5 completed: lab-service now supports role-gated order lifecycle, result reporting, and downstream trigger alignment for EHR and billing touchpoints.
-20. Active next slice (M3.6): ensure billing-service receives and processes required clinical trigger hooks from lab and prescription workflow events.
+20. M3.6 completed: billing-service now receives and processes clinical trigger hooks from lab and prescription workflows with idempotent correlation handling.
+21. Active next slice (M4.1): finalize appointment lifecycle state machine and conflict handling reliability semantics.

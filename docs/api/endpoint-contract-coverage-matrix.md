@@ -10,9 +10,9 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 | notification-service | /api/v1 (also mounted at /api)  | services/notification-service/routes.js | services/notification-service/openapi.yaml | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
 | patient-service      | /api/patients                   | services/patient-service/src            | services/patient-service/openapi.yaml      | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
 | ehr-service          | /ehr/records/{id}               | services/ehr-service/routes.js          | services/ehr-service/openapi.yaml          | covered         | parity pass   | Runtime routes and OpenAPI are reconciled for EHR CRUD and timeline history paths.     |
-| lab-service          | /lab-tests (mounted at /api)    | services/lab-service/routes.js          | services/lab-service/openapi.yaml          | covered         | parity pass   | Runtime route module and OpenAPI are reconciled for catalog/order/result workflows.     |
+| lab-service          | /lab-tests (mounted at /api)    | services/lab-service/routes.js          | services/lab-service/openapi.yaml          | covered         | parity pass   | Runtime route module and OpenAPI are reconciled for catalog/order/result workflows.    |
 | pharmacy-service     | /api/pharmacy                   | services/pharmacy-service/src           | services/pharmacy-service/openapi.yaml     | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
-| billing-service      | /billing                        | services/billing-service/src            | services/billing-service/openapi.yaml      | covered         | parity pass   | Runtime CRUD endpoints and OpenAPI are reconciled for /billing and /billing/{id}.      |
+| billing-service      | /billing                        | services/billing-service/src            | services/billing-service/openapi.yaml      | covered         | parity pass   | Runtime and OpenAPI are reconciled for billing CRUD and clinical trigger hook endpoints. |
 
 ## M1.2 Parity Rules
 
@@ -76,6 +76,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Critical schema assertions include `POST /lab-tests/orders`, `PUT /lab-tests/orders/{id}/status`, `POST /lab-tests/orders/{id}/result`, and `POST /lab-tests/orders/{id}/report` in `lab-service`.
 - Lab runtime now enforces actor-role presence, lifecycle status constraints, and report-before-result protection semantics.
 - Regression tests cover order creation, status progression, result recording, reported-state trigger fanout to EHR/billing, and error-path guardrails.
+
+## M3.6 Billing Clinical Trigger Hook Coverage
+
+- Critical schema assertions include `POST /billing/hooks/clinical-trigger` in `billing-service`.
+- Billing runtime now validates actor role, trigger semantics, and idempotent `correlationId` handling for lab and prescription workflow events.
+- Regression tests cover successful lab/prescription trigger processing, trigger receipt queries, and duplicate correlation rejection behavior.
 
 ## Current Allowlisted Drifts
 

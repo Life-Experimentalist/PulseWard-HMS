@@ -283,4 +283,5 @@ Exit criteria:
 11. M2.3 completed: auth policy consumption is enforced in login and OAuth flows with tenant-level policy guards and audit-ready denial semantics.
 12. M2.4 completed: role/provider compatibility and tenant policy-driven session controls are enforced with regression coverage.
 13. M2.5 completed: OTP provider execution path and MFA policy enforcement for selected roles are implemented with regression coverage.
-14. Active next slice (M3.1): connect auth policy outcomes to patient/clinical workflow entry checks and role-scoped session observability events.
+14. M3.1 completed: auth policy outcomes now gate patient/clinical workflow entry and emit role-scoped session observability events with query filters.
+15. Active next slice (M3.2): harden patient-service profile lifecycle validation and access semantics for core clinical flows.

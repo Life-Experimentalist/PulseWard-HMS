@@ -47,6 +47,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Critical schema assertions include OTP challenge and verification endpoints in `auth-service`.
 - Login schema assertions now include MFA-required response coverage for policy-driven auth flows.
 
+## M3.1 Workflow Entry And Session Observability Coverage
+
+- Critical schema assertions include `POST /auth/workflow-entry/check` and `GET /auth/session/events` in `auth-service`.
+- Workflow-entry policy outcomes (allow, role-denied, MFA-required, provider-policy-denied) are covered by auth regression tests.
+- Session event filtering by tenant, role, action, and outcome is covered by auth regression tests.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -43,7 +43,7 @@ module.exports = {
         "apps/operations-dashboard/src/**/*.js",
         "apps/operations-dashboard/src/**/*.jsx",
         "apps/patient-portal/src/**/*.js",
-        "apps/patient-portal/src/**/*.jsx"
+        "apps/patient-portal/src/**/*.jsx",
       ],
       env: {
         browser: true,
@@ -62,7 +62,7 @@ module.exports = {
         "apps/admin-console/vite.config.js",
         "apps/clinician-portal/vite.config.js",
         "apps/operations-dashboard/vite.config.js",
-        "apps/patient-portal/vite.config.js"
+        "apps/patient-portal/vite.config.js",
       ],
       env: {
         node: true,

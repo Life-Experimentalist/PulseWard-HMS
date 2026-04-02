@@ -1,66 +1,66 @@
 # PulseWard Admin Console
 
-Welcome to the **PulseWard Admin Console**! This application is a crucial part of the PulseWard Hospital Management System, designed to facilitate administrative tasks and user management within the hospital environment.
+The Admin Console is a framework-based React + Vite application built for modular, professional operations workflows.
+Production usage is precompiled static assets (`dist`) served by a lightweight Node static server.
 
-## Overview
+## What It Covers
 
-The Admin Console provides a user-friendly interface for administrators to manage various aspects of the hospital management system, including user accounts, roles, permissions, and system settings. It is built to ensure that administrative tasks are streamlined and efficient, allowing for better management of hospital operations.
+- Service reachability checks for Auth, Notification, and Appointment services
+- Google OAuth readiness and quick start-link launch
+- ABHA environment readiness visibility and ABHA gateway health-check tab
+- Telegram Bot test delivery (live send via Bot API)
+- SMTP test delivery (live send via configured credentials)
+- Activity log with latest test output
 
-## Features
+## Build and Start (Production-Fast)
 
-- **User Management**: Create, update, and delete user accounts. Assign roles and permissions to ensure appropriate access levels.
-- **System Configuration**: Modify system settings to tailor the application to the hospital's needs.
-- **Reporting**: Generate reports on user activity, system performance, and other key metrics to aid in decision-making.
-- **Notifications**: Manage notifications sent to users regarding system updates, alerts, and other important information.
+From repository root:
 
-## Technology Stack
+```powershell
+npm run install:admin
+npm run build:admin
+npm run start:admin
+```
 
-- **Frontend**: React.js for building a responsive and interactive user interface.
-- **Backend**: Node.js with Express for handling API requests and managing server-side logic.
-- **Database**: MongoDB for storing user data and application settings.
-- **Authentication**: JWT (JSON Web Tokens) for secure user authentication and authorization.
+For CI/CD production pipelines:
 
-## Getting Started
+```powershell
+npm run build:admin:ci
+npm run start:admin
+```
 
-To get started with the PulseWard Admin Console, follow these steps:
+`start:admin` serves prebuilt files only and does not run runtime bundling.
+By default, it starts on `http://127.0.0.1:4180` and auto-falls forward to the next free port.
 
-1. **Clone the Repository**:
+## Optional Dev Mode
 
-   ```bash
-   git clone https://github.com/Life-Experimentalist/PulseWard-HMS.git
-   cd PulseWard-HMS/apps/admin-console
-   ```
+For iterative UI development:
 
-2. **Install Dependencies**:
+```powershell
+npm run start:admin:dev
+```
 
-   ```bash
-   npm install
-   ```
+## Required Service Endpoints
 
-3. **Run the Application**:
+Set these in dashboard routing controls or `.env`:
 
-   ```bash
-   npm start
-   ```
+- Auth Service: `http://localhost:5101`
+- Notification Service: `http://localhost:5102`
+- Appointment Service: `http://localhost:5103`
 
-4. **Access the Admin Console**:
-   Open your web browser and navigate to `http://localhost:3000` to access the Admin Console.
+## Integration Credentials
 
-## API Documentation
+For production-like usage, configure credentials through environment variables and secret references.
+For quick validation, the dashboard can submit one-time credentials directly in test requests.
 
-The Admin Console interacts with various microservices through well-defined APIs. For detailed API documentation, refer to the [API Gateway README](../services/api-gateway/README.md).
+## Data Storage
 
-## Contribution
+- Tenant dashboard settings are persisted server-side in auth-service JSON store:
+  `services/auth-service/data/admin-console-settings.json`
+- Browser `localStorage` is used only as a fallback cache if server persistence is unavailable.
+- Integration credentials remain environment-driven or one-time test payloads and are not persisted by the dashboard.
 
-Contributions to the PulseWard Admin Console are welcome! Please follow the guidelines outlined in the main repository's README for contributing to this project.
+## Notes
 
-## License
-
-This project is proprietary and confidential. All rights reserved. See the LICENSE.md file for internal licensing terms.
-
-## Acknowledgments
-
-- Special thanks to the development team for their hard work and dedication in bringing this project to life.
-- Thanks to the open-source community for providing valuable tools and libraries that made this project possible.
-
-For any questions or feedback, please reach out to the project maintainers through the GitHub repository.
+- Keep CORS allowed origins permissive for local/LAN demos, then restrict for production.
+- Avoid using real patient identifiers in integration test payloads.

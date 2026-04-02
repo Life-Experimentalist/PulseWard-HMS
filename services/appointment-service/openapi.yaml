@@ -25,7 +25,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Appointment"
+              $ref: "#/components/schemas/AppointmentCreateRequest"
       responses:
         "201":
           description: Appointment created successfully
@@ -33,6 +33,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Invalid appointment payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "403":
+          description: Appointment entry blocked for role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentRoleErrorResponse"
   /appointments/{id}:
     get:
       summary: Retrieve a specific appointment by ID
@@ -66,7 +78,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Appointment"
+              $ref: "#/components/schemas/AppointmentUpdateRequest"
       responses:
         "200":
           description: Appointment updated successfully
@@ -74,6 +86,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Invalid update payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "403":
+          description: Appointment update blocked for role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentRoleErrorResponse"
         "404":
           description: Appointment not found
     delete:
@@ -88,8 +112,82 @@ paths:
       responses:
         "204":
           description: Appointment deleted successfully
+        "400":
+          description: Missing actor role for appointment cancel action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentRoleErrorResponse"
+        "403":
+          description: Appointment cancel blocked for role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentRoleErrorResponse"
         "404":
           description: Appointment not found
+  /opd/entries:
+    get:
+      summary: List OPD intake entries with optional filters
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: triageLevel
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: OPD entry list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdEntriesListResponse"
+    post:
+      summary: Create OPD intake entry and optional appointment draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpdEntryCreateRequest"
+      responses:
+        "201":
+          description: OPD entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdEntryCreateResponse"
+        "400":
+          description: Invalid OPD intake payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "403":
+          description: OPD intake blocked for role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentRoleErrorResponse"
   /integrations/calendars/providers:
     get:
       summary: List calendar providers for a tenant
@@ -132,6 +230,9 @@ components:
         id:
           type: string
           example: "12345"
+        tenantKey:
+          type: string
+          example: citycare-hospital
         patientId:
           type: string
           example: "67890"
@@ -144,8 +245,226 @@ components:
           example: "2023-10-01T10:00:00Z"
         status:
           type: string
-          enum: [scheduled, completed, cancelled]
+          enum: [scheduled, completed, cancelled, pending-triage]
           example: "scheduled"
+        source:
+          type: string
+          example: standard
+        opdEntryId:
+          type: string
+          nullable: true
+          example: opd-1001
+        createdByRole:
+          type: string
+          example: frontdesk
+        updatedByRole:
+          type: string
+          nullable: true
+          example: operations
+    AppointmentCreateRequest:
+      type: object
+      required:
+        - actorRole
+        - patientId
+        - appointmentDate
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, frontdesk, doctor, nurse, operations, patient]
+          example: frontdesk
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        appointmentDate:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:00:00Z"
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled, pending-triage]
+          example: scheduled
+        source:
+          type: string
+          example: opd
+        opdEntryId:
+          type: string
+          example: opd-1001
+    AppointmentUpdateRequest:
+      type: object
+      required:
+        - actorRole
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, frontdesk, doctor, nurse, operations]
+          example: operations
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        appointmentDate:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:30:00Z"
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled, pending-triage]
+          example: scheduled
+        source:
+          type: string
+          example: opd
+        opdEntryId:
+          type: string
+          nullable: true
+          example: opd-1001
+    OpdEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          example: opd-1001
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        visitReason:
+          type: string
+          example: recurrent migraine
+        triageLevel:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        visitType:
+          type: string
+          enum: [walk-in, follow-up, referred]
+          example: walk-in
+        requestedDateTime:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:00:00Z"
+        status:
+          type: string
+          example: intake-recorded
+        notes:
+          type: string
+          example: requires urgent clinician review
+        createdAt:
+          type: string
+          format: date-time
+        createdByRole:
+          type: string
+          example: frontdesk
+    OpdEntryCreateRequest:
+      type: object
+      required:
+        - actorRole
+        - patientId
+        - visitReason
+        - requestedDateTime
+      properties:
+        actorRole:
+          type: string
+          enum: [admin, frontdesk, doctor, nurse]
+          example: frontdesk
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        patientId:
+          type: string
+          example: pat-88
+        clinicianId:
+          type: string
+          example: cln-42
+        visitReason:
+          type: string
+          example: recurrent migraine
+        triageLevel:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        visitType:
+          type: string
+          enum: [walk-in, follow-up, referred]
+          example: walk-in
+        requestedDateTime:
+          type: string
+          format: date-time
+          example: "2026-04-02T09:00:00Z"
+        notes:
+          type: string
+          example: requires urgent clinician review
+        createAppointment:
+          type: boolean
+          example: true
+    OpdEntryCreateResponse:
+      type: object
+      properties:
+        opdEntry:
+          $ref: "#/components/schemas/OpdEntry"
+        appointmentDraft:
+          nullable: true
+          $ref: "#/components/schemas/Appointment"
+    OpdEntriesListResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpdEntry"
+        total:
+          type: integer
+          example: 2
+        returned:
+          type: integer
+          example: 2
+        limit:
+          type: integer
+          example: 50
+    AppointmentRoleErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Appointment entry blocked for role
+        code:
+          type: string
+          example: APPOINTMENT_ENTRY_ROLE_BLOCKED
+        details:
+          type: object
+          properties:
+            role:
+              type: string
+              example: patient
+            action:
+              type: string
+              example: appointment.update
+            allowedRoles:
+              type: array
+              items:
+                type: string
+              example:
+                - admin
+                - frontdesk
+                - doctor
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: appointmentDate must be a valid ISO date-time
+        code:
+          type: string
+          example: APPOINTMENT_PAYLOAD_INVALID
     CalendarProviderStatus:
       type: object
       properties:

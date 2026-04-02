@@ -197,7 +197,7 @@ const criticalSchemaChecks = [
     method: "POST",
     path: "/appointments",
     requireRequestBody: true,
-    requiredResponseCodes: ["201"],
+    requiredResponseCodes: ["201", "400", "403"],
   },
   {
     service: "appointment-service",
@@ -205,7 +205,15 @@ const criticalSchemaChecks = [
     method: "PUT",
     path: "/appointments/{id}",
     requireRequestBody: true,
-    requiredResponseCodes: ["200"],
+    requiredResponseCodes: ["200", "400", "403"],
+  },
+  {
+    service: "appointment-service",
+    specSource: "services/appointment-service/openapi.yaml",
+    method: "POST",
+    path: "/opd/entries",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201", "400", "403"],
   },
   {
     service: "notification-service",

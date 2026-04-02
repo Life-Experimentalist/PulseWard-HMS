@@ -234,7 +234,8 @@ describe("auth-service policy enforcement", () => {
       enabledProviders: ["email-password", "google-oauth", "otp"],
       primaryProvider: "email-password",
       otpChannel: "both",
-      mfaRequired: true,
+      mfaRequired: false,
+      mfaRequiredRoles: [],
       sessionTtlMinutes: 120,
       roleSessionTtlMinutes: {
         doctor: 30,
@@ -278,5 +279,110 @@ describe("auth-service policy enforcement", () => {
 
     expect(callbackResponse.status).toBe(200);
     expect(callbackResponse.body.session.expiresInMinutes).toBe(30);
+  });
+
+  test("requires MFA token when role is listed in mfaRequiredRoles", async () => {
+    const settingsResponse = await saveTenantPolicy({
+      enabledProviders: ["email-password", "otp"],
+      primaryProvider: "email-password",
+      otpChannel: "email",
+      mfaRequired: false,
+      mfaRequiredRoles: ["doctor"],
+      sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {
+        doctor: ["email-password", "otp"],
+      },
+      passwordMinLength: 8,
+      allowSelfRegistration: false,
+    });
+
+    expect(settingsResponse.status).toBe(200);
+
+    const loginResponse = await requestJson("/api/v1/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "doctor@citycare.example.com",
+        password: "secret",
+        role: "doctor",
+        tenantKey: "citycare-hospital",
+      }),
+    });
+
+    expect(loginResponse.status).toBe(401);
+    expect(loginResponse.body.code).toBe("MFA_REQUIRED");
+    expect(loginResponse.body.details.requiredProvider).toBe("otp");
+  });
+
+  test("supports OTP request/verify and MFA login completion", async () => {
+    const settingsResponse = await saveTenantPolicy({
+      enabledProviders: ["email-password", "otp"],
+      primaryProvider: "email-password",
+      otpChannel: "email",
+      mfaRequired: true,
+      mfaRequiredRoles: [],
+      sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {
+        doctor: 25,
+      },
+      roleProviderOverrides: {
+        doctor: ["email-password", "otp"],
+      },
+      passwordMinLength: 8,
+      allowSelfRegistration: false,
+    });
+
+    expect(settingsResponse.status).toBe(200);
+
+    const otpRequestResponse = await requestJson("/api/v1/auth/otp/request", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey: "citycare-hospital",
+        role: "doctor",
+        recipient: "doctor@citycare.example.com",
+      }),
+    });
+
+    expect(otpRequestResponse.status).toBe(200);
+    expect(otpRequestResponse.body.challengeId).toBeTruthy();
+    expect(otpRequestResponse.body.demoCode).toBeTruthy();
+
+    const otpVerifyResponse = await requestJson("/api/v1/auth/otp/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        challengeId: otpRequestResponse.body.challengeId,
+        code: otpRequestResponse.body.demoCode,
+      }),
+    });
+
+    expect(otpVerifyResponse.status).toBe(200);
+    expect(otpVerifyResponse.body.verified).toBe(true);
+    expect(otpVerifyResponse.body.otpVerifiedToken).toBeTruthy();
+
+    const loginResponse = await requestJson("/api/v1/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "doctor@citycare.example.com",
+        password: "secret",
+        role: "doctor",
+        tenantKey: "citycare-hospital",
+        otpVerifiedToken: otpVerifyResponse.body.otpVerifiedToken,
+      }),
+    });
+
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.session.expiresInMinutes).toBe(25);
   });
 });

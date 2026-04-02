@@ -15,6 +15,7 @@ var validateAndNormalizeAuthPolicy = authPolicySchema.validateAndNormalizeAuthPo
 
 var router = express.Router();
 var users = [];
+var otpChallenges = new Map();
 var roles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
 
 function hasRealConfigValue(value) {
@@ -45,6 +46,11 @@ function signToken(payload, sessionTtlMinutes) {
 
 function normalizeRoleKey(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function createOtpCode() {
+  var value = Math.floor(100000 + Math.random() * 900000);
+  return String(value);
 }
 
 function getEffectiveAuthPolicy(tenantKey) {
@@ -119,6 +125,51 @@ function evaluateAuthFlowAccess(tenantKey, providerKey, roleKey) {
   };
 }
 
+function requiresMfaForRole(policy, roleKey) {
+  if (!policy || typeof policy !== "object") {
+    return false;
+  }
+
+  if (policy.mfaRequired === true) {
+    return true;
+  }
+
+  var normalizedRole = normalizeRoleKey(roleKey);
+  var mfaRoles = Array.isArray(policy.mfaRequiredRoles) ? policy.mfaRequiredRoles : [];
+  return mfaRoles.indexOf(normalizedRole) !== -1;
+}
+
+function verifyOtpVerifiedToken(token, tenantKey, roleKey) {
+  if (!token) {
+    return false;
+  }
+
+  try {
+    var secret = process.env.JWT_SECRET || "dev-secret";
+    var decoded = jwt.verify(token, secret);
+    return (
+      decoded &&
+      decoded.type === "otp-verified" &&
+      decoded.tenantKey === tenantKey &&
+      normalizeRoleKey(decoded.role) === normalizeRoleKey(roleKey)
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
+function issueOtpVerifiedToken(tenantKey, roleKey) {
+  return signToken(
+    {
+      type: "otp-verified",
+      tenantKey: tenantKey,
+      role: normalizeRoleKey(roleKey),
+      provider: "otp",
+    },
+    10
+  );
+}
+
 function sendAuthPolicyBlocked(res, payload) {
   res.status(403).json({
     message: "Auth flow blocked by tenant policy",
@@ -141,6 +192,104 @@ function sendAuthPolicyBlocked(res, payload) {
 
 router.get("/auth/roles", function (_req, res) {
   res.json({ roles: roles });
+});
+
+router.post("/auth/otp/request", function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = payload.tenantKey || "default";
+  var roleKey = normalizeRoleKey(payload.role || "patient");
+
+  if (roles.indexOf(roleKey) === -1) {
+    res.status(400).json({ message: "Unsupported role" });
+    return;
+  }
+
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, "otp", roleKey);
+  if (!policyAccess.allowed) {
+    sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
+      tenantKey: tenantKey,
+      provider: "otp",
+      action: "auth.otp.request",
+      role: roleKey,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
+    });
+    return;
+  }
+
+  var challengeId = randomUUID();
+  var otpCode = createOtpCode();
+  var expiresInSeconds = 300;
+  var expiresAt = Date.now() + expiresInSeconds * 1000;
+
+  otpChallenges.set(challengeId, {
+    challengeId: challengeId,
+    code: otpCode,
+    tenantKey: tenantKey,
+    role: roleKey,
+    expiresAt: expiresAt,
+  });
+
+  res.json({
+    challengeId: challengeId,
+    tenantKey: tenantKey,
+    role: roleKey,
+    deliveryChannel: policyAccess.policy.otpChannel,
+    expiresInSeconds: expiresInSeconds,
+    detail: "OTP challenge generated",
+    demoCode: process.env.NODE_ENV === "production" ? undefined : otpCode,
+  });
+});
+
+router.post("/auth/otp/verify", function (req, res) {
+  var payload = req.body || {};
+  var challengeId = payload.challengeId || "";
+  var submittedCode = String(payload.code || "").trim();
+
+  if (!challengeId || !submittedCode) {
+    res.status(400).json({ message: "challengeId and code are required" });
+    return;
+  }
+
+  var challenge = otpChallenges.get(challengeId);
+  if (!challenge) {
+    res.status(400).json({
+      verified: false,
+      code: "OTP_CHALLENGE_NOT_FOUND",
+      message: "OTP challenge not found",
+    });
+    return;
+  }
+
+  if (Date.now() > challenge.expiresAt) {
+    otpChallenges.delete(challengeId);
+    res.status(400).json({
+      verified: false,
+      code: "OTP_CHALLENGE_EXPIRED",
+      message: "OTP challenge expired",
+    });
+    return;
+  }
+
+  if (challenge.code !== submittedCode) {
+    res.status(400).json({
+      verified: false,
+      code: "OTP_CODE_INVALID",
+      message: "Invalid OTP code",
+    });
+    return;
+  }
+
+  otpChallenges.delete(challengeId);
+
+  res.json({
+    verified: true,
+    tenantKey: challenge.tenantKey,
+    role: challenge.role,
+    otpVerifiedToken: issueOtpVerifiedToken(challenge.tenantKey, challenge.role),
+    expiresInMinutes: 10,
+  });
 });
 
 router.post("/auth/register", function (req, res) {
@@ -196,6 +345,23 @@ router.post("/auth/login", function (req, res) {
   }
 
   var sessionTtlMinutes = resolveSessionTtlMinutes(policyAccess.policy, roleKey);
+
+  if (requiresMfaForRole(policyAccess.policy, roleKey)) {
+    var otpVerifiedToken = payload.otpVerifiedToken;
+    if (!verifyOtpVerifiedToken(otpVerifiedToken, tenantKey, roleKey)) {
+      res.status(401).json({
+        message: "MFA required for this tenant policy",
+        code: "MFA_REQUIRED",
+        details: {
+          tenantKey: tenantKey,
+          role: roleKey,
+          requiredProvider: "otp",
+          hint: "Complete /auth/otp/request and /auth/otp/verify before login",
+        },
+      });
+      return;
+    }
+  }
 
   var token = signToken({
     sub: payload.email,

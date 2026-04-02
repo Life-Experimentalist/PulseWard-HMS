@@ -109,7 +109,23 @@ const criticalSchemaChecks = [
     method: "POST",
     path: "/auth/login",
     requireRequestBody: true,
+    requiredResponseCodes: ["200", "400", "401", "403"],
+  },
+  {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
+    method: "POST",
+    path: "/auth/otp/request",
+    requireRequestBody: true,
     requiredResponseCodes: ["200", "400", "403"],
+  },
+  {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
+    method: "POST",
+    path: "/auth/otp/verify",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200", "400"],
   },
   {
     service: "auth-service",

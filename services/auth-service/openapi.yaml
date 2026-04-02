@@ -25,6 +25,62 @@ paths:
                     items:
                       type: string
 
+  /auth/otp/request:
+    post:
+      summary: Create tenant-scoped OTP challenge for role login flow
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpRequest"
+      responses:
+        "200":
+          description: OTP challenge issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpChallengeResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: OTP flow blocked by tenant auth policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPolicyDeniedResponse"
+
+  /auth/otp/verify:
+    post:
+      summary: Verify OTP challenge and issue short-lived OTP verified token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpVerifyRequest"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpVerifyResponse"
+        "400":
+          description: Invalid, expired, or missing OTP challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpVerifyErrorResponse"
+
   /auth/register:
     post:
       summary: Register a user for a tenant and role
@@ -80,6 +136,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthPolicyDeniedResponse"
+        "401":
+          description: MFA required by tenant policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaRequiredResponse"
 
   /auth/oauth/providers:
     get:
@@ -409,6 +471,92 @@ components:
         tenantKey:
           type: string
           example: citycare-hospital
+    OtpRequest:
+      type: object
+      required:
+        - tenantKey
+        - role
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        recipient:
+          type: string
+          example: doctor@citycare.example.com
+    OtpChallengeResponse:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          example: 9f1fbf9a-1497-4c7f-a8df-43d0863218ba
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        deliveryChannel:
+          type: string
+          enum:
+            - email
+            - phone
+            - both
+          example: email
+        expiresInSeconds:
+          type: integer
+          example: 300
+        detail:
+          type: string
+          example: OTP challenge generated
+        demoCode:
+          type: string
+          nullable: true
+          example: "123456"
+    OtpVerifyRequest:
+      type: object
+      required:
+        - challengeId
+        - code
+      properties:
+        challengeId:
+          type: string
+          example: 9f1fbf9a-1497-4c7f-a8df-43d0863218ba
+        code:
+          type: string
+          example: "123456"
+    OtpVerifyResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          example: true
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        otpVerifiedToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresInMinutes:
+          type: integer
+          example: 10
+    OtpVerifyErrorResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: OTP_CODE_INVALID
+        message:
+          type: string
+          example: Invalid OTP code
     RegisterResponse:
       type: object
       properties:
@@ -536,6 +684,30 @@ components:
         expiresInMinutes:
           type: integer
           example: 60
+    MfaRequiredResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: MFA required for this tenant policy
+        code:
+          type: string
+          example: MFA_REQUIRED
+        details:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              example: citycare-hospital
+            role:
+              type: string
+              example: doctor
+            requiredProvider:
+              type: string
+              example: otp
+            hint:
+              type: string
+              example: Complete /auth/otp/request and /auth/otp/verify before login
     AuthPolicyDeniedResponse:
       type: object
       properties:
@@ -744,6 +916,20 @@ components:
         mfaRequired:
           type: boolean
           example: false
+        mfaRequiredRoles:
+          type: array
+          items:
+            type: string
+            enum:
+              - admin
+              - doctor
+              - nurse
+              - patient
+              - frontdesk
+              - operations
+          example:
+            - doctor
+            - nurse
         sessionTtlMinutes:
           type: integer
           minimum: 15

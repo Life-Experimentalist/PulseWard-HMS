@@ -60,6 +60,7 @@ function getDefaultAuthPolicy() {
     primaryProvider: "email-password",
     otpChannel: "email",
     mfaRequired: false,
+    mfaRequiredRoles: [],
     sessionTtlMinutes: 60,
     roleSessionTtlMinutes: {},
     roleProviderOverrides: {},
@@ -118,6 +119,18 @@ function validateAndNormalizeAuthPolicy(rawPolicy) {
     errors.push("sessionTtlMinutes must be between 15 and 1440");
     sessionTtlMinutes = defaults.sessionTtlMinutes;
   }
+
+  var mfaRequiredRoles = uniqueStrings(candidate.mfaRequiredRoles).map(normalizeRoleKey);
+  var invalidMfaRoles = mfaRequiredRoles.filter(function (roleKey) {
+    return allowedRoles.indexOf(roleKey) === -1;
+  });
+  if (invalidMfaRoles.length > 0) {
+    errors.push("mfaRequiredRoles contains unsupported roles: " + invalidMfaRoles.join(", "));
+  }
+
+  mfaRequiredRoles = mfaRequiredRoles.filter(function (roleKey) {
+    return allowedRoles.indexOf(roleKey) !== -1;
+  });
 
   var passwordMinLength = toInteger(candidate.passwordMinLength, defaults.passwordMinLength);
   if (passwordMinLength < 8 || passwordMinLength > 128) {
@@ -207,6 +220,7 @@ function validateAndNormalizeAuthPolicy(rawPolicy) {
     primaryProvider: primaryProvider,
     otpChannel: otpChannel,
     mfaRequired: toBoolean(candidate.mfaRequired, defaults.mfaRequired),
+    mfaRequiredRoles: mfaRequiredRoles,
     sessionTtlMinutes: sessionTtlMinutes,
     roleSessionTtlMinutes: roleSessionTtlMinutes,
     roleProviderOverrides: roleProviderOverrides,

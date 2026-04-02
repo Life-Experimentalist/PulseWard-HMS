@@ -54,17 +54,17 @@ For new API surfaces, prefer this envelope while preserving backward compatibili
 
 ## Suggested Error Code Families
 
-| HTTP | Code | Meaning |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | Input shape or value is invalid. |
-| 401 | `AUTH_REQUIRED` | Missing or invalid auth token. |
-| 403 | `AUTH_FORBIDDEN` | Authenticated but not authorized. |
-| 404 | `RESOURCE_NOT_FOUND` | Resource does not exist. |
-| 409 | `CONFLICT` | State conflict (booking, version, idempotency). |
-| 422 | `UNPROCESSABLE_ENTITY` | Semantically invalid request body. |
-| 429 | `RATE_LIMITED` | Request throttled. |
-| 502 | `UPSTREAM_FAILURE` | Provider or upstream call failed. |
-| 503 | `SERVICE_UNAVAILABLE` | Service temporarily unavailable. |
+| HTTP | Code                   | Meaning                                         |
+| ---- | ---------------------- | ----------------------------------------------- |
+| 400  | `VALIDATION_ERROR`     | Input shape or value is invalid.                |
+| 401  | `AUTH_REQUIRED`        | Missing or invalid auth token.                  |
+| 403  | `AUTH_FORBIDDEN`       | Authenticated but not authorized.               |
+| 404  | `RESOURCE_NOT_FOUND`   | Resource does not exist.                        |
+| 409  | `CONFLICT`             | State conflict (booking, version, idempotency). |
+| 422  | `UNPROCESSABLE_ENTITY` | Semantically invalid request body.              |
+| 429  | `RATE_LIMITED`         | Request throttled.                              |
+| 502  | `UPSTREAM_FAILURE`     | Provider or upstream call failed.               |
+| 503  | `SERVICE_UNAVAILABLE`  | Service temporarily unavailable.                |
 
 ## Migration Guidance
 

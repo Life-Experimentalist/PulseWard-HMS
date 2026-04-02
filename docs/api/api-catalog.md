@@ -19,70 +19,70 @@ For field-level schemas, always use each service OpenAPI file as the canonical c
 
 ## API Base Paths
 
-| Service | Primary base path | Notes |
-| --- | --- | --- |
-| API Gateway | `/` | Routes traffic to service backends. |
-| Auth Service | `/api/v1` | Also mounted at `/api` in local runtime. |
-| Appointment Service | `/api/v1` | Also mounted at `/api` in local runtime. |
-| Notification Service | `/api/v1` | Also mounted at `/api` in local runtime. |
-| Patient Service | `/api/patients` | CRUD patient profile routes. |
-| EHR Service | `/ehr` and `/api/ehr` | Runtime/spec aligned in M1.3. |
-| Lab Service | `/api/lab-tests` | Runtime/spec aligned in M1.3. |
-| Pharmacy Service | `/api/pharmacy` | CRUD pharmacy routes. |
-| Billing Service | `/billing` and `/api/billing` | Runtime/spec aligned in M1.3. |
+| Service              | Primary base path             | Notes                                    |
+| -------------------- | ----------------------------- | ---------------------------------------- |
+| API Gateway          | `/`                           | Routes traffic to service backends.      |
+| Auth Service         | `/api/v1`                     | Also mounted at `/api` in local runtime. |
+| Appointment Service  | `/api/v1`                     | Also mounted at `/api` in local runtime. |
+| Notification Service | `/api/v1`                     | Also mounted at `/api` in local runtime. |
+| Patient Service      | `/api/patients`               | CRUD patient profile routes.             |
+| EHR Service          | `/ehr` and `/api/ehr`         | Runtime/spec aligned in M1.3.            |
+| Lab Service          | `/api/lab-tests`              | Runtime/spec aligned in M1.3.            |
+| Pharmacy Service     | `/api/pharmacy`               | CRUD pharmacy routes.                    |
+| Billing Service      | `/billing` and `/api/billing` | Runtime/spec aligned in M1.3.            |
 
 ## Auth Service Highlights
 
 Under `/api/v1`:
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/auth/roles` | List supported role keys. |
-| POST | `/auth/register` | Register role-scoped user. |
-| POST | `/auth/login` | Role login and JWT issue. |
-| GET | `/auth/oauth/providers` | OAuth provider readiness list. |
-| GET | `/auth/oauth/google/start` | Google OAuth bootstrap URL. |
-| POST | `/auth/oauth/google/callback` | Exchange callback payload for JWT. |
-| GET | `/auth/oauth/clerk/start` | Clerk bootstrap metadata. |
-| GET | `/auth/oauth/google/config-status` | Google OAuth env readiness probe. |
-| GET | `/platform/abha/config-status` | ABHA config readiness probe. |
-| GET | `/platform/abha/health-check` | ABHA gateway reachability check. |
-| GET | `/admin/settings/storage` | Admin settings store metadata. |
-| GET | `/admin/settings` | Read tenant admin settings. |
-| PUT | `/admin/settings` | Persist tenant admin settings. |
-| GET | `/platform/domain-config` | Resolve tenant domain config. |
-| POST | `/platform/domain-config/validate` | Validate origin for tenant. |
-| GET | `/platform/domain-config/all` | Return full domain config model. |
+| Method | Endpoint                           | Purpose                            |
+| ------ | ---------------------------------- | ---------------------------------- |
+| GET    | `/auth/roles`                      | List supported role keys.          |
+| POST   | `/auth/register`                   | Register role-scoped user.         |
+| POST   | `/auth/login`                      | Role login and JWT issue.          |
+| GET    | `/auth/oauth/providers`            | OAuth provider readiness list.     |
+| GET    | `/auth/oauth/google/start`         | Google OAuth bootstrap URL.        |
+| POST   | `/auth/oauth/google/callback`      | Exchange callback payload for JWT. |
+| GET    | `/auth/oauth/clerk/start`          | Clerk bootstrap metadata.          |
+| GET    | `/auth/oauth/google/config-status` | Google OAuth env readiness probe.  |
+| GET    | `/platform/abha/config-status`     | ABHA config readiness probe.       |
+| GET    | `/platform/abha/health-check`      | ABHA gateway reachability check.   |
+| GET    | `/admin/settings/storage`          | Admin settings store metadata.     |
+| GET    | `/admin/settings`                  | Read tenant admin settings.        |
+| PUT    | `/admin/settings`                  | Persist tenant admin settings.     |
+| GET    | `/platform/domain-config`          | Resolve tenant domain config.      |
+| POST   | `/platform/domain-config/validate` | Validate origin for tenant.        |
+| GET    | `/platform/domain-config/all`      | Return full domain config model.   |
 
 ## Notification Service Highlights
 
 Under `/api/v1`:
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/notifications` | List notifications. |
-| POST | `/notifications` | Create notification. |
-| GET | `/notifications/{id}` | Fetch notification by id. |
-| DELETE | `/notifications/{id}` | Delete notification by id. |
-| GET | `/integrations/messaging/providers` | List tenant messaging providers. |
-| POST | `/integrations/messaging/test` | Trigger provider test delivery (dry run or live). |
-| GET | `/integrations/messaging/telegram/setup` | Telegram bootstrap checklist. |
-| GET | `/integrations/messaging/telegram/config-status` | Telegram secret/config readiness. |
-| GET | `/integrations/messaging/email/config-status` | SMTP secret/config readiness. |
+| Method | Endpoint                                         | Purpose                                           |
+| ------ | ------------------------------------------------ | ------------------------------------------------- |
+| GET    | `/notifications`                                 | List notifications.                               |
+| POST   | `/notifications`                                 | Create notification.                              |
+| GET    | `/notifications/{id}`                            | Fetch notification by id.                         |
+| DELETE | `/notifications/{id}`                            | Delete notification by id.                        |
+| GET    | `/integrations/messaging/providers`              | List tenant messaging providers.                  |
+| POST   | `/integrations/messaging/test`                   | Trigger provider test delivery (dry run or live). |
+| GET    | `/integrations/messaging/telegram/setup`         | Telegram bootstrap checklist.                     |
+| GET    | `/integrations/messaging/telegram/config-status` | Telegram secret/config readiness.                 |
+| GET    | `/integrations/messaging/email/config-status`    | SMTP secret/config readiness.                     |
 
 ## Appointment Service Highlights
 
 Under `/api/v1`:
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/appointments` | List appointments. |
-| GET | `/appointments/{id}` | Fetch appointment by id. |
-| POST | `/appointments` | Create appointment. |
-| PUT | `/appointments/{id}` | Update appointment. |
-| DELETE | `/appointments/{id}` | Cancel appointment. |
-| GET | `/integrations/calendars/providers` | List calendar providers. |
-| POST | `/integrations/calendars/test` | Test calendar booking flow. |
+| Method | Endpoint                            | Purpose                     |
+| ------ | ----------------------------------- | --------------------------- |
+| GET    | `/appointments`                     | List appointments.          |
+| GET    | `/appointments/{id}`                | Fetch appointment by id.    |
+| POST   | `/appointments`                     | Create appointment.         |
+| PUT    | `/appointments/{id}`                | Update appointment.         |
+| DELETE | `/appointments/{id}`                | Cancel appointment.         |
+| GET    | `/integrations/calendars/providers` | List calendar providers.    |
+| POST   | `/integrations/calendars/test`      | Test calendar booking flow. |
 
 ## ABHA References
 

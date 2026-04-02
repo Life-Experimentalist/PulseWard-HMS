@@ -273,6 +273,14 @@ const criticalSchemaChecks = [
     requiredResponseCodes: ["200"],
   },
   {
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/appointments/events",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201", "200", "400"],
+  },
+  {
     service: "pharmacy-service",
     specSource: "services/pharmacy-service/openapi.yaml",
     method: "POST",

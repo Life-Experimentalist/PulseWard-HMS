@@ -8,6 +8,7 @@ var loadTenantIntegrationConfig =
 var router = express.Router();
 var appointments = [];
 var opdEntries = [];
+var notificationDispatchEvents = [];
 
 var appointmentStatusValues = [
   "pending-triage",
@@ -39,6 +40,8 @@ var appointmentAccessMatrix = {
 
 var MIN_DURATION_MINUTES = 5;
 var MAX_DURATION_MINUTES = 240;
+var NOTIFICATION_DISPATCH_MAX_ATTEMPTS = 3;
+var NOTIFICATION_DISPATCH_TIMEOUT_MS = 1500;
 
 function normalizeRoleKey(value) {
   return String(value || "")
@@ -236,6 +239,166 @@ function findAppointmentByClientRequestId(tenantKey, clientRequestId) {
   return null;
 }
 
+function getNotificationDispatchEndpoint() {
+  return String(
+    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT || process.env.APPOINTMENT_NOTIFICATION_ENDPOINT || ""
+  ).trim();
+}
+
+function getNotificationDispatchMaxAttempts() {
+  var parsed = Number(process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES || NOTIFICATION_DISPATCH_MAX_ATTEMPTS);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return NOTIFICATION_DISPATCH_MAX_ATTEMPTS;
+  }
+
+  return Math.min(6, Math.max(1, Math.floor(parsed)));
+}
+
+function getNotificationDispatchTimeoutMs() {
+  var parsed = Number(process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS || NOTIFICATION_DISPATCH_TIMEOUT_MS);
+  if (!Number.isFinite(parsed) || parsed < 200) {
+    return NOTIFICATION_DISPATCH_TIMEOUT_MS;
+  }
+
+  return Math.min(10_000, Math.max(200, Math.floor(parsed)));
+}
+
+function buildLifecycleCorrelationId(req, payload, appointment, eventType) {
+  var requested = String(
+    req.headers["x-correlation-id"] || payload.correlationId || payload.clientRequestId || ""
+  ).trim();
+  if (requested) {
+    return [requested, eventType, appointment.id].join(":");
+  }
+
+  return [
+    "corr",
+    appointment.tenantKey || "default",
+    appointment.id,
+    eventType,
+    randomUUID().slice(0, 12),
+  ].join("-");
+}
+
+function getAppointmentLifecycleMessage(eventType, appointment) {
+  var patientRef = appointment.patientId || "patient";
+  var dateTime = appointment.appointmentDate || "";
+
+  if (eventType === "appointment.created") {
+    return "Appointment created for " + patientRef + " at " + dateTime;
+  }
+
+  if (eventType === "appointment.rescheduled") {
+    return "Appointment rescheduled for " + patientRef + " to " + dateTime;
+  }
+
+  if (eventType === "appointment.cancelled") {
+    return "Appointment cancelled for " + patientRef;
+  }
+
+  return "Appointment status updated to " + appointment.status + " for " + patientRef;
+}
+
+function createNotificationDispatchRecord(eventPayload, endpoint) {
+  return {
+    dispatchId: randomUUID(),
+    endpoint: endpoint || "",
+    eventType: eventPayload.eventType,
+    tenantKey: eventPayload.tenantKey,
+    appointmentId: eventPayload.appointmentId,
+    correlationId: eventPayload.correlationId,
+    status: "pending",
+    attempts: 0,
+    responseStatus: null,
+    lastError: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+async function dispatchLifecycleNotificationEvent(eventPayload) {
+  var endpoint = getNotificationDispatchEndpoint();
+  var dispatchRecord = createNotificationDispatchRecord(eventPayload, endpoint);
+  notificationDispatchEvents.push(dispatchRecord);
+
+  if (!endpoint) {
+    dispatchRecord.status = "skipped";
+    dispatchRecord.lastError = "notification endpoint not configured";
+    dispatchRecord.updatedAt = new Date().toISOString();
+    return dispatchRecord;
+  }
+
+  var maxAttempts = getNotificationDispatchMaxAttempts();
+  var timeoutMs = getNotificationDispatchTimeoutMs();
+
+  for (var attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    dispatchRecord.attempts = attempt;
+    dispatchRecord.updatedAt = new Date().toISOString();
+
+    var controller = new AbortController();
+    var timeout = setTimeout(function () {
+      controller.abort();
+    }, timeoutMs);
+
+    try {
+      var response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-correlation-id": eventPayload.correlationId,
+        },
+        body: JSON.stringify(eventPayload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+      dispatchRecord.responseStatus = response.status;
+
+      if (response.ok) {
+        var responseBody = await response.json().catch(function () {
+          return {};
+        });
+
+        dispatchRecord.status = "delivered";
+        dispatchRecord.remoteReceiptId = responseBody.receipt ? responseBody.receipt.id : null;
+        dispatchRecord.updatedAt = new Date().toISOString();
+        return dispatchRecord;
+      }
+
+      dispatchRecord.lastError = "notification endpoint returned status " + response.status;
+    } catch (error) {
+      clearTimeout(timeout);
+      dispatchRecord.lastError = error && error.message ? error.message : "notification dispatch error";
+    }
+  }
+
+  dispatchRecord.status = "failed";
+  dispatchRecord.updatedAt = new Date().toISOString();
+  return dispatchRecord;
+}
+
+async function emitAppointmentLifecycleEvent(req, payload, appointment, actorRole, eventType, details) {
+  var eventPayload = {
+    tenantKey: appointment.tenantKey,
+    appointmentId: appointment.id,
+    patientId: appointment.patientId,
+    clinicianId: appointment.clinicianId,
+    appointmentDate: appointment.appointmentDate,
+    status: appointment.status,
+    actorRole: actorRole,
+    sourceService: "appointment-service",
+    eventType: eventType,
+    correlationId: buildLifecycleCorrelationId(req, payload, appointment, eventType),
+    occurredAt: new Date().toISOString(),
+    channel: "appointment-lifecycle",
+    recipient: appointment.patientId,
+    message: getAppointmentLifecycleMessage(eventType, appointment),
+    metadata: details || {},
+  };
+
+  return dispatchLifecycleNotificationEvent(eventPayload);
+}
+
 function getAllowedRoles(actionKey) {
   return appointmentAccessMatrix[actionKey] || [];
 }
@@ -342,7 +505,7 @@ router.get("/appointments", function (req, res) {
   res.json(filtered);
 });
 
-router.post("/appointments", function (req, res) {
+router.post("/appointments", async function (req, res) {
   var payload = req.body || {};
   var access = requireAccessForAction(req, res, payload, "appointment.create");
   if (!access) {
@@ -434,6 +597,12 @@ router.post("/appointments", function (req, res) {
   });
 
   appointments.push(item);
+
+  await emitAppointmentLifecycleEvent(req, payload, item, access.actorRole, "appointment.created", {
+    source: item.source,
+    durationMinutes: item.durationMinutes,
+  });
+
   res.status(201).json(item);
 });
 
@@ -449,7 +618,7 @@ router.get("/appointments/:id", function (req, res) {
   res.json(found);
 });
 
-router.put("/appointments/:id", function (req, res) {
+router.put("/appointments/:id", async function (req, res) {
   var payload = req.body || {};
   var access = requireAccessForAction(req, res, payload, "appointment.update");
   if (!access) {
@@ -648,11 +817,40 @@ router.put("/appointments/:id", function (req, res) {
     );
   }
 
+  if (currentStatus !== nextStatus) {
+    await emitAppointmentLifecycleEvent(
+      req,
+      payload,
+      updated,
+      access.actorRole,
+      "appointment.status-updated",
+      {
+        previousStatus: currentStatus,
+        nextStatus: nextStatus,
+      }
+    );
+  }
+
+  if (
+    appointments[index].appointmentDate !== nextAppointmentDate ||
+    appointments[index].clinicianId !== nextClinicianId ||
+    appointments[index].durationMinutes !== nextDurationMinutes
+  ) {
+    await emitAppointmentLifecycleEvent(req, payload, updated, access.actorRole, "appointment.rescheduled", {
+      previousDateTime: appointments[index].appointmentDate,
+      nextDateTime: nextAppointmentDate,
+      previousClinicianId: appointments[index].clinicianId,
+      nextClinicianId: nextClinicianId,
+      previousDurationMinutes: appointments[index].durationMinutes || 30,
+      nextDurationMinutes: nextDurationMinutes,
+    });
+  }
+
   appointments[index] = updated;
   res.json(updated);
 });
 
-router.delete("/appointments/:id", function (req, res) {
+router.delete("/appointments/:id", async function (req, res) {
   var access = requireAccessForAction(req, res, {}, "appointment.cancel");
   if (!access) {
     return;
@@ -698,7 +896,60 @@ router.delete("/appointments/:id", function (req, res) {
     {}
   );
 
+  await emitAppointmentLifecycleEvent(
+    req,
+    {},
+    appointments[index],
+    access.actorRole,
+    "appointment.cancelled",
+    {
+      previousStatus: currentStatus,
+      nextStatus: "cancelled",
+    }
+  );
+
   res.status(204).send();
+});
+
+router.get("/integrations/notifications/dispatch-events", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var appointmentId = String(req.query.appointmentId || "").trim();
+  var eventType = String(req.query.eventType || "")
+    .trim()
+    .toLowerCase();
+  var status = String(req.query.status || "")
+    .trim()
+    .toLowerCase();
+  var correlationId = String(req.query.correlationId || "").trim();
+
+  var filtered = notificationDispatchEvents.filter(function (eventItem) {
+    if (tenantKey && eventItem.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (appointmentId && eventItem.appointmentId !== appointmentId) {
+      return false;
+    }
+
+    if (eventType && String(eventItem.eventType || "").toLowerCase() !== eventType) {
+      return false;
+    }
+
+    if (status && String(eventItem.status || "").toLowerCase() !== status) {
+      return false;
+    }
+
+    if (correlationId && eventItem.correlationId !== correlationId) {
+      return false;
+    }
+
+    return true;
+  });
+
+  res.json({
+    events: filtered,
+    total: filtered.length,
+  });
 });
 
 router.get("/opd/entries", function (req, res) {

@@ -7,6 +7,72 @@ var loadTenantIntegrationConfig =
 
 var router = express.Router();
 var notifications = [];
+var appointmentEventReceipts = [];
+
+var supportedAppointmentEventTypes = [
+  "appointment.created",
+  "appointment.status-updated",
+  "appointment.rescheduled",
+  "appointment.cancelled",
+];
+
+function findAppointmentReceiptByCorrelationId(correlationId) {
+  if (!correlationId) {
+    return null;
+  }
+
+  for (var index = 0; index < appointmentEventReceipts.length; index += 1) {
+    if (appointmentEventReceipts[index].correlationId === correlationId) {
+      return appointmentEventReceipts[index];
+    }
+  }
+
+  return null;
+}
+
+function findAppointmentReceiptById(receiptId) {
+  for (var index = 0; index < appointmentEventReceipts.length; index += 1) {
+    if (appointmentEventReceipts[index].id === receiptId) {
+      return appointmentEventReceipts[index];
+    }
+  }
+
+  return null;
+}
+
+function validateAppointmentEventPayload(payload) {
+  var failures = [];
+
+  if (!payload.tenantKey) {
+    failures.push("tenantKey is required");
+  }
+
+  if (!payload.appointmentId) {
+    failures.push("appointmentId is required");
+  }
+
+  if (!payload.eventType) {
+    failures.push("eventType is required");
+  }
+
+  if (!payload.correlationId) {
+    failures.push("correlationId is required");
+  }
+
+  if (!payload.message) {
+    failures.push("message is required");
+  }
+
+  if (!payload.recipient) {
+    failures.push("recipient is required");
+  }
+
+  if (payload.eventType && supportedAppointmentEventTypes.indexOf(payload.eventType) === -1) {
+    failures.push("eventType is unsupported");
+  }
+
+  return failures;
+}
 
 router.get("/notifications", function (_req, res) {
   res.json(notifications);
@@ -23,6 +89,119 @@ router.post("/notifications", function (req, res) {
 
   notifications.push(item);
   res.status(201).json(item);
+});
+
+router.post("/integrations/appointments/events", function (req, res) {
+  var payload = req.body || {};
+  var failures = validateAppointmentEventPayload(payload);
+  if (failures.length > 0) {
+    res.status(400).json({
+      message: "appointment lifecycle event payload is invalid",
+      code: "NOTIFICATION_APPOINTMENT_EVENT_INVALID",
+      details: {
+        failures: failures,
+        supportedEventTypes: supportedAppointmentEventTypes,
+      },
+    });
+    return;
+  }
+
+  var existingReceipt = findAppointmentReceiptByCorrelationId(payload.correlationId);
+  if (existingReceipt) {
+    var existingNotification = notifications.find(function (item) {
+      return item.id === existingReceipt.notificationId;
+    });
+
+    res.status(200).json({
+      duplicate: true,
+      receipt: existingReceipt,
+      notification: existingNotification || null,
+    });
+    return;
+  }
+
+  var notification = {
+    id: randomUUID(),
+    message: payload.message,
+    recipient: payload.recipient,
+    channel: payload.channel || "appointment-lifecycle",
+    timestamp: new Date().toISOString(),
+    correlationId: payload.correlationId,
+    sourceService: payload.sourceService || "appointment-service",
+    metadata: payload.metadata || {},
+  };
+
+  notifications.push(notification);
+
+  var receipt = {
+    id: randomUUID(),
+    tenantKey: payload.tenantKey,
+    appointmentId: payload.appointmentId,
+    patientId: payload.patientId || "",
+    clinicianId: payload.clinicianId || "",
+    eventType: payload.eventType,
+    correlationId: payload.correlationId,
+    notificationId: notification.id,
+    processingStatus: "accepted",
+    attempts: Number(payload.attempt || 1),
+    occurredAt: payload.occurredAt || new Date().toISOString(),
+    receivedAt: new Date().toISOString(),
+  };
+
+  appointmentEventReceipts.push(receipt);
+
+  res.status(201).json({
+    duplicate: false,
+    receipt: receipt,
+    notification: notification,
+  });
+});
+
+router.get("/integrations/appointments/events", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var appointmentId = String(req.query.appointmentId || "").trim();
+  var eventType = String(req.query.eventType || "")
+    .trim()
+    .toLowerCase();
+  var correlationId = String(req.query.correlationId || "").trim();
+
+  var filtered = appointmentEventReceipts.filter(function (receipt) {
+    if (tenantKey && receipt.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (appointmentId && receipt.appointmentId !== appointmentId) {
+      return false;
+    }
+
+    if (eventType && String(receipt.eventType || "").toLowerCase() !== eventType) {
+      return false;
+    }
+
+    if (correlationId && receipt.correlationId !== correlationId) {
+      return false;
+    }
+
+    return true;
+  });
+
+  res.json({
+    receipts: filtered,
+    total: filtered.length,
+  });
+});
+
+router.get("/integrations/appointments/events/:id", function (req, res) {
+  var receipt = findAppointmentReceiptById(req.params.id);
+  if (!receipt) {
+    res.status(404).json({
+      message: "Appointment event receipt not found",
+      code: "NOTIFICATION_APPOINTMENT_EVENT_NOT_FOUND",
+    });
+    return;
+  }
+
+  res.json(receipt);
 });
 
 router.get("/notifications/:id", function (req, res) {

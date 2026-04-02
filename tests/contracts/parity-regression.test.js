@@ -68,6 +68,7 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain("PASS: appointment-service PUT /appointments/{id}");
     expect(output).toContain("PASS: appointment-service POST /opd/entries");
     expect(output).toContain("PASS: notification-service POST /integrations/messaging/test");
+    expect(output).toContain("PASS: notification-service POST /integrations/appointments/events");
     expect(output).toContain("PASS: pharmacy-service POST /prescriptions/handoff");
     expect(output).toContain("PASS: pharmacy-service PUT /prescriptions/{id}/status");
     expect(output).toContain("PASS: lab-service POST /lab-tests/orders");

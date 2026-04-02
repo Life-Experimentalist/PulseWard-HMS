@@ -67,6 +67,9 @@ Under `/api/v1`:
 | ------ | ------------------------------------------------ | ------------------------------------------------- |
 | GET    | `/notifications`                                 | List notifications.                               |
 | POST   | `/notifications`                                 | Create notification.                              |
+| GET    | `/integrations/appointments/events`              | List appointment lifecycle event receipts.        |
+| POST   | `/integrations/appointments/events`              | Ingest appointment lifecycle event with dedupe.   |
+| GET    | `/integrations/appointments/events/{id}`         | Fetch appointment event receipt by id.            |
 | GET    | `/notifications/{id}`                            | Fetch notification by id.                         |
 | DELETE | `/notifications/{id}`                            | Delete notification by id.                        |
 | GET    | `/integrations/messaging/providers`              | List tenant messaging providers.                  |
@@ -94,11 +97,13 @@ OPD management alignment:
 | POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.                                    |
 | GET    | `/integrations/calendars/providers` | List calendar providers.                                                                           |
 | POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                                                        |
+| GET    | `/integrations/notifications/dispatch-events` | List lifecycle notification dispatch attempts for delivery audit/debug.                            |
 
 Lifecycle reliability notes:
 - Appointment lifecycle states are transition-guarded (`pending-triage -> scheduled -> checked-in -> in-consultation -> completed`) with controlled cancel/no-show paths.
 - Scheduling writes reject clinician slot overlaps and stale version updates with conflict error semantics.
 - Client request id keys can replay safe create retries without duplicate appointment creation.
+- Lifecycle events are dispatched to notification-service with propagated correlation-id and retry-safe delivery semantics.
 
 ## EHR Service Highlights
 

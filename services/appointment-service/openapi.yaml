@@ -272,6 +272,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CalendarProviderTestResponse"
+  /integrations/notifications/dispatch-events:
+    get:
+      summary: List appointment lifecycle notification dispatch attempts
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: appointmentId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - appointment.created
+              - appointment.status-updated
+              - appointment.rescheduled
+              - appointment.cancelled
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - delivered
+              - failed
+              - skipped
+        - name: correlationId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dispatch attempt events filtered by optional query fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationDispatchEventsResponse"
 components:
   schemas:
     Appointment:
@@ -416,6 +462,9 @@ components:
         clientRequestId:
           type: string
           example: req-appointment-1001
+        correlationId:
+          type: string
+          example: corr-appointment-create-1001
     AppointmentUpdateRequest:
       type: object
       required:
@@ -461,6 +510,9 @@ components:
           type: string
           nullable: true
           example: opd-1001
+        correlationId:
+          type: string
+          example: corr-appointment-update-1001
     OpdEntry:
       type: object
       properties:
@@ -688,3 +740,67 @@ components:
         detail:
           type: string
           example: Booking accepted by provider adapter.
+    NotificationDispatchEvent:
+      type: object
+      properties:
+        dispatchId:
+          type: string
+          example: 198afab8-86ad-47fb-a570-55e5cc6c0de5
+        endpoint:
+          type: string
+          example: http://localhost:5004/api/v1/integrations/appointments/events
+        eventType:
+          type: string
+          enum:
+            - appointment.created
+            - appointment.status-updated
+            - appointment.rescheduled
+            - appointment.cancelled
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        appointmentId:
+          type: string
+          example: apt-1001
+        correlationId:
+          type: string
+          example: corr-citycare-hospital-apt-1001-appointment.created
+        status:
+          type: string
+          enum:
+            - pending
+            - delivered
+            - failed
+            - skipped
+          example: delivered
+        attempts:
+          type: integer
+          minimum: 0
+          example: 1
+        responseStatus:
+          type: integer
+          nullable: true
+          example: 201
+        lastError:
+          type: string
+          example: ""
+        remoteReceiptId:
+          type: string
+          nullable: true
+          example: e5d5f243-fd8f-438f-b813-31692c4d3f43
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    NotificationDispatchEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationDispatchEvent"
+        total:
+          type: integer
+          example: 1

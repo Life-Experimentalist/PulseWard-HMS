@@ -170,6 +170,12 @@ paths:
           schema:
             type: string
             default: default
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+            default: patient
       responses:
         "200":
           description: Clerk bootstrap metadata
@@ -438,12 +444,17 @@ components:
         token:
           type: string
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        provider:
+          type: string
+          example: email-password
         role:
           type: string
           example: admin
         tenantKey:
           type: string
           example: citycare-hospital
+        session:
+          $ref: "#/components/schemas/AuthSessionMetadata"
     OAuthProvidersResponse:
       type: object
       properties:
@@ -517,6 +528,14 @@ components:
         tenantKey:
           type: string
           example: citycare-hospital
+        session:
+          $ref: "#/components/schemas/AuthSessionMetadata"
+    AuthSessionMetadata:
+      type: object
+      properties:
+        expiresInMinutes:
+          type: integer
+          example: 60
     AuthPolicyDeniedResponse:
       type: object
       properties:
@@ -543,6 +562,13 @@ components:
               nullable: true
               example: doctor
             enabledProviders:
+              type: array
+              items:
+                type: string
+              example:
+                - email-password
+                - otp
+            roleAllowedProviders:
               type: array
               items:
                 type: string
@@ -723,6 +749,32 @@ components:
           minimum: 15
           maximum: 1440
           example: 60
+        roleSessionTtlMinutes:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 15
+            maximum: 1440
+          example:
+            doctor: 30
+            nurse: 45
+        roleProviderOverrides:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              enum:
+                - email-password
+                - otp
+                - google-oauth
+                - clerk
+          example:
+            doctor:
+              - email-password
+              - google-oauth
+            patient:
+              - otp
         passwordMinLength:
           type: integer
           minimum: 8

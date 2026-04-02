@@ -30,11 +30,21 @@ function hasRealConfigValue(value) {
   return !/^(your_|<set-|changeme|replace-me|example)/i.test(normalized);
 }
 
-function signToken(payload) {
+function signToken(payload, sessionTtlMinutes) {
   var secret = process.env.JWT_SECRET || "dev-secret";
-  return jwt.sign(payload, secret, {
-    expiresIn: process.env.JWT_EXPIRATION || "1h",
-  });
+  var tokenOptions = {};
+
+  if (Number.isFinite(sessionTtlMinutes) && sessionTtlMinutes > 0) {
+    tokenOptions.expiresIn = String(Math.trunc(sessionTtlMinutes)) + "m";
+  } else {
+    tokenOptions.expiresIn = process.env.JWT_EXPIRATION || "1h";
+  }
+
+  return jwt.sign(payload, secret, tokenOptions);
+}
+
+function normalizeRoleKey(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function getEffectiveAuthPolicy(tenantKey) {
@@ -55,16 +65,71 @@ function isProviderEnabledForTenant(tenantKey, providerKey) {
   };
 }
 
+function resolveSessionTtlMinutes(policy, roleKey) {
+  if (!policy || typeof policy !== "object") {
+    return 60;
+  }
+
+  var normalizedRole = normalizeRoleKey(roleKey);
+  var roleSpecificTtl =
+    policy.roleSessionTtlMinutes &&
+    Number(policy.roleSessionTtlMinutes[normalizedRole]);
+
+  if (Number.isFinite(roleSpecificTtl) && roleSpecificTtl >= 15 && roleSpecificTtl <= 1440) {
+    return Math.trunc(roleSpecificTtl);
+  }
+
+  var globalTtl = Number(policy.sessionTtlMinutes);
+  if (Number.isFinite(globalTtl) && globalTtl >= 15 && globalTtl <= 1440) {
+    return Math.trunc(globalTtl);
+  }
+
+  return 60;
+}
+
+function evaluateAuthFlowAccess(tenantKey, providerKey, roleKey) {
+  var providerCheck = isProviderEnabledForTenant(tenantKey, providerKey);
+  if (!providerCheck.enabled) {
+    return {
+      allowed: false,
+      code: "AUTH_POLICY_PROVIDER_BLOCKED",
+      policy: providerCheck.policy,
+      roleAllowedProviders: [],
+    };
+  }
+
+  var normalizedRole = normalizeRoleKey(roleKey);
+  var roleOverrides = providerCheck.policy.roleProviderOverrides || {};
+  var roleAllowedProviders = roleOverrides[normalizedRole] || [];
+
+  if (roleAllowedProviders.length > 0 && roleAllowedProviders.indexOf(providerKey) === -1) {
+    return {
+      allowed: false,
+      code: "AUTH_POLICY_ROLE_PROVIDER_BLOCKED",
+      policy: providerCheck.policy,
+      roleAllowedProviders: roleAllowedProviders,
+    };
+  }
+
+  return {
+    allowed: true,
+    code: "",
+    policy: providerCheck.policy,
+    roleAllowedProviders: roleAllowedProviders,
+  };
+}
+
 function sendAuthPolicyBlocked(res, payload) {
   res.status(403).json({
     message: "Auth flow blocked by tenant policy",
-    code: "AUTH_POLICY_PROVIDER_BLOCKED",
+    code: payload.code || "AUTH_POLICY_PROVIDER_BLOCKED",
     details: {
       tenantKey: payload.tenantKey,
       provider: payload.provider,
       action: payload.action,
       role: payload.role || null,
       enabledProviders: payload.enabledProviders || [],
+      roleAllowedProviders: payload.roleAllowedProviders || [],
     },
     audit: {
       eventType: "auth.policy.denied",
@@ -104,6 +169,7 @@ router.post("/auth/register", function (req, res) {
 router.post("/auth/login", function (req, res) {
   var payload = req.body || {};
   var tenantKey = payload.tenantKey || "default";
+  var roleKey = normalizeRoleKey(payload.role);
 
   if (!payload.email || !payload.password || !payload.role) {
     res.status(400).json({ message: "email, password, and role are required" });
@@ -115,29 +181,38 @@ router.post("/auth/login", function (req, res) {
     return;
   }
 
-  var policyCheck = isProviderEnabledForTenant(tenantKey, "email-password");
-  if (!policyCheck.enabled) {
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, "email-password", roleKey);
+  if (!policyAccess.allowed) {
     sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
       tenantKey: tenantKey,
       provider: "email-password",
       action: "auth.login",
       role: payload.role,
-      enabledProviders: policyCheck.policy.enabledProviders,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
     });
     return;
   }
+
+  var sessionTtlMinutes = resolveSessionTtlMinutes(policyAccess.policy, roleKey);
 
   var token = signToken({
     sub: payload.email,
     role: payload.role,
     tenantKey: tenantKey,
     provider: "email-password",
-  });
+    sessionTtlMinutes: sessionTtlMinutes,
+  }, sessionTtlMinutes);
 
   res.json({
     token: token,
     role: payload.role,
     tenantKey: tenantKey,
+    provider: "email-password",
+    session: {
+      expiresInMinutes: sessionTtlMinutes,
+    },
   });
 });
 
@@ -174,14 +249,17 @@ router.get("/auth/oauth/providers", function (_req, res) {
 router.get("/auth/oauth/google/start", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
   var role = req.query.role || "patient";
-  var policyCheck = isProviderEnabledForTenant(tenantKey, "google-oauth");
-  if (!policyCheck.enabled) {
+  var roleKey = normalizeRoleKey(role);
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, "google-oauth", roleKey);
+  if (!policyAccess.allowed) {
     sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
       tenantKey: tenantKey,
       provider: "google-oauth",
       action: "auth.oauth.google.start",
       role: role,
-      enabledProviders: policyCheck.policy.enabledProviders,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
     });
     return;
   }
@@ -213,43 +291,56 @@ router.post("/auth/oauth/google/callback", function (req, res) {
   var payload = req.body || {};
   var tenantKey = payload.tenantKey || "default";
   var role = payload.role || "patient";
-  var policyCheck = isProviderEnabledForTenant(tenantKey, "google-oauth");
-  if (!policyCheck.enabled) {
+  var roleKey = normalizeRoleKey(role);
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, "google-oauth", roleKey);
+  if (!policyAccess.allowed) {
     sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
       tenantKey: tenantKey,
       provider: "google-oauth",
       action: "auth.oauth.google.callback",
       role: role,
-      enabledProviders: policyCheck.policy.enabledProviders,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
     });
     return;
   }
+
+  var sessionTtlMinutes = resolveSessionTtlMinutes(policyAccess.policy, roleKey);
 
   var token = signToken({
     sub: payload.email || "google-user@example.com",
     role: role,
     tenantKey: tenantKey,
     provider: "google-oauth",
-  });
+    sessionTtlMinutes: sessionTtlMinutes,
+  }, sessionTtlMinutes);
 
   res.json({
     token: token,
     provider: "google-oauth",
     role: role,
     tenantKey: tenantKey,
+    session: {
+      expiresInMinutes: sessionTtlMinutes,
+    },
   });
 });
 
 router.get("/auth/oauth/clerk/start", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
-  var policyCheck = isProviderEnabledForTenant(tenantKey, "clerk");
-  if (!policyCheck.enabled) {
+  var role = req.query.role || "patient";
+  var roleKey = normalizeRoleKey(role);
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, "clerk", roleKey);
+  if (!policyAccess.allowed) {
     sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
       tenantKey: tenantKey,
       provider: "clerk",
       action: "auth.oauth.clerk.start",
-      role: null,
-      enabledProviders: policyCheck.policy.enabledProviders,
+      role: role,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
     });
     return;
   }

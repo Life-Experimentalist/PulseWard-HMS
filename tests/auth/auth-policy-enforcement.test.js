@@ -72,6 +72,8 @@ describe("auth-service policy enforcement", () => {
       otpChannel: "email",
       mfaRequired: false,
       sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {},
       passwordMinLength: 8,
       allowSelfRegistration: false,
     });
@@ -93,6 +95,8 @@ describe("auth-service policy enforcement", () => {
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.token).toBeTruthy();
+    expect(loginResponse.body.provider).toBe("email-password");
+    expect(loginResponse.body.session.expiresInMinutes).toBe(60);
   });
 
   test("blocks password login when provider is disabled", async () => {
@@ -102,6 +106,8 @@ describe("auth-service policy enforcement", () => {
       otpChannel: "email",
       mfaRequired: false,
       sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {},
       passwordMinLength: 8,
       allowSelfRegistration: false,
     });
@@ -135,6 +141,8 @@ describe("auth-service policy enforcement", () => {
       otpChannel: "email",
       mfaRequired: false,
       sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {},
       passwordMinLength: 8,
       allowSelfRegistration: false,
     });
@@ -165,6 +173,8 @@ describe("auth-service policy enforcement", () => {
       otpChannel: "both",
       mfaRequired: true,
       sessionTtlMinutes: 120,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {},
       passwordMinLength: 12,
       allowSelfRegistration: false,
     });
@@ -182,7 +192,91 @@ describe("auth-service policy enforcement", () => {
     expect(providersResponse.body.tenantKey).toBe("citycare-hospital");
     expect(Array.isArray(providersResponse.body.providers)).toBe(true);
 
-    const googleProvider = providersResponse.body.providers.find((item) => item.key === "google-oauth");
+    const googleProvider = providersResponse.body.providers.find(
+      (item) => item.key === "google-oauth"
+    );
     expect(googleProvider.policyEnabled).toBe(false);
+  });
+
+  test("blocks role-provider mismatch when role overrides are configured", async () => {
+    const settingsResponse = await saveTenantPolicy({
+      enabledProviders: ["email-password", "google-oauth", "otp"],
+      primaryProvider: "email-password",
+      otpChannel: "email",
+      mfaRequired: false,
+      sessionTtlMinutes: 60,
+      roleSessionTtlMinutes: {},
+      roleProviderOverrides: {
+        doctor: ["email-password"],
+      },
+      passwordMinLength: 8,
+      allowSelfRegistration: false,
+    });
+
+    expect(settingsResponse.status).toBe(200);
+
+    const startResponse = await requestJson(
+      "/api/v1/auth/oauth/google/start?tenantKey=citycare-hospital&role=doctor",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(startResponse.status).toBe(403);
+    expect(startResponse.body.code).toBe("AUTH_POLICY_ROLE_PROVIDER_BLOCKED");
+    expect(startResponse.body.details.provider).toBe("google-oauth");
+    expect(startResponse.body.details.role).toBe("doctor");
+    expect(startResponse.body.details.roleAllowedProviders).toEqual(["email-password"]);
+  });
+
+  test("applies role-specific session ttl in login and oauth callback", async () => {
+    const settingsResponse = await saveTenantPolicy({
+      enabledProviders: ["email-password", "google-oauth", "otp"],
+      primaryProvider: "email-password",
+      otpChannel: "both",
+      mfaRequired: true,
+      sessionTtlMinutes: 120,
+      roleSessionTtlMinutes: {
+        doctor: 30,
+      },
+      roleProviderOverrides: {
+        doctor: ["email-password", "google-oauth"],
+      },
+      passwordMinLength: 12,
+      allowSelfRegistration: false,
+    });
+
+    expect(settingsResponse.status).toBe(200);
+
+    const loginResponse = await requestJson("/api/v1/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "doctor@citycare.example.com",
+        password: "secret",
+        role: "doctor",
+        tenantKey: "citycare-hospital",
+      }),
+    });
+
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.session.expiresInMinutes).toBe(30);
+
+    const callbackResponse = await requestJson("/api/v1/auth/oauth/google/callback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "doctor@citycare.example.com",
+        role: "doctor",
+        tenantKey: "citycare-hospital",
+      }),
+    });
+
+    expect(callbackResponse.status).toBe(200);
+    expect(callbackResponse.body.session.expiresInMinutes).toBe(30);
   });
 });

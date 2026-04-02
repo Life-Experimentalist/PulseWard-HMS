@@ -1,5 +1,6 @@
 var allowedProviders = ["email-password", "otp", "google-oauth", "clerk"];
 var allowedOtpChannels = ["email", "phone", "both"];
+var allowedRoles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
 
 function toBoolean(value, fallback) {
   if (typeof value === "boolean") {
@@ -49,6 +50,10 @@ function uniqueStrings(values) {
   return result;
 }
 
+function normalizeRoleKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function getDefaultAuthPolicy() {
   return {
     enabledProviders: ["email-password", "otp", "google-oauth", "clerk"],
@@ -56,6 +61,8 @@ function getDefaultAuthPolicy() {
     otpChannel: "email",
     mfaRequired: false,
     sessionTtlMinutes: 60,
+    roleSessionTtlMinutes: {},
+    roleProviderOverrides: {},
     passwordMinLength: 8,
     allowSelfRegistration: false,
   };
@@ -118,12 +125,91 @@ function validateAndNormalizeAuthPolicy(rawPolicy) {
     passwordMinLength = defaults.passwordMinLength;
   }
 
+  var roleSessionTtlMinutes = {};
+  if (
+    candidate.roleSessionTtlMinutes &&
+    typeof candidate.roleSessionTtlMinutes === "object" &&
+    !Array.isArray(candidate.roleSessionTtlMinutes)
+  ) {
+    Object.keys(candidate.roleSessionTtlMinutes).forEach(function (rawRoleKey) {
+      var roleKey = normalizeRoleKey(rawRoleKey);
+      if (allowedRoles.indexOf(roleKey) === -1) {
+        errors.push("roleSessionTtlMinutes contains unsupported role: " + rawRoleKey);
+        return;
+      }
+
+      var ttlValue = toInteger(candidate.roleSessionTtlMinutes[rawRoleKey], NaN);
+      if (!Number.isFinite(ttlValue) || ttlValue < 15 || ttlValue > 1440) {
+        errors.push("roleSessionTtlMinutes." + roleKey + " must be between 15 and 1440");
+        return;
+      }
+
+      roleSessionTtlMinutes[roleKey] = ttlValue;
+    });
+  }
+
+  var roleProviderOverrides = {};
+  if (
+    candidate.roleProviderOverrides &&
+    typeof candidate.roleProviderOverrides === "object" &&
+    !Array.isArray(candidate.roleProviderOverrides)
+  ) {
+    Object.keys(candidate.roleProviderOverrides).forEach(function (rawRoleKey) {
+      var roleKey = normalizeRoleKey(rawRoleKey);
+      if (allowedRoles.indexOf(roleKey) === -1) {
+        errors.push("roleProviderOverrides contains unsupported role: " + rawRoleKey);
+        return;
+      }
+
+      var providerList = uniqueStrings(candidate.roleProviderOverrides[rawRoleKey]);
+      if (providerList.length === 0) {
+        errors.push("roleProviderOverrides." + roleKey + " must include at least one provider");
+        return;
+      }
+
+      var invalidRoleProviders = providerList.filter(function (providerKey) {
+        return allowedProviders.indexOf(providerKey) === -1;
+      });
+      if (invalidRoleProviders.length > 0) {
+        errors.push(
+          "roleProviderOverrides." + roleKey + " contains unsupported providers: " +
+            invalidRoleProviders.join(", ")
+        );
+      }
+
+      var normalizedRoleProviders = providerList.filter(function (providerKey) {
+        return allowedProviders.indexOf(providerKey) !== -1;
+      });
+      if (normalizedRoleProviders.length === 0) {
+        return;
+      }
+
+      var disabledProviders = normalizedRoleProviders.filter(function (providerKey) {
+        return normalizedProviders.indexOf(providerKey) === -1;
+      });
+      if (disabledProviders.length > 0) {
+        errors.push(
+          "roleProviderOverrides." +
+            roleKey +
+            " contains providers not enabled globally: " +
+            disabledProviders.join(", ")
+        );
+      }
+
+      roleProviderOverrides[roleKey] = normalizedRoleProviders.filter(function (providerKey) {
+        return normalizedProviders.indexOf(providerKey) !== -1;
+      });
+    });
+  }
+
   var normalized = {
     enabledProviders: normalizedProviders,
     primaryProvider: primaryProvider,
     otpChannel: otpChannel,
     mfaRequired: toBoolean(candidate.mfaRequired, defaults.mfaRequired),
     sessionTtlMinutes: sessionTtlMinutes,
+    roleSessionTtlMinutes: roleSessionTtlMinutes,
+    roleProviderOverrides: roleProviderOverrides,
     passwordMinLength: passwordMinLength,
     allowSelfRegistration: toBoolean(
       candidate.allowSelfRegistration,

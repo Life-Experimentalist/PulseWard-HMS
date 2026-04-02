@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Build the project
-        run: npm run build:apps
+        run: npm run build:apps:ci
 
       - name: Deploy to Production
         run: |

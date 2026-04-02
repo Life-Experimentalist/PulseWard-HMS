@@ -274,4 +274,5 @@ Exit criteria:
 2. M1.2 completed: `contracts:check` now validates both source/spec presence and semantic route-path parity with explicit allowlisted drift baselines.
 3. M1.3 completed: allowlisted drift has been reconciled for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service` runtime paths/specs.
 4. M1.4 completed: strict parity mode is enforced in CI (`contracts:check -- --strict`).
-5. Next slice (M1.5): add route/spec drift regression tests for newly aligned services and block regressions before merge.
+5. M1.5 completed: route/spec drift regression tests added for newly aligned services to block regressions before merge.
+6. Next slice (M1.6): expand contract assertions to endpoint-level request/response schema checks for critical booking and notification APIs.

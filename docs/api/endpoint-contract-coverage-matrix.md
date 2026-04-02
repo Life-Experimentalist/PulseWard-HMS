@@ -20,6 +20,7 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Default mode fails on any unexpected runtime/spec mismatch.
 - Strict mode (`npm run contracts:check -- --strict`) also fails when allowlist entries become stale and should be removed.
 - CI runs strict mode by default to prevent drift regressions.
+- Regression tests are tracked in `tests/contracts/parity-regression.test.js` and run in the standard Jest pipeline.
 - Known drifts can be explicitly allowlisted to prevent hidden breakage while documenting intentional exceptions.
 
 ## Current Allowlisted Drifts

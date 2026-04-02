@@ -125,7 +125,10 @@ function validateAndNormalizeAuthPolicy(rawPolicy) {
     mfaRequired: toBoolean(candidate.mfaRequired, defaults.mfaRequired),
     sessionTtlMinutes: sessionTtlMinutes,
     passwordMinLength: passwordMinLength,
-    allowSelfRegistration: toBoolean(candidate.allowSelfRegistration, defaults.allowSelfRegistration),
+    allowSelfRegistration: toBoolean(
+      candidate.allowSelfRegistration,
+      defaults.allowSelfRegistration
+    ),
   };
 
   return {

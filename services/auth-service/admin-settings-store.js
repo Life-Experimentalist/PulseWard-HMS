@@ -10,9 +10,7 @@ function resolveStorePath() {
   }
 
   var normalized = String(overridePath).trim();
-  return path.isAbsolute(normalized)
-    ? normalized
-    : path.resolve(process.cwd(), normalized);
+  return path.isAbsolute(normalized) ? normalized : path.resolve(process.cwd(), normalized);
 }
 
 function ensureStore() {

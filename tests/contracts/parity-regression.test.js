@@ -49,6 +49,8 @@ describe("M1 parity regression guard", () => {
     const output = `${result.stdout || ""}\n${result.stderr || ""}`;
 
     expect(output).toContain("Critical endpoint schema checks:");
+    expect(output).toContain("PASS: auth-service POST /auth/login");
+    expect(output).toContain("PASS: auth-service POST /auth/oauth/google/callback");
     expect(output).toContain("PASS: appointment-service POST /appointments");
     expect(output).toContain("PASS: notification-service POST /integrations/messaging/test");
     expect(output).toContain("PASS: auth-service POST /admin/settings/auth-policy/validate");

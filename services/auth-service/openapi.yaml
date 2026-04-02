@@ -74,12 +74,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Login blocked by tenant auth policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPolicyDeniedResponse"
 
   /auth/oauth/providers:
     get:
       summary: List OAuth providers and enablement state
       tags:
         - OAuth
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
       responses:
         "200":
           description: Provider catalog
@@ -113,6 +126,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GoogleOAuthStartResponse"
+        "403":
+          description: Google OAuth flow blocked by tenant auth policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPolicyDeniedResponse"
 
   /auth/oauth/google/callback:
     post:
@@ -132,6 +151,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GoogleOAuthCallbackResponse"
+        "403":
+          description: Google OAuth callback blocked by tenant auth policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPolicyDeniedResponse"
 
   /auth/oauth/clerk/start:
     get:
@@ -152,6 +177,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClerkStartResponse"
+        "403":
+          description: Clerk flow blocked by tenant auth policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPolicyDeniedResponse"
 
   /auth/oauth/google/config-status:
     get:
@@ -416,6 +447,11 @@ components:
     OAuthProvidersResponse:
       type: object
       properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        authPolicy:
+          $ref: "#/components/schemas/AdminAuthPolicy"
         providers:
           type: array
           items:
@@ -426,6 +462,12 @@ components:
         key:
           type: string
           example: google-oauth
+        envEnabled:
+          type: boolean
+          example: true
+        policyEnabled:
+          type: boolean
+          example: true
         enabled:
           type: boolean
           example: true
@@ -475,6 +517,50 @@ components:
         tenantKey:
           type: string
           example: citycare-hospital
+    AuthPolicyDeniedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Auth flow blocked by tenant policy
+        code:
+          type: string
+          example: AUTH_POLICY_PROVIDER_BLOCKED
+        details:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              example: citycare-hospital
+            provider:
+              type: string
+              example: google-oauth
+            action:
+              type: string
+              example: auth.oauth.google.callback
+            role:
+              type: string
+              nullable: true
+              example: doctor
+            enabledProviders:
+              type: array
+              items:
+                type: string
+              example:
+                - email-password
+                - otp
+        audit:
+          type: object
+          properties:
+            eventType:
+              type: string
+              example: auth.policy.denied
+            eventId:
+              type: string
+              example: b6c307cc-6bb7-4d4c-bff4-af50de93f615
+            occurredAt:
+              type: string
+              format: date-time
     ClerkStartResponse:
       type: object
       properties:

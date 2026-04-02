@@ -37,6 +37,43 @@ function signToken(payload) {
   });
 }
 
+function getEffectiveAuthPolicy(tenantKey) {
+  var persisted = getTenantSettings(tenantKey);
+  if (!persisted || !persisted.settings) {
+    return getDefaultAuthPolicy();
+  }
+
+  var validation = validateAndNormalizeAuthPolicy(persisted.settings.authPolicy);
+  return validation.authPolicy;
+}
+
+function isProviderEnabledForTenant(tenantKey, providerKey) {
+  var policy = getEffectiveAuthPolicy(tenantKey);
+  return {
+    enabled: policy.enabledProviders.indexOf(providerKey) !== -1,
+    policy: policy,
+  };
+}
+
+function sendAuthPolicyBlocked(res, payload) {
+  res.status(403).json({
+    message: "Auth flow blocked by tenant policy",
+    code: "AUTH_POLICY_PROVIDER_BLOCKED",
+    details: {
+      tenantKey: payload.tenantKey,
+      provider: payload.provider,
+      action: payload.action,
+      role: payload.role || null,
+      enabledProviders: payload.enabledProviders || [],
+    },
+    audit: {
+      eventType: "auth.policy.denied",
+      eventId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+    },
+  });
+}
+
 router.get("/auth/roles", function (_req, res) {
   res.json({ roles: roles });
 });
@@ -66,6 +103,8 @@ router.post("/auth/register", function (req, res) {
 
 router.post("/auth/login", function (req, res) {
   var payload = req.body || {};
+  var tenantKey = payload.tenantKey || "default";
+
   if (!payload.email || !payload.password || !payload.role) {
     res.status(400).json({ message: "email, password, and role are required" });
     return;
@@ -76,39 +115,77 @@ router.post("/auth/login", function (req, res) {
     return;
   }
 
+  var policyCheck = isProviderEnabledForTenant(tenantKey, "email-password");
+  if (!policyCheck.enabled) {
+    sendAuthPolicyBlocked(res, {
+      tenantKey: tenantKey,
+      provider: "email-password",
+      action: "auth.login",
+      role: payload.role,
+      enabledProviders: policyCheck.policy.enabledProviders,
+    });
+    return;
+  }
+
   var token = signToken({
     sub: payload.email,
     role: payload.role,
-    tenantKey: payload.tenantKey || "default",
+    tenantKey: tenantKey,
+    provider: "email-password",
   });
 
   res.json({
     token: token,
     role: payload.role,
-    tenantKey: payload.tenantKey || "default",
+    tenantKey: tenantKey,
   });
 });
 
 router.get("/auth/oauth/providers", function (_req, res) {
+  var tenantKey = (_req.query && _req.query.tenantKey) || "default";
+  var policy = getEffectiveAuthPolicy(tenantKey);
+
   res.json({
     providers: [
       {
         key: "google-oauth",
-        enabled: Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID),
+        envEnabled: Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID),
+        policyEnabled: policy.enabledProviders.indexOf("google-oauth") !== -1,
+        enabled:
+          Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID) &&
+          policy.enabledProviders.indexOf("google-oauth") !== -1,
         mode: "free",
       },
       {
         key: "clerk",
-        enabled: Boolean(process.env.CLERK_PUBLISHABLE_KEY),
+        envEnabled: Boolean(process.env.CLERK_PUBLISHABLE_KEY),
+        policyEnabled: policy.enabledProviders.indexOf("clerk") !== -1,
+        enabled:
+          Boolean(process.env.CLERK_PUBLISHABLE_KEY) &&
+          policy.enabledProviders.indexOf("clerk") !== -1,
         mode: "paid-optional",
       },
     ],
+    tenantKey: tenantKey,
+    authPolicy: policy,
   });
 });
 
 router.get("/auth/oauth/google/start", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
   var role = req.query.role || "patient";
+  var policyCheck = isProviderEnabledForTenant(tenantKey, "google-oauth");
+  if (!policyCheck.enabled) {
+    sendAuthPolicyBlocked(res, {
+      tenantKey: tenantKey,
+      provider: "google-oauth",
+      action: "auth.oauth.google.start",
+      role: role,
+      enabledProviders: policyCheck.policy.enabledProviders,
+    });
+    return;
+  }
+
   var redirectUri =
     process.env.GOOGLE_OAUTH_REDIRECT_URI ||
     "http://localhost:8081/api/v1/auth/oauth/google/callback";
@@ -136,6 +213,17 @@ router.post("/auth/oauth/google/callback", function (req, res) {
   var payload = req.body || {};
   var tenantKey = payload.tenantKey || "default";
   var role = payload.role || "patient";
+  var policyCheck = isProviderEnabledForTenant(tenantKey, "google-oauth");
+  if (!policyCheck.enabled) {
+    sendAuthPolicyBlocked(res, {
+      tenantKey: tenantKey,
+      provider: "google-oauth",
+      action: "auth.oauth.google.callback",
+      role: role,
+      enabledProviders: policyCheck.policy.enabledProviders,
+    });
+    return;
+  }
 
   var token = signToken({
     sub: payload.email || "google-user@example.com",
@@ -154,6 +242,18 @@ router.post("/auth/oauth/google/callback", function (req, res) {
 
 router.get("/auth/oauth/clerk/start", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
+  var policyCheck = isProviderEnabledForTenant(tenantKey, "clerk");
+  if (!policyCheck.enabled) {
+    sendAuthPolicyBlocked(res, {
+      tenantKey: tenantKey,
+      provider: "clerk",
+      action: "auth.oauth.clerk.start",
+      role: null,
+      enabledProviders: policyCheck.policy.enabledProviders,
+    });
+    return;
+  }
+
   res.json({
     provider: "clerk",
     tenantKey: tenantKey,
@@ -294,12 +394,16 @@ router.get("/admin/settings", function (req, res) {
   );
 
   var nextSettings = {
-    routing: persisted.settings && persisted.settings.routing ? persisted.settings.routing : {
-      tenantKey: tenantKey,
-      authBaseUrl: process.env.AUTH_SERVICE_BASE_URL || "http://localhost:5101",
-      notificationBaseUrl: process.env.NOTIFICATION_SERVICE_BASE_URL || "http://localhost:5102",
-      appointmentBaseUrl: process.env.APPOINTMENT_SERVICE_BASE_URL || "http://localhost:5103",
-    },
+    routing:
+      persisted.settings && persisted.settings.routing
+        ? persisted.settings.routing
+        : {
+            tenantKey: tenantKey,
+            authBaseUrl: process.env.AUTH_SERVICE_BASE_URL || "http://localhost:5101",
+            notificationBaseUrl:
+              process.env.NOTIFICATION_SERVICE_BASE_URL || "http://localhost:5102",
+            appointmentBaseUrl: process.env.APPOINTMENT_SERVICE_BASE_URL || "http://localhost:5103",
+          },
     ui:
       persisted.settings && persisted.settings.ui
         ? persisted.settings.ui

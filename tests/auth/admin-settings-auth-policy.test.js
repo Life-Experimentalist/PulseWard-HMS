@@ -15,10 +15,7 @@ describe("auth-service admin settings auth policy", () => {
   }
 
   beforeAll(async () => {
-    tempStorePath = path.join(
-      __dirname,
-      `tmp-admin-settings-${process.pid}-${Date.now()}.json`
-    );
+    tempStorePath = path.join(__dirname, `tmp-admin-settings-${process.pid}-${Date.now()}.json`);
 
     process.env.AUTH_ADMIN_SETTINGS_STORE_PATH = tempStorePath;
 
@@ -133,12 +130,9 @@ describe("auth-service admin settings auth policy", () => {
     ]);
     expect(saveResponse.body.settings.authPolicy.otpChannel).toBe("both");
 
-    const fetchResponse = await requestJson(
-      "/api/v1/admin/settings?tenantKey=citycare-hospital",
-      {
-        method: "GET",
-      }
-    );
+    const fetchResponse = await requestJson("/api/v1/admin/settings?tenantKey=citycare-hospital", {
+      method: "GET",
+    });
 
     expect(fetchResponse.status).toBe(200);
     expect(fetchResponse.body.settings.authPolicy.sessionTtlMinutes).toBe(120);

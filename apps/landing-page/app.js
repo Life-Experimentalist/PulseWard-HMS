@@ -81,10 +81,6 @@ function initialize() {
   renderAll();
   registerServiceWorker();
 
-  if (state.services.mode === "live") {
-    discoverServiceUrls();
-  }
-
   if (!state.setup.completed) {
     openSetupWizard();
   }
@@ -137,6 +133,7 @@ function attachListeners() {
     createSnapshot("Initial setup complete");
 
     if (state.services.mode === "live") {
+      await discoverServiceUrls();
       await bootstrapAdminLive();
     }
 
@@ -757,10 +754,23 @@ async function syncProviders() {
 
 async function discoverServiceUrls() {
   var base = "http://localhost:";
+  var defaultPorts = [5101, 5102, 5103];
+  var configuredPorts = [
+    extractPortFromUrl(state.services.authApiUrl),
+    extractPortFromUrl(state.services.notificationApiUrl),
+    extractPortFromUrl(state.services.appointmentApiUrl),
+  ].filter(Boolean);
+
   var searchRange = [];
-  for (var candidatePort = 5101; candidatePort <= 5120; candidatePort += 1) {
-    searchRange.push(candidatePort);
-  }
+  defaultPorts.concat(configuredPorts).forEach(function (basePort) {
+    for (var offset = -1; offset <= 3; offset += 1) {
+      var candidate = basePort + offset;
+      if (candidate < 1024 || searchRange.indexOf(candidate) !== -1) {
+        continue;
+      }
+      searchRange.push(candidate);
+    }
+  });
 
   var found = {
     auth: null,
@@ -814,6 +824,18 @@ async function discoverServiceUrls() {
     discovered: found,
     hint: "If any service is null, start that service and run discovery again.",
   });
+}
+
+function extractPortFromUrl(url) {
+  try {
+    var parsed = new URL(url);
+    if (parsed.port) {
+      return Number(parsed.port);
+    }
+    return parsed.protocol === "https:" ? 443 : 80;
+  } catch (_error) {
+    return null;
+  }
 }
 
 async function bootstrapAdminLive() {
@@ -995,9 +1017,7 @@ function normalizeUrl(value, fallback) {
 
 async function getJson(url) {
   try {
-    var response = await fetch(url, {
-      headers: { "Content-Type": "application/json" },
-    });
+    var response = await fetch(url);
     var data = await response.json();
     return { ok: response.ok, data: data };
   } catch (error) {

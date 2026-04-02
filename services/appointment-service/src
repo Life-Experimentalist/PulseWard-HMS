@@ -9,22 +9,51 @@ const app = express();
 const PORT = Number(process.env.APPOINTMENT_SERVICE_PORT || process.env.PORT || 5103);
 
 app.use(bodyParser.json());
-const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "http://localhost:4173,http://127.0.0.1:4173")
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "*")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error("Origin not allowed by CORS"));
-    },
-  }),
-);
+function isPrivateNetworkOrigin(origin) {
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname;
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
+const allowAllOrigins =
+  process.env.NODE_ENV !== "production" || allowedOrigins.indexOf("*") !== -1;
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (
+      !origin ||
+      allowAllOrigins ||
+      allowedOrigins.indexOf(origin) !== -1 ||
+      isPrivateNetworkOrigin(origin)
+    ) {
+      callback(null, true);
+      return;
+    }
+
+    callback(null, false);
+  },
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use("/api/v1", routes);
 app.use("/api", routes);
 

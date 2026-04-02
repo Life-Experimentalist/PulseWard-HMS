@@ -16,7 +16,17 @@ var validateAndNormalizeAuthPolicy = authPolicySchema.validateAndNormalizeAuthPo
 var router = express.Router();
 var users = [];
 var otpChallenges = new Map();
+var authSessionEvents = [];
+var maxAuthSessionEvents = 500;
 var roles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
+var workflowRoleMatrix = {
+  "patient.profile.view": ["admin", "doctor", "nurse", "patient", "frontdesk"],
+  "patient.profile.update": ["admin", "doctor", "nurse", "frontdesk"],
+  "clinical.ehr.write": ["admin", "doctor", "nurse"],
+  "clinical.prescription.write": ["admin", "doctor"],
+  "clinical.lab.order": ["admin", "doctor", "nurse"],
+  "appointment.manage": ["admin", "doctor", "nurse", "frontdesk", "operations"],
+};
 
 function hasRealConfigValue(value) {
   if (!value) {
@@ -45,12 +55,40 @@ function signToken(payload, sessionTtlMinutes) {
 }
 
 function normalizeRoleKey(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function createOtpCode() {
   var value = Math.floor(100000 + Math.random() * 900000);
   return String(value);
+}
+
+function recordAuthSessionEvent(entry) {
+  var event = {
+    eventId: randomUUID(),
+    eventType: entry.eventType || "auth.session.event",
+    occurredAt: new Date().toISOString(),
+    tenantKey: entry.tenantKey || "default",
+    role: normalizeRoleKey(entry.role || ""),
+    provider: entry.provider || null,
+    action: entry.action || null,
+    outcome: entry.outcome || "unknown",
+    code: entry.code || null,
+    details: entry.details || {},
+  };
+
+  authSessionEvents.push(event);
+  if (authSessionEvents.length > maxAuthSessionEvents) {
+    authSessionEvents.shift();
+  }
+
+  return event;
+}
+
+function getWorkflowAllowedRoles(workflowKey) {
+  return workflowRoleMatrix[String(workflowKey || "").trim()] || null;
 }
 
 function getEffectiveAuthPolicy(tenantKey) {
@@ -78,8 +116,7 @@ function resolveSessionTtlMinutes(policy, roleKey) {
 
   var normalizedRole = normalizeRoleKey(roleKey);
   var roleSpecificTtl =
-    policy.roleSessionTtlMinutes &&
-    Number(policy.roleSessionTtlMinutes[normalizedRole]);
+    policy.roleSessionTtlMinutes && Number(policy.roleSessionTtlMinutes[normalizedRole]);
 
   if (Number.isFinite(roleSpecificTtl) && roleSpecificTtl >= 15 && roleSpecificTtl <= 1440) {
     return Math.trunc(roleSpecificTtl);
@@ -171,6 +208,20 @@ function issueOtpVerifiedToken(tenantKey, roleKey) {
 }
 
 function sendAuthPolicyBlocked(res, payload) {
+  var event = recordAuthSessionEvent({
+    eventType: "auth.policy.denied",
+    tenantKey: payload.tenantKey,
+    role: payload.role,
+    provider: payload.provider,
+    action: payload.action,
+    outcome: "denied",
+    code: payload.code || "AUTH_POLICY_PROVIDER_BLOCKED",
+    details: {
+      enabledProviders: payload.enabledProviders || [],
+      roleAllowedProviders: payload.roleAllowedProviders || [],
+    },
+  });
+
   res.status(403).json({
     message: "Auth flow blocked by tenant policy",
     code: payload.code || "AUTH_POLICY_PROVIDER_BLOCKED",
@@ -184,14 +235,204 @@ function sendAuthPolicyBlocked(res, payload) {
     },
     audit: {
       eventType: "auth.policy.denied",
-      eventId: randomUUID(),
-      occurredAt: new Date().toISOString(),
+      eventId: event.eventId,
+      occurredAt: event.occurredAt,
     },
   });
 }
 
 router.get("/auth/roles", function (_req, res) {
   res.json({ roles: roles });
+});
+
+router.get("/auth/session/events", function (req, res) {
+  var tenantKey = (req.query.tenantKey || "").trim();
+  var role = normalizeRoleKey(req.query.role || "");
+  var action = String(req.query.action || "").trim();
+  var outcome = String(req.query.outcome || "").trim();
+  var limit = Number(req.query.limit || 50);
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 200)) : 50;
+
+  var filtered = authSessionEvents.filter(function (event) {
+    if (tenantKey && event.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (role && event.role !== role) {
+      return false;
+    }
+
+    if (action && event.action !== action) {
+      return false;
+    }
+
+    if (outcome && event.outcome !== outcome) {
+      return false;
+    }
+
+    return true;
+  });
+
+  var result = filtered.slice(Math.max(0, filtered.length - boundedLimit));
+
+  res.json({
+    events: result,
+    total: filtered.length,
+    returned: result.length,
+    limit: boundedLimit,
+  });
+});
+
+router.post("/auth/workflow-entry/check", function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = payload.tenantKey || "default";
+  var role = payload.role || "";
+  var roleKey = normalizeRoleKey(role);
+  var provider = payload.provider || "email-password";
+  var workflowKey = String(payload.workflowKey || "").trim();
+
+  if (!workflowKey || !role) {
+    res.status(400).json({
+      message: "workflowKey and role are required",
+      code: "WORKFLOW_CHECK_PAYLOAD_INVALID",
+    });
+    return;
+  }
+
+  if (roles.indexOf(roleKey) === -1) {
+    res.status(400).json({
+      message: "Unsupported role",
+      code: "WORKFLOW_CHECK_ROLE_INVALID",
+    });
+    return;
+  }
+
+  var allowedRoles = getWorkflowAllowedRoles(workflowKey);
+  if (!allowedRoles) {
+    res.status(400).json({
+      message: "Unsupported workflowKey",
+      code: "WORKFLOW_KEY_UNSUPPORTED",
+      details: {
+        workflowKey: workflowKey,
+      },
+    });
+    return;
+  }
+
+  var policyAccess = evaluateAuthFlowAccess(tenantKey, provider, roleKey);
+  if (!policyAccess.allowed) {
+    sendAuthPolicyBlocked(res, {
+      code: policyAccess.code,
+      tenantKey: tenantKey,
+      provider: provider,
+      action: "auth.workflow.entry.check",
+      role: roleKey,
+      enabledProviders: policyAccess.policy.enabledProviders,
+      roleAllowedProviders: policyAccess.roleAllowedProviders,
+    });
+    return;
+  }
+
+  if (allowedRoles.indexOf(roleKey) === -1) {
+    var roleDeniedEvent = recordAuthSessionEvent({
+      eventType: "auth.workflow.entry.denied",
+      tenantKey: tenantKey,
+      role: roleKey,
+      provider: provider,
+      action: "auth.workflow.entry.check",
+      outcome: "denied",
+      code: "AUTH_WORKFLOW_ROLE_BLOCKED",
+      details: {
+        workflowKey: workflowKey,
+        allowedRoles: allowedRoles,
+      },
+    });
+
+    res.status(403).json({
+      allowed: false,
+      code: "AUTH_WORKFLOW_ROLE_BLOCKED",
+      message: "Role is not allowed for workflow",
+      details: {
+        workflowKey: workflowKey,
+        role: roleKey,
+        allowedRoles: allowedRoles,
+      },
+      audit: {
+        eventType: roleDeniedEvent.eventType,
+        eventId: roleDeniedEvent.eventId,
+        occurredAt: roleDeniedEvent.occurredAt,
+      },
+    });
+    return;
+  }
+
+  if (requiresMfaForRole(policyAccess.policy, roleKey)) {
+    var otpVerifiedToken = payload.otpVerifiedToken;
+    if (!verifyOtpVerifiedToken(otpVerifiedToken, tenantKey, roleKey)) {
+      var mfaEvent = recordAuthSessionEvent({
+        eventType: "auth.workflow.entry.mfa-required",
+        tenantKey: tenantKey,
+        role: roleKey,
+        provider: provider,
+        action: "auth.workflow.entry.check",
+        outcome: "denied",
+        code: "MFA_REQUIRED",
+        details: {
+          workflowKey: workflowKey,
+          requiredProvider: "otp",
+        },
+      });
+
+      res.status(401).json({
+        allowed: false,
+        message: "MFA required for this tenant policy",
+        code: "MFA_REQUIRED",
+        details: {
+          tenantKey: tenantKey,
+          role: roleKey,
+          workflowKey: workflowKey,
+          requiredProvider: "otp",
+          hint: "Complete /auth/otp/request and /auth/otp/verify before workflow entry",
+        },
+        audit: {
+          eventType: mfaEvent.eventType,
+          eventId: mfaEvent.eventId,
+          occurredAt: mfaEvent.occurredAt,
+        },
+      });
+      return;
+    }
+  }
+
+  var ttl = resolveSessionTtlMinutes(policyAccess.policy, roleKey);
+  var allowedEvent = recordAuthSessionEvent({
+    eventType: "auth.workflow.entry.allowed",
+    tenantKey: tenantKey,
+    role: roleKey,
+    provider: provider,
+    action: "auth.workflow.entry.check",
+    outcome: "allowed",
+    details: {
+      workflowKey: workflowKey,
+      sessionTtlMinutes: ttl,
+    },
+  });
+
+  res.json({
+    allowed: true,
+    tenantKey: tenantKey,
+    role: roleKey,
+    provider: provider,
+    workflowKey: workflowKey,
+    session: {
+      expiresInMinutes: ttl,
+    },
+    audit: {
+      eventType: allowedEvent.eventType,
+      eventId: allowedEvent.eventId,
+      occurredAt: allowedEvent.occurredAt,
+    },
+  });
 });
 
 router.post("/auth/otp/request", function (req, res) {
@@ -239,6 +480,19 @@ router.post("/auth/otp/request", function (req, res) {
     expiresInSeconds: expiresInSeconds,
     detail: "OTP challenge generated",
     demoCode: process.env.NODE_ENV === "production" ? undefined : otpCode,
+  });
+
+  recordAuthSessionEvent({
+    eventType: "auth.otp.requested",
+    tenantKey: tenantKey,
+    role: roleKey,
+    provider: "otp",
+    action: "auth.otp.request",
+    outcome: "requested",
+    details: {
+      challengeId: challengeId,
+      expiresInSeconds: expiresInSeconds,
+    },
   });
 });
 
@@ -289,6 +543,18 @@ router.post("/auth/otp/verify", function (req, res) {
     role: challenge.role,
     otpVerifiedToken: issueOtpVerifiedToken(challenge.tenantKey, challenge.role),
     expiresInMinutes: 10,
+  });
+
+  recordAuthSessionEvent({
+    eventType: "auth.otp.verified",
+    tenantKey: challenge.tenantKey,
+    role: challenge.role,
+    provider: "otp",
+    action: "auth.otp.verify",
+    outcome: "verified",
+    details: {
+      challengeId: challenge.challengeId,
+    },
   });
 });
 
@@ -349,6 +615,16 @@ router.post("/auth/login", function (req, res) {
   if (requiresMfaForRole(policyAccess.policy, roleKey)) {
     var otpVerifiedToken = payload.otpVerifiedToken;
     if (!verifyOtpVerifiedToken(otpVerifiedToken, tenantKey, roleKey)) {
+      recordAuthSessionEvent({
+        eventType: "auth.login.mfa-required",
+        tenantKey: tenantKey,
+        role: roleKey,
+        provider: "email-password",
+        action: "auth.login",
+        outcome: "denied",
+        code: "MFA_REQUIRED",
+      });
+
       res.status(401).json({
         message: "MFA required for this tenant policy",
         code: "MFA_REQUIRED",
@@ -363,13 +639,16 @@ router.post("/auth/login", function (req, res) {
     }
   }
 
-  var token = signToken({
-    sub: payload.email,
-    role: payload.role,
-    tenantKey: tenantKey,
-    provider: "email-password",
-    sessionTtlMinutes: sessionTtlMinutes,
-  }, sessionTtlMinutes);
+  var token = signToken(
+    {
+      sub: payload.email,
+      role: payload.role,
+      tenantKey: tenantKey,
+      provider: "email-password",
+      sessionTtlMinutes: sessionTtlMinutes,
+    },
+    sessionTtlMinutes
+  );
 
   res.json({
     token: token,
@@ -378,6 +657,18 @@ router.post("/auth/login", function (req, res) {
     provider: "email-password",
     session: {
       expiresInMinutes: sessionTtlMinutes,
+    },
+  });
+
+  recordAuthSessionEvent({
+    eventType: "auth.login.success",
+    tenantKey: tenantKey,
+    role: roleKey,
+    provider: "email-password",
+    action: "auth.login",
+    outcome: "allowed",
+    details: {
+      sessionTtlMinutes: sessionTtlMinutes,
     },
   });
 });
@@ -474,13 +765,16 @@ router.post("/auth/oauth/google/callback", function (req, res) {
 
   var sessionTtlMinutes = resolveSessionTtlMinutes(policyAccess.policy, roleKey);
 
-  var token = signToken({
-    sub: payload.email || "google-user@example.com",
-    role: role,
-    tenantKey: tenantKey,
-    provider: "google-oauth",
-    sessionTtlMinutes: sessionTtlMinutes,
-  }, sessionTtlMinutes);
+  var token = signToken(
+    {
+      sub: payload.email || "google-user@example.com",
+      role: role,
+      tenantKey: tenantKey,
+      provider: "google-oauth",
+      sessionTtlMinutes: sessionTtlMinutes,
+    },
+    sessionTtlMinutes
+  );
 
   res.json({
     token: token,
@@ -489,6 +783,18 @@ router.post("/auth/oauth/google/callback", function (req, res) {
     tenantKey: tenantKey,
     session: {
       expiresInMinutes: sessionTtlMinutes,
+    },
+  });
+
+  recordAuthSessionEvent({
+    eventType: "auth.oauth.google.success",
+    tenantKey: tenantKey,
+    role: roleKey,
+    provider: "google-oauth",
+    action: "auth.oauth.google.callback",
+    outcome: "allowed",
+    details: {
+      sessionTtlMinutes: sessionTtlMinutes,
     },
   });
 });

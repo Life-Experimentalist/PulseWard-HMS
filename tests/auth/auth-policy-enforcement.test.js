@@ -14,14 +14,14 @@ describe("auth-service policy enforcement", () => {
     return { status: response.status, body };
   }
 
-  async function saveTenantPolicy(authPolicy) {
+  async function saveTenantPolicy(authPolicy, tenantKey = "citycare-hospital") {
     return requestJson("/api/v1/admin/settings", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        tenantKey: "citycare-hospital",
+        tenantKey,
         settings: {
           routing: {
             authBaseUrl: "http://localhost:5101",
@@ -384,5 +384,201 @@ describe("auth-service policy enforcement", () => {
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.session.expiresInMinutes).toBe(25);
+  });
+
+  test("allows workflow entry and exposes role-scoped session observability events", async () => {
+    var tenantKey = "m31-workflow-allow";
+    const settingsResponse = await saveTenantPolicy(
+      {
+        enabledProviders: ["email-password", "otp"],
+        primaryProvider: "email-password",
+        otpChannel: "email",
+        mfaRequired: false,
+        mfaRequiredRoles: [],
+        sessionTtlMinutes: 60,
+        roleSessionTtlMinutes: {
+          doctor: 35,
+        },
+        roleProviderOverrides: {
+          doctor: ["email-password", "otp"],
+        },
+        passwordMinLength: 8,
+        allowSelfRegistration: false,
+      },
+      tenantKey
+    );
+
+    expect(settingsResponse.status).toBe(200);
+
+    const workflowCheckResponse = await requestJson("/api/v1/auth/workflow-entry/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey,
+        role: "doctor",
+        provider: "email-password",
+        workflowKey: "clinical.ehr.write",
+      }),
+    });
+
+    expect(workflowCheckResponse.status).toBe(200);
+    expect(workflowCheckResponse.body.allowed).toBe(true);
+    expect(workflowCheckResponse.body.session.expiresInMinutes).toBe(35);
+    expect(workflowCheckResponse.body.audit.eventType).toBe("auth.workflow.entry.allowed");
+
+    const eventsResponse = await requestJson(
+      "/api/v1/auth/session/events?tenantKey=m31-workflow-allow&role=doctor&action=auth.workflow.entry.check&outcome=allowed&limit=10",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(eventsResponse.status).toBe(200);
+    expect(eventsResponse.body.total).toBeGreaterThanOrEqual(1);
+    expect(eventsResponse.body.returned).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(eventsResponse.body.events)).toBe(true);
+    expect(eventsResponse.body.events[0].eventType).toBe("auth.workflow.entry.allowed");
+  });
+
+  test("denies unsupported workflow role and records denied session event", async () => {
+    var tenantKey = "m31-workflow-denied";
+    const settingsResponse = await saveTenantPolicy(
+      {
+        enabledProviders: ["email-password", "otp"],
+        primaryProvider: "email-password",
+        otpChannel: "email",
+        mfaRequired: false,
+        mfaRequiredRoles: [],
+        sessionTtlMinutes: 60,
+        roleSessionTtlMinutes: {},
+        roleProviderOverrides: {
+          nurse: ["email-password", "otp"],
+        },
+        passwordMinLength: 8,
+        allowSelfRegistration: false,
+      },
+      tenantKey
+    );
+
+    expect(settingsResponse.status).toBe(200);
+
+    const workflowCheckResponse = await requestJson("/api/v1/auth/workflow-entry/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey,
+        role: "nurse",
+        provider: "email-password",
+        workflowKey: "clinical.prescription.write",
+      }),
+    });
+
+    expect(workflowCheckResponse.status).toBe(403);
+    expect(workflowCheckResponse.body.code).toBe("AUTH_WORKFLOW_ROLE_BLOCKED");
+    expect(workflowCheckResponse.body.audit.eventType).toBe("auth.workflow.entry.denied");
+    expect(workflowCheckResponse.body.details.allowedRoles).toEqual(["admin", "doctor"]);
+
+    const eventsResponse = await requestJson(
+      "/api/v1/auth/session/events?tenantKey=m31-workflow-denied&role=nurse&action=auth.workflow.entry.check&outcome=denied&limit=10",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(eventsResponse.status).toBe(200);
+    expect(eventsResponse.body.total).toBeGreaterThanOrEqual(1);
+    expect(eventsResponse.body.events[0].code).toBe("AUTH_WORKFLOW_ROLE_BLOCKED");
+  });
+
+  test("requires MFA for workflow entry and allows access after OTP verification", async () => {
+    var tenantKey = "m31-workflow-mfa";
+    const settingsResponse = await saveTenantPolicy(
+      {
+        enabledProviders: ["email-password", "otp"],
+        primaryProvider: "email-password",
+        otpChannel: "email",
+        mfaRequired: false,
+        mfaRequiredRoles: ["doctor"],
+        sessionTtlMinutes: 75,
+        roleSessionTtlMinutes: {
+          doctor: 40,
+        },
+        roleProviderOverrides: {
+          doctor: ["email-password", "otp"],
+        },
+        passwordMinLength: 8,
+        allowSelfRegistration: false,
+      },
+      tenantKey
+    );
+
+    expect(settingsResponse.status).toBe(200);
+
+    const firstWorkflowCheck = await requestJson("/api/v1/auth/workflow-entry/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey,
+        role: "doctor",
+        provider: "email-password",
+        workflowKey: "clinical.ehr.write",
+      }),
+    });
+
+    expect(firstWorkflowCheck.status).toBe(401);
+    expect(firstWorkflowCheck.body.code).toBe("MFA_REQUIRED");
+    expect(firstWorkflowCheck.body.audit.eventType).toBe("auth.workflow.entry.mfa-required");
+
+    const otpRequestResponse = await requestJson("/api/v1/auth/otp/request", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey,
+        role: "doctor",
+        recipient: "doctor@citycare.example.com",
+      }),
+    });
+
+    expect(otpRequestResponse.status).toBe(200);
+
+    const otpVerifyResponse = await requestJson("/api/v1/auth/otp/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        challengeId: otpRequestResponse.body.challengeId,
+        code: otpRequestResponse.body.demoCode,
+      }),
+    });
+
+    expect(otpVerifyResponse.status).toBe(200);
+    expect(otpVerifyResponse.body.otpVerifiedToken).toBeTruthy();
+
+    const secondWorkflowCheck = await requestJson("/api/v1/auth/workflow-entry/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey,
+        role: "doctor",
+        provider: "email-password",
+        workflowKey: "clinical.ehr.write",
+        otpVerifiedToken: otpVerifyResponse.body.otpVerifiedToken,
+      }),
+    });
+
+    expect(secondWorkflowCheck.status).toBe(200);
+    expect(secondWorkflowCheck.body.allowed).toBe(true);
+    expect(secondWorkflowCheck.body.session.expiresInMinutes).toBe(40);
   });
 });

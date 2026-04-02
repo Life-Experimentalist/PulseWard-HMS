@@ -25,6 +25,87 @@ paths:
                     items:
                       type: string
 
+  /auth/session/events:
+    get:
+      summary: List recent auth session observability events
+      tags:
+        - Auth
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Filtered auth session events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionEventsResponse"
+
+  /auth/workflow-entry/check:
+    post:
+      summary: Check whether role/provider can enter patient or clinical workflow
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowEntryCheckRequest"
+      responses:
+        "200":
+          description: Workflow entry allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowEntryAllowedResponse"
+        "400":
+          description: Invalid workflow check payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowEntryPayloadErrorResponse"
+        "401":
+          description: MFA is required before workflow entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowEntryMfaRequiredResponse"
+        "403":
+          description: Workflow entry denied by policy or role compatibility
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AuthPolicyDeniedResponse"
+                  - $ref: "#/components/schemas/WorkflowEntryRoleDeniedResponse"
+
   /auth/otp/request:
     post:
       summary: Create tenant-scoped OTP challenge for role login flow
@@ -684,6 +765,193 @@ components:
         expiresInMinutes:
           type: integer
           example: 60
+    AuthSessionEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          example: b6c307cc-6bb7-4d4c-bff4-af50de93f615
+        eventType:
+          type: string
+          example: auth.workflow.entry.allowed
+        occurredAt:
+          type: string
+          format: date-time
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        provider:
+          type: string
+          nullable: true
+          example: email-password
+        action:
+          type: string
+          nullable: true
+          example: auth.workflow.entry.check
+        outcome:
+          type: string
+          example: allowed
+        code:
+          type: string
+          nullable: true
+          example: AUTH_WORKFLOW_ROLE_BLOCKED
+        details:
+          type: object
+          additionalProperties: true
+    AuthSessionEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthSessionEvent"
+        total:
+          type: integer
+          example: 12
+        returned:
+          type: integer
+          example: 10
+        limit:
+          type: integer
+          example: 10
+    WorkflowEntryCheckRequest:
+      type: object
+      required:
+        - workflowKey
+        - role
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        provider:
+          type: string
+          default: email-password
+          example: email-password
+        workflowKey:
+          type: string
+          enum:
+            - patient.profile.view
+            - patient.profile.update
+            - clinical.ehr.write
+            - clinical.prescription.write
+            - clinical.lab.order
+            - appointment.manage
+          example: clinical.ehr.write
+        otpVerifiedToken:
+          type: string
+          nullable: true
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    WorkflowEntryAllowedResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          example: true
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        role:
+          type: string
+          example: doctor
+        provider:
+          type: string
+          example: email-password
+        workflowKey:
+          type: string
+          example: clinical.ehr.write
+        session:
+          $ref: "#/components/schemas/AuthSessionMetadata"
+        audit:
+          $ref: "#/components/schemas/AuthAuditMetadata"
+    WorkflowEntryRoleDeniedResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: AUTH_WORKFLOW_ROLE_BLOCKED
+        message:
+          type: string
+          example: Role is not allowed for workflow
+        details:
+          type: object
+          properties:
+            workflowKey:
+              type: string
+              example: clinical.prescription.write
+            role:
+              type: string
+              example: nurse
+            allowedRoles:
+              type: array
+              items:
+                type: string
+              example:
+                - admin
+                - doctor
+        audit:
+          $ref: "#/components/schemas/AuthAuditMetadata"
+    WorkflowEntryMfaRequiredResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: MFA required for this tenant policy
+        code:
+          type: string
+          example: MFA_REQUIRED
+        details:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              example: citycare-hospital
+            role:
+              type: string
+              example: doctor
+            workflowKey:
+              type: string
+              example: clinical.ehr.write
+            requiredProvider:
+              type: string
+              example: otp
+            hint:
+              type: string
+              example: Complete /auth/otp/request and /auth/otp/verify before workflow entry
+        audit:
+          $ref: "#/components/schemas/AuthAuditMetadata"
+    WorkflowEntryPayloadErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: workflowKey and role are required
+        code:
+          type: string
+          example: WORKFLOW_CHECK_PAYLOAD_INVALID
+    AuthAuditMetadata:
+      type: object
+      properties:
+        eventType:
+          type: string
+          example: auth.workflow.entry.allowed
+        eventId:
+          type: string
+          example: b6c307cc-6bb7-4d4c-bff4-af50de93f615
+        occurredAt:
+          type: string
+          format: date-time
     MfaRequiredResponse:
       type: object
       properties:
@@ -748,17 +1016,7 @@ components:
                 - email-password
                 - otp
         audit:
-          type: object
-          properties:
-            eventType:
-              type: string
-              example: auth.policy.denied
-            eventId:
-              type: string
-              example: b6c307cc-6bb7-4d4c-bff4-af50de93f615
-            occurredAt:
-              type: string
-              format: date-time
+          $ref: "#/components/schemas/AuthAuditMetadata"
     ClerkStartResponse:
       type: object
       properties:

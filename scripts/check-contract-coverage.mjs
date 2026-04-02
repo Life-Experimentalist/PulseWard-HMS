@@ -76,7 +76,8 @@ const serviceChecks = [
     openapiSpecSource: "services/lab-service/openapi.yaml",
     coverageStatus: "covered",
     parityPractical: true,
-    notes: "Runtime route module and OpenAPI spec are reconciled for catalog, order, and result workflows.",
+    notes:
+      "Runtime route module and OpenAPI spec are reconciled for catalog, order, and result workflows.",
   },
   {
     service: "pharmacy-service",
@@ -318,6 +319,14 @@ const criticalSchemaChecks = [
     path: "/lab-tests/orders/{id}/report",
     requireRequestBody: true,
     requiredResponseCodes: ["200", "400", "404"],
+  },
+  {
+    service: "billing-service",
+    specSource: "services/billing-service/openapi.yaml",
+    method: "POST",
+    path: "/billing/hooks/clinical-trigger",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201", "400", "403", "409"],
   },
 ];
 

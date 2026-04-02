@@ -4,7 +4,7 @@ info:
   description: API Gateway for the PulseWard Hospital Management System, routing requests to various microservices.
   version: 1.0.0
 servers:
-  - url: http://localhost:3000/api
+  - url: http://localhost:3000
     description: Development server
 paths:
   /auth:

@@ -4,91 +4,133 @@ info:
   description: API for managing billing and payments within the PulseWard Hospital Management System.
   version: 1.0.0
 servers:
-  - url: http://localhost:5000/api/v1
+  - url: http://localhost:5000
     description: Development server
 paths:
   /billing:
     get:
-      summary: Retrieve billing information
-      description: Get billing details for a specific patient.
-      parameters:
-        - name: patientId
-          in: query
-          required: true
-          description: ID of the patient to retrieve billing information for.
-          schema:
-            type: string
+      summary: Retrieve all billing records
+      description: Return all billing records currently stored by the service.
       responses:
         "200":
-          description: Successful retrieval of billing information
+          description: Successful retrieval of billing records
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  patientId:
-                    type: string
-                  totalAmount:
-                    type: number
-                    format: float
-                  dueDate:
-                    type: string
-                    format: date
-        "404":
-          description: Patient not found
-        "500":
-          description: Internal server error
-
-  /billing/payment:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillingRecord"
     post:
-      summary: Process a payment
-      description: Submit a payment for a specific billing record.
+      summary: Create a billing record
+      description: Create a new billing record for a patient.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                patientId:
-                  type: string
-                amount:
-                  type: number
-                  format: float
-                paymentMethod:
-                  type: string
-                  enum: [credit_card, debit_card, insurance]
+              $ref: "#/components/schemas/BillingCreateRequest"
+      responses:
+        "201":
+          description: Billing record created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingRecord"
+
+  /billing/{id}:
+    get:
+      summary: Retrieve a billing record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Billing record ID
+          schema:
+            type: integer
       responses:
         "200":
-          description: Payment processed successfully
-        "400":
-          description: Invalid payment details
+          description: Billing record retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingRecord"
         "404":
-          description: Patient not found
-        "500":
-          description: Internal server error
+          description: Billing record not found
+    put:
+      summary: Update a billing record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Billing record ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingUpdateRequest"
+      responses:
+        "200":
+          description: Billing record updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingRecord"
+        "404":
+          description: Billing record not found
+    delete:
+      summary: Delete a billing record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Billing record ID
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Billing record deleted successfully
+        "404":
+          description: Billing record not found
 
 components:
   schemas:
-    Billing:
+    BillingRecord:
       type: object
       properties:
+        id:
+          type: integer
         patientId:
           type: string
-        totalAmount:
+        amount:
           type: number
           format: float
-        dueDate:
+        status:
           type: string
-          format: date
-    Payment:
+        createdAt:
+          type: string
+          format: date-time
+    BillingCreateRequest:
       type: object
+      required:
+        - patientId
+        - amount
+        - status
       properties:
         patientId:
           type: string
         amount:
           type: number
           format: float
-        paymentMethod:
+        status:
           type: string
-          enum: [credit_card, debit_card, insurance]
+    BillingUpdateRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+        status:
+          type: string

@@ -11,10 +11,9 @@ const serviceChecks = [
     runtimeRouteSource: "services/api-gateway/src",
     runtimeRouteFiles: ["services/api-gateway/src"],
     openapiSpecSource: "services/api-gateway/openapi.yaml",
-    coverageStatus: "partial",
-    parityPractical: false,
-    notes:
-      "Runtime entry file exists but is currently blank; gateway route implementation is not yet materialized in this source file.",
+    coverageStatus: "covered",
+    parityPractical: true,
+    notes: "Runtime gateway handlers and OpenAPI operations are aligned for core auth, patient, and appointment routes.",
   },
   {
     service: "auth-service",
@@ -59,24 +58,24 @@ const serviceChecks = [
   },
   {
     service: "ehr-service",
-    basePath: "/ehr (runtime), /api/v1/patients (spec)",
+    basePath: "/ehr/records/{id}",
     runtimeRouteSource: "services/ehr-service/src",
     runtimeRouteFiles: ["services/ehr-service/src"],
     runtimeOperationPrefix: "/ehr",
     openapiSpecSource: "services/ehr-service/openapi.yaml",
-    coverageStatus: "partial",
-    parityPractical: false,
-    notes: "Runtime mount path and OpenAPI server/path structure appear drifted and should be reconciled.",
+    coverageStatus: "covered",
+    parityPractical: true,
+    notes: "Runtime routes and OpenAPI are reconciled on /ehr/records/{id}.",
   },
   {
     service: "lab-service",
-    basePath: "/api/lab-tests (runtime), /api/lab/tests (spec)",
+    basePath: "/api/lab-tests",
     runtimeRouteSource: "services/lab-service/src",
     runtimeRouteFiles: ["services/lab-service/src"],
     openapiSpecSource: "services/lab-service/openapi.yaml",
-    coverageStatus: "partial",
-    parityPractical: false,
-    notes: "Runtime path naming differs from OpenAPI path model and should be reconciled.",
+    coverageStatus: "covered",
+    parityPractical: true,
+    notes: "Runtime paths and OpenAPI model are reconciled under /api/lab-tests.",
   },
   {
     service: "pharmacy-service",
@@ -90,61 +89,17 @@ const serviceChecks = [
   },
   {
     service: "billing-service",
-    basePath: "/billing (runtime route prefix), /api/v1/billing (spec)",
+    basePath: "/billing",
     runtimeRouteSource: "services/billing-service/src",
     runtimeRouteFiles: ["services/billing-service/src"],
     openapiSpecSource: "services/billing-service/openapi.yaml",
-    coverageStatus: "partial",
-    parityPractical: false,
-    notes:
-      "Runtime router exists in src, but explicit service mount wiring is not shown in this file and appears drifted from spec base path.",
+    coverageStatus: "covered",
+    parityPractical: true,
+    notes: "Runtime CRUD endpoints and OpenAPI are reconciled for /billing and /billing/{id}.",
   },
 ];
 
-const parityAllowlist = {
-  "api-gateway": {
-    reason: "Known drift: runtime gateway routes are not yet materialized in services/api-gateway/src.",
-    runtimeOnly: [],
-    specOnly: ["POST /auth", "GET /patients", "POST /patients", "GET /appointments", "POST /appointments"],
-  },
-  "ehr-service": {
-    reason: "Known drift: runtime mounts under /ehr/records while spec models /patients resources.",
-    runtimeOnly: ["GET /ehr/records/{param}", "PUT /ehr/records/{param}", "DELETE /ehr/records/{param}"],
-    specOnly: [
-      "GET /patients",
-      "POST /patients",
-      "GET /patients/{param}",
-      "PUT /patients/{param}",
-      "DELETE /patients/{param}",
-    ],
-  },
-  "lab-service": {
-    reason: "Known drift: runtime uses /api/lab-tests while spec uses /tests under /api/lab server base.",
-    runtimeOnly: [
-      "GET /api/lab-tests",
-      "POST /api/lab-tests",
-      "PUT /api/lab-tests/{param}",
-      "DELETE /api/lab-tests/{param}",
-    ],
-    specOnly: [
-      "GET /tests",
-      "POST /tests",
-      "GET /tests/{param}",
-      "PUT /tests/{param}",
-      "DELETE /tests/{param}",
-    ],
-  },
-  "billing-service": {
-    reason: "Known drift: runtime CRUD endpoints differ from spec billing/payment model.",
-    runtimeOnly: [
-      "POST /billing",
-      "GET /billing/{param}",
-      "PUT /billing/{param}",
-      "DELETE /billing/{param}",
-    ],
-    specOnly: ["POST /billing/payment"],
-  },
-};
+const parityAllowlist = {};
 
 function existsInRepo(relativePath) {
   if (!relativePath) {
@@ -199,7 +154,8 @@ function parseRuntimeOperations(filePath, runtimeOperationPrefix) {
   const source = fs.readFileSync(absolutePath, "utf8");
 
   const mountByReceiver = new Map();
-  const usePattern = /([A-Za-z_$][\w$]*)\.use\(\s*["'`]([^"'`]+)["'`]\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g;
+  const usePattern =
+    /([A-Za-z_$][\w$]*)\.use\(\s*["'`]([^"'`]+)["'`]\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g;
   let useMatch = usePattern.exec(source);
   while (useMatch) {
     const mountPath = normalizePathSegment(useMatch[2]);
@@ -209,7 +165,8 @@ function parseRuntimeOperations(filePath, runtimeOperationPrefix) {
   }
 
   const operations = new Set();
-  const routePattern = /([A-Za-z_$][\w$]*)\.(get|post|put|patch|delete|options|head|trace)\(\s*["'`]([^"'`]+)["'`]/gi;
+  const routePattern =
+    /([A-Za-z_$][\w$]*)\.(get|post|put|patch|delete|options|head|trace)\(\s*["'`]([^"'`]+)["'`]/gi;
   let routeMatch = routePattern.exec(source);
   while (routeMatch) {
     const receiver = routeMatch[1];
@@ -327,7 +284,9 @@ function evaluateParity(serviceConfig) {
       unexpectedRuntimeOnly.length > 0
         ? `unexpected runtime-only: ${unexpectedRuntimeOnly.join(", ")}`
         : null,
-      unexpectedSpecOnly.length > 0 ? `unexpected spec-only: ${unexpectedSpecOnly.join(", ")}` : null,
+      unexpectedSpecOnly.length > 0
+        ? `unexpected spec-only: ${unexpectedSpecOnly.join(", ")}`
+        : null,
     ]
       .filter(Boolean)
       .join("; ");
@@ -469,8 +428,12 @@ rows.forEach((row) => {
 
   const details = row.parityResult;
   console.log(`- ${row.service}`);
-  console.log(`  - runtime-only (${details.runtimeOnly.length}): ${details.runtimeOnly.join(", ") || "none"}`);
-  console.log(`  - spec-only (${details.specOnly.length}): ${details.specOnly.join(", ") || "none"}`);
+  console.log(
+    `  - runtime-only (${details.runtimeOnly.length}): ${details.runtimeOnly.join(", ") || "none"}`
+  );
+  console.log(
+    `  - spec-only (${details.specOnly.length}): ${details.specOnly.join(", ") || "none"}`
+  );
   console.log(
     `  - unexpected runtime-only (${details.unexpectedRuntimeOnly.length}): ${
       details.unexpectedRuntimeOnly.join(", ") || "none"

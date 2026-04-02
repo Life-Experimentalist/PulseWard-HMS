@@ -272,4 +272,5 @@ Exit criteria:
 
 1. M1.1 completed: endpoint-level contract coverage matrix is in place for gateway, auth, appointment, notification, patient, EHR, lab, pharmacy, and billing services.
 2. M1.2 completed: `contracts:check` now validates both source/spec presence and semantic route-path parity with explicit allowlisted drift baselines.
-3. Next slice (M1.3): reduce allowlisted drift by reconciling `api-gateway`, `ehr-service`, `lab-service`, and `billing-service` runtime paths/specs, then tighten strict parity in CI.
+3. M1.3 completed: allowlisted drift has been reconciled for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service` runtime paths/specs.
+4. Next slice (M1.4): enforce strict parity mode in CI (`contracts:check -- --strict`) and add route/spec drift regression tests for newly aligned services.

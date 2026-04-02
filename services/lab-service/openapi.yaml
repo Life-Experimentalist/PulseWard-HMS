@@ -4,9 +4,9 @@ info:
   description: API for managing lab tests and results in the PulseWard Hospital Management System.
   version: 1.0.0
 servers:
-  - url: http://localhost:5000/api/lab
+  - url: http://localhost:5000
 paths:
-  /tests:
+  /api/lab-tests:
     get:
       summary: Retrieve a list of lab tests
       responses:
@@ -62,40 +62,7 @@ paths:
                   id:
                     type: string
                     example: "test123"
-  /tests/{id}:
-    get:
-      summary: Retrieve a specific lab test by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the lab test
-          schema:
-            type: string
-            example: "test123"
-      responses:
-        "200":
-          description: Lab test details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: "test123"
-                  name:
-                    type: string
-                    example: "Complete Blood Count"
-                  description:
-                    type: string
-                    example: "A test to evaluate overall health and detect a variety of disorders."
-                  price:
-                    type: number
-                    format: float
-                    example: 50.0
-        "404":
-          description: Lab test not found
+  /api/lab-tests/{id}:
     put:
       summary: Update a lab test
       parameters:

@@ -1,77 +1,83 @@
-// ehrService.js
+require("dotenv").config();
 
-const express = require('express');
-const router = express.Router();
-const { getPatientRecords, updatePatientRecord, deletePatientRecord } = require('./ehrController');
+var express = require("express");
+var bodyParser = require("body-parser");
+var cors = require("cors");
+var routes = require("./routes");
 
-// Route to get patient records
-router.get('/records/:patientId', async (req, res) => {
+var app = express();
+var PORT = Number(process.env.EHR_SERVICE_PORT || process.env.PORT || 5104);
+
+app.use(bodyParser.json());
+
+var allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "*")
+    .split(",")
+    .map(function (item) {
+        return item.trim();
+    })
+    .filter(Boolean);
+
+function isPrivateNetworkOrigin(origin) {
     try {
-        const records = await getPatientRecords(req.params.patientId);
-        res.status(200).json(records);
-    } catch (error) {
-        res.status(500).json({ message: 'Error retrieving patient records', error });
+        var parsed = new URL(origin);
+        var host = parsed.hostname;
+        return (
+            host === "localhost" ||
+            host === "127.0.0.1" ||
+            host === "0.0.0.0" ||
+            host.endsWith(".local") ||
+            host.startsWith("192.168.") ||
+            host.startsWith("10.") ||
+            /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+        );
+    } catch (_error) {
+        return false;
     }
-});
-
-// Route to update a patient record
-router.put('/records/:recordId', async (req, res) => {
-    try {
-        const updatedRecord = await updatePatientRecord(req.params.recordId, req.body);
-        res.status(200).json(updatedRecord);
-    } catch (error) {
-        res.status(500).json({ message: 'Error updating patient record', error });
-    }
-});
-
-// Route to delete a patient record
-router.delete('/records/:recordId', async (req, res) => {
-    try {
-        await deletePatientRecord(req.params.recordId);
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ message: 'Error deleting patient record', error });
-    }
-});
-
-module.exports = router;
-
-// ehrController.js
-
-const db = require('../database'); // Assuming a database module is available
-
-// Function to get patient records
-async function getPatientRecords(patientId) {
-    return await db.query('SELECT * FROM records WHERE patient_id = ?', [patientId]);
 }
 
-// Function to update a patient record
-async function updatePatientRecord(recordId, data) {
-    return await db.query('UPDATE records SET ? WHERE id = ?', [data, recordId]);
-}
+var allowAllOrigins = process.env.NODE_ENV !== "production" || allowedOrigins.indexOf("*") !== -1;
 
-// Function to delete a patient record
-async function deletePatientRecord(recordId) {
-    return await db.query('DELETE FROM records WHERE id = ?', [recordId]);
-}
+var corsOptions = {
+    origin: function (origin, callback) {
+        if (
+            !origin ||
+            allowAllOrigins ||
+            allowedOrigins.indexOf(origin) !== -1 ||
+            isPrivateNetworkOrigin(origin)
+        ) {
+            callback(null, true);
+            return;
+        }
 
-module.exports = {
-    getPatientRecords,
-    updatePatientRecord,
-    deletePatientRecord
+        callback(null, false);
+    },
+    optionsSuccessStatus: 200,
 };
 
-// index.js
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+app.use("/ehr", routes);
+app.use("/api/ehr", routes);
 
-const express = require('express');
-const ehrService = require('./ehrService');
+function startWithFallback(port, retriesLeft) {
+    var server = app.listen(port, function () {
+        console.log("EHR service running on port " + port);
+    });
 
-const app = express();
-app.use(express.json());
+    server.on("error", function (error) {
+        if (error.code === "EADDRINUSE" && retriesLeft > 0) {
+            var nextPort = port + 1;
+            console.log("EHR service port " + port + " in use, retrying on " + nextPort);
+            startWithFallback(nextPort, retriesLeft - 1);
+            return;
+        }
 
-app.use('/ehr', ehrService);
+        throw error;
+    });
+}
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`EHR Service running on port ${PORT}`);
-});
+if (require.main === module) {
+    startWithFallback(PORT, 20);
+}
+
+module.exports = app;

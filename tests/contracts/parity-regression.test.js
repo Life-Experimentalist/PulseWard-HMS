@@ -57,6 +57,9 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain("PASS: auth-service GET /auth/oauth/google/start");
     expect(output).toContain("PASS: auth-service POST /auth/oauth/google/callback");
     expect(output).toContain("PASS: auth-service GET /auth/oauth/clerk/start");
+    expect(output).toContain("PASS: ehr-service POST /ehr/records");
+    expect(output).toContain("PASS: ehr-service PUT /ehr/records/{id}");
+    expect(output).toContain("PASS: ehr-service GET /ehr/records/{id}/timeline");
     expect(output).toContain("PASS: appointment-service POST /appointments");
     expect(output).toContain("PASS: appointment-service PUT /appointments/{id}");
     expect(output).toContain("PASS: appointment-service POST /opd/entries");

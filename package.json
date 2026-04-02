@@ -34,7 +34,7 @@
     "build:apps:ci": "npm run build:admin:ci && npm run build:clinician:ci && npm run build:operations:ci && npm run build:patient:ci",
     "test": "jest",
     "test:smoke": "node ./scripts/smoke-test-platform.mjs",
-    "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); console.log('Route modules loaded');\"",
+    "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); require('./services/ehr-service/routes'); console.log('Route modules loaded');\"",
     "contracts:check": "node ./scripts/check-contract-coverage.mjs",
     "build": "tsc",
     "lint": "eslint . --ext .js,.mjs",

@@ -32,8 +32,7 @@ function isPrivateNetworkOrigin(origin) {
   }
 }
 
-const allowAllOrigins =
-  process.env.NODE_ENV !== "production" || allowedOrigins.indexOf("*") !== -1;
+const allowAllOrigins = process.env.NODE_ENV !== "production" || allowedOrigins.indexOf("*") !== -1;
 
 const corsOptions = {
   origin: function (origin, callback) {

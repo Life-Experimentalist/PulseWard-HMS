@@ -9,10 +9,8 @@
 body {
   margin: 0;
   font-family: "IBM Plex Sans", sans-serif;
-  background:
-    radial-gradient(circle at 15% 15%, rgba(106, 197, 255, 0.24), transparent 38%),
-    radial-gradient(circle at 90% 75%, rgba(121, 247, 174, 0.22), transparent 40%),
-    #f3fafc;
+  background: radial-gradient(circle at 15% 15%, rgba(106, 197, 255, 0.24), transparent 38%),
+    radial-gradient(circle at 90% 75%, rgba(121, 247, 174, 0.22), transparent 40%), #f3fafc;
   color: #1f2b33;
 }
 

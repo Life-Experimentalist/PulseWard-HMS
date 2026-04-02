@@ -17,7 +17,9 @@ function App() {
       <aside className="rail">
         <h1>Clinician</h1>
         <nav>
-          <a className="active" href="#">Today</a>
+          <a className="active" href="#">
+            Today
+          </a>
           <a href="#">Patient Records</a>
           <a href="#">Orders</a>
           <a href="#">Messages</a>

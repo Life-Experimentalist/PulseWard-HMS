@@ -5,8 +5,7 @@
 body {
   margin: 0;
   font-family: "Plus Jakarta Sans", sans-serif;
-  background:
-    linear-gradient(160deg, rgba(225, 235, 255, 0.72), rgba(236, 253, 245, 0.75)),
+  background: linear-gradient(160deg, rgba(225, 235, 255, 0.72), rgba(236, 253, 245, 0.75)),
     repeating-linear-gradient(
       -18deg,
       rgba(16, 67, 87, 0.06),

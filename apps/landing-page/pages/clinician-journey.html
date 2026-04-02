@@ -6,15 +6,53 @@
     <title>PulseWard Demo Pages - Clinician Journey</title>
     <link rel="stylesheet" href="../styles.css" />
     <style>
-      .demo-shell { max-width: 1100px; margin: 1rem auto; padding: 1rem; }
-      .demo-nav { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.8rem; }
-      .demo-nav a { text-decoration: none; border: 1px solid rgba(15, 76, 92, 0.2); border-radius: 999px; padding: 0.45rem 0.8rem; color: var(--ink); background: #fff; }
-      .demo-nav a.active { background: var(--teal); color: #fff; }
-      .lane-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
-      .lane { border: 1px solid rgba(15, 76, 92, 0.18); border-radius: 14px; background: #fff; padding: 0.8rem; }
-      .lane h3 { margin: 0; }
-      .lane ul { margin: 0.4rem 0 0; padding-left: 1rem; color: #4f626f; }
-      @media (max-width: 900px) { .lane-grid { grid-template-columns: 1fr; } }
+      .demo-shell {
+        max-width: 1100px;
+        margin: 1rem auto;
+        padding: 1rem;
+      }
+      .demo-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 0.8rem;
+      }
+      .demo-nav a {
+        text-decoration: none;
+        border: 1px solid rgba(15, 76, 92, 0.2);
+        border-radius: 999px;
+        padding: 0.45rem 0.8rem;
+        color: var(--ink);
+        background: #fff;
+      }
+      .demo-nav a.active {
+        background: var(--teal);
+        color: #fff;
+      }
+      .lane-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+      .lane {
+        border: 1px solid rgba(15, 76, 92, 0.18);
+        border-radius: 14px;
+        background: #fff;
+        padding: 0.8rem;
+      }
+      .lane h3 {
+        margin: 0;
+      }
+      .lane ul {
+        margin: 0.4rem 0 0;
+        padding-left: 1rem;
+        color: #4f626f;
+      }
+      @media (max-width: 900px) {
+        .lane-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>

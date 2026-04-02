@@ -38,8 +38,8 @@ Under `/api/v1`:
 | Method | Endpoint                               | Purpose                                                                                                                     |
 | ------ | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/auth/roles`                          | List supported role keys.                                                                                                   |
-| GET    | `/auth/session/events`                 | Query role-scoped auth session observability events with tenant/action/outcome filters.                                    |
-| POST   | `/auth/workflow-entry/check`           | Evaluate tenant policy, role compatibility, and MFA state before patient or clinical workflow entry.                       |
+| GET    | `/auth/session/events`                 | Query role-scoped auth session observability events with tenant/action/outcome filters.                                     |
+| POST   | `/auth/workflow-entry/check`           | Evaluate tenant policy, role compatibility, and MFA state before patient or clinical workflow entry.                        |
 | POST   | `/auth/otp/request`                    | Create tenant-scoped OTP challenge for policy-driven MFA.                                                                   |
 | POST   | `/auth/otp/verify`                     | Verify OTP challenge and return short-lived OTP verification token.                                                         |
 | POST   | `/auth/register`                       | Register role-scoped user.                                                                                                  |
@@ -78,6 +78,10 @@ Under `/api/v1`:
 ## Appointment Service Highlights
 
 Under `/api/v1`:
+
+OPD management alignment:
+- OPD registration and frontdesk scheduling flows should be implemented on top of the appointment lifecycle endpoints below.
+- OPD workflow milestones should treat create/update/cancel appointment operations as the canonical scheduling surface.
 
 | Method | Endpoint                            | Purpose                     |
 | ------ | ----------------------------------- | --------------------------- |

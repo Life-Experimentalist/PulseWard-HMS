@@ -116,6 +116,7 @@ Goals:
 Scope:
 
 - Harden patient-service data model and profile lifecycle.
+- Implement OPD intake-to-appointment entry semantics across patient and appointment services.
 - Complete EHR service CRUD and timeline/history integrity.
 - Implement prescription lifecycle across EHR and pharmacy-service integration points.
 - Complete lab-service order and result workflows.
@@ -124,6 +125,7 @@ Scope:
 Exit criteria:
 
 - End-to-end clinical record flow validated across patient, EHR, lab, and pharmacy interactions.
+- OPD management path (registration, triage context, and appointment handoff) is validated for primary outpatient workflows.
 - Data validation and error semantics are consistent with shared error model.
 - Protected fields are masked in logs and non-production fixtures.
 
@@ -284,4 +286,4 @@ Exit criteria:
 12. M2.4 completed: role/provider compatibility and tenant policy-driven session controls are enforced with regression coverage.
 13. M2.5 completed: OTP provider execution path and MFA policy enforcement for selected roles are implemented with regression coverage.
 14. M3.1 completed: auth policy outcomes now gate patient/clinical workflow entry and emit role-scoped session observability events with query filters.
-15. Active next slice (M3.2): harden patient-service profile lifecycle validation and access semantics for core clinical flows.
+15. Active next slice (M3.2): deliver OPD management and appointments foundation by hardening patient profile lifecycle plus OPD intake and appointment-entry access semantics.

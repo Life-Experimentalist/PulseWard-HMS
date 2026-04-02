@@ -1,64 +1,58 @@
-# PulseWard - Hospital Management System
+# PulseWard HMS
 
-Welcome to **PulseWard**, a comprehensive hospital management system designed to streamline healthcare operations and enhance patient care. This project aims to provide a robust platform for managing various aspects of hospital administration, patient care, and clinical operations.
+PulseWard HMS is a modular hospital management platform by Life Experimentalist for patient, clinician, operations, and admin workflows.
 
-## Project Overview
+## Description
 
-**PulseWard** is structured into multiple applications and services, each catering to specific user roles and functionalities within the hospital ecosystem. The system is built using modern technologies and follows best practices in software development to ensure scalability, maintainability, and security.
+PulseWard focuses on safe healthcare workflow delivery using:
 
-### Key Features
+- Role-specific portals and dashboards.
+- Service-oriented backend modules with contract-checked APIs.
+- Tenant-aware integration adapters (messaging, calendar, ABHA readiness).
+- Operational runbooks, governance, and release evidence.
 
-- **Patient Portal**: Allows patients to access their health information, manage appointments, and communicate with healthcare providers.
-- **Clinician Portal**: Enables clinicians to manage patient records, treatment plans, and clinical workflows efficiently.
-- **Admin Console**: Provides administrative tools for user management, reporting, and system configuration.
-- **Operations Dashboard**: Offers insights into hospital operations, including resource allocation, patient flow, and performance metrics.
-- **Modular Integrations**: Tenant-configurable adapters for WhatsApp, Telegram, Website Webhooks, and calendar providers with fallback routing.
+## Product Surfaces
 
-### Architecture
+- `apps/admin-console`: admin configuration and governance workflows.
+- `apps/clinician-portal`: clinician workflow interface.
+- `apps/operations-dashboard`: operations and reliability visibility.
+- `apps/patient-portal`: patient-facing experience.
+- `apps/landing-page`: static website/marketing shell.
 
-The architecture of PulseWard is designed to support a microservices approach, ensuring that each service can be developed, deployed, and scaled independently. The system is composed of the following components:
+## Core Services
 
-- **Applications**: Frontend applications for different user roles (patients, clinicians, administrators).
-- **Microservices**: Backend services handling specific functionalities such as authentication, patient management, appointment scheduling, billing, and more.
-- **API Gateway**: A centralized entry point for all client requests, routing them to the appropriate microservices.
-- **Shared Libraries**: Common utilities and types used across the applications and services.
+- `services/api-gateway`
+- `services/auth-service`
+- `services/appointment-service`
+- `services/notification-service`
+- `services/patient-service`
+- `services/ehr-service`
+- `services/lab-service`
+- `services/pharmacy-service`
+- `services/billing-service`
 
-### Development Model
+## Local Setup
 
-PulseWard follows an **iterative development model**, allowing for continuous improvement and adaptation based on user feedback and changing requirements. The development process is organized into iterations, each focusing on delivering specific features and enhancements.
+Prerequisites:
 
-### Documentation
+- Node.js 22+
+- npm 10+
 
-Comprehensive documentation is provided throughout the project, including:
+Install root dependencies:
 
-- **Architecture Documentation**: Detailed descriptions of system components, data flow, and integration points.
-- **API Documentation**: Specifications for all intra-project APIs, including request/response formats and error handling.
-- **Runbooks**: Guides for operational procedures, including incident response and backup recovery.
-- **Branding Configuration Guide**: Admin-configurable, tenant-based branding model for hospitals.
-- **Source of Truth Policy**: GitHub-centered control model for change and operations evidence.
-- **Deployment and Domain Migration Guide**: Practical rollout and domain cutover steps with `/api/v1` stability.
-- **Release Documentation**: Versioned release notes under `docs/releases/`.
-- **Landing Page Demo**: UI showcase in `apps/landing-page/`.
+```powershell
+npm ci
+```
 
-### AI Project Manager Agent
-
-An AI project manager agent is integrated into the system to assist with project management tasks, ensuring efficient coordination among team members and facilitating decision-making processes. The agent operates under a defined constitution that outlines its responsibilities and governance.
-
-### Getting Started
-
-To set up the PulseWard project locally, follow the instructions in the `scripts/setup.ps1` file. Ensure that all dependencies are installed and configured correctly.
-
-### Frontend App Commands
-
-PulseWard apps now follow a shared React + Vite workflow with root-linked scripts.
-
-Install all frontend app dependencies:
+Install all app dependencies:
 
 ```powershell
 npm run install:apps
 ```
 
-Run individual app development servers:
+## Development Commands
+
+Run key apps:
 
 ```powershell
 npm run start:landing
@@ -68,29 +62,62 @@ npm run start:operations:dev
 npm run start:patient:dev
 ```
 
-Build all framework apps for deployment:
+Run quality gates:
 
 ```powershell
+npm run contracts:check -- --strict
+npm test
 npm run build:apps
+npm run lint
 ```
 
-Production static starts (compile-first):
+## CI and Reliability
 
-```powershell
-npm run start:admin
-npm run start:clinician
-npm run start:operations
-npm run start:patient
-```
+- Workflows are configured for npm lockfile builds.
+- GitHub Actions now opts JavaScript actions into Node24 runtime to avoid Node20 deprecation warnings.
+- Visual diagram generation is manual-only (`Automated Visuals` via `workflow_dispatch`) so it does not block normal delivery.
 
-### Contributing
+## Documentation Map
 
-Contributions to PulseWard are welcome! Please refer to the project's governance documents for guidelines on contributing, decision-making, and risk management.
+- `docs/api/api-catalog.md`
+- `docs/api/endpoint-contract-coverage-matrix.md`
+- `docs/runbooks/integration-provider-operations.md`
+- `docs/runbooks/abha-operational-readiness.md`
+- `docs/releases/v1.2.1.md`
+- `docs/deployment/deploy-and-domain-migration.md`
 
-### License
+## Cloudflare Pages (Landing Page)
 
-This project is proprietary and confidential. All rights reserved. See the LICENSE.md file for internal licensing terms.
+Landing page deployment guidance is documented in:
 
----
+- `docs/deployment/cloudflare-pages-landing.md`
 
-For more information, please explore the documentation in the `docs` directory and the README files within each application and service. Thank you for your interest in PulseWard!
+Recommended for static site deployment:
+
+- Build command: `exit 0`
+- Build output directory: `apps/landing-page`
+- Production branch: `main`
+
+## Suggested GitHub Metadata
+
+Recommended repository description:
+
+`PulseWard HMS is a modular hospital management platform with tenant-aware portals, contract-validated APIs, and operational runbooks for healthcare workflows.`
+
+Recommended topics/tags:
+
+- `hospital-management-system`
+- `healthcare`
+- `hms`
+- `ehr`
+- `patient-portal`
+- `clinician-portal`
+- `microservices`
+- `nodejs`
+- `express`
+- `vite`
+
+## License
+
+This project is proprietary and confidential.
+See `LICENSE.md` for license terms.

@@ -238,7 +238,7 @@ const criticalSchemaChecks = [
     method: "POST",
     path: "/appointments",
     requireRequestBody: true,
-    requiredResponseCodes: ["201", "400", "403"],
+    requiredResponseCodes: ["201", "400", "403", "409"],
   },
   {
     service: "appointment-service",
@@ -246,7 +246,7 @@ const criticalSchemaChecks = [
     method: "PUT",
     path: "/appointments/{id}",
     requireRequestBody: true,
-    requiredResponseCodes: ["200", "400", "403"],
+    requiredResponseCodes: ["200", "400", "403", "409"],
   },
   {
     service: "appointment-service",

@@ -30,7 +30,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Check contract compatibility (M1)
-        run: pnpm run contracts:check
+        run: pnpm run contracts:check -- --strict
 
       - name: Run tests
         run: pnpm test

@@ -275,4 +275,7 @@ Exit criteria:
 3. M1.3 completed: allowlisted drift has been reconciled for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service` runtime paths/specs.
 4. M1.4 completed: strict parity mode is enforced in CI (`contracts:check -- --strict`).
 5. M1.5 completed: route/spec drift regression tests added for newly aligned services to block regressions before merge.
-6. Next slice (M1.6): expand contract assertions to endpoint-level request/response schema checks for critical booking and notification APIs.
+6. M2 seed completed: auth service now exposes tenant admin-settings persistence plus ABHA configuration readiness and health-check endpoints.
+7. M5 seed completed: notification service now exposes live provider readiness endpoints for Telegram and SMTP credentials.
+8. M6 seed completed: admin console moved to production-style static runtime scaffold with service and integration diagnostics.
+9. Active next slice (M1.6): expand contract assertions to endpoint-level request/response schema checks for critical booking and notification APIs.

@@ -2,22 +2,29 @@
 
 ## Adopted Decision
 
-PulseWard will follow a **Docker + AWS ECS Fargate + Cloudflare** primary deployment model, with pnpm monorepo dependency management.
+PulseWard follows a **Docker Compose on VM (cost-first) + Cloudflare edge controls** baseline for pilot and early production.
+
+Planned upgrade path:
+
+- Move to AWS ECS/Fargate or Kubernetes only when measurable scale/operations thresholds require it.
 
 ## Framework Decision
 
-- **Current practical framework**: Node.js + Express services with React frontends.
-- **Immediate standardization**: TypeScript-first services and shared contracts.
+- **Current runtime framework**: Node.js + Express services with React/Vite frontends.
+- **Contract model**: OpenAPI-first per service with repository-level contract parity checks.
+- **Type strategy**: shared contracts/types via workspace packages, with incremental TypeScript hardening where practical.
 
 ## Data Decision
 
-- **Primary database**: PostgreSQL.
-- **Operational cache/queue**: Redis.
-- **Object storage**: S3.
+- **Current state**: service-local/in-memory or file-backed stores for rapid iteration where applicable.
+- **Production target**: PostgreSQL as primary system of record.
+- **Queue/cache target**: Redis for async dispatch and cache layers.
+- **Object storage target**: S3-compatible object storage for artifacts and backups.
 
 ## Tooling Decision
 
-- **Package manager**: pnpm.
+- **Primary scripts**: npm scripts (with pnpm compatibility retained).
+- **Package manager**: pnpm workspace with npm-compatible script execution.
 - **CI/CD**: GitHub Actions.
 - **Containerization**: Docker.
 
@@ -25,7 +32,8 @@ PulseWard will follow a **Docker + AWS ECS Fargate + Cloudflare** primary deploy
 
 - Kubernetes: deferred until scale/operational needs justify it.
 - Terraform: deferred until infra repeatability at scale is required.
+- Multi-region and active-active failover: deferred until post-pilot reliability targets demand it.
 
 ## Decision Rationale
 
-This path keeps operations manageable now, aligns with existing team familiarity (AWS, Cloudflare, Docker), and preserves a clear upgrade path without lock-in.
+This path keeps costs and operations manageable for the first pilot, aligns with existing implementation, and preserves a clean migration path to heavier infrastructure once performance and reliability data justify the move.

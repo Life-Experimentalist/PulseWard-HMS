@@ -1,5 +1,15 @@
 # PulseWard HMS Foundation Handoff
 
+## Status
+
+This document captures initial foundation thinking and historical architecture context.
+For current authoritative decisions, use:
+
+- `docs/ROADMAP-TODO.md`
+- `docs/TECH-STACK-DECISIONS.md`
+- `docs/api/api-catalog.md`
+- `docs/development-model/quality-gates.md`
+
 ## Is This Required?
 
 No. Chat continuity does not strictly require this file.

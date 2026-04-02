@@ -536,7 +536,9 @@ function buildCalendarInteroperabilityDiagnostics(tenantConfig) {
       adminActionRequired: Boolean(
         provider && provider.billing && provider.billing.adminActionRequired
       ),
-      hasCredentialsRef: Boolean(provider && provider.credentialsRef && provider.credentialsRef.secretKey),
+      hasCredentialsRef: Boolean(
+        provider && provider.credentialsRef && provider.credentialsRef.secretKey
+      ),
     };
   });
 

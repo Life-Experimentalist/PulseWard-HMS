@@ -72,8 +72,8 @@ describe("appointment calendar interoperability diagnostics", () => {
     expect(diagnostics.body.tenantKey).toBe("citycare-hospital");
     expect(diagnostics.body.routing.defaultProvider).toBe("google-calendar");
     expect(diagnostics.body.interoperability.status).toBe("healthy");
-    expect(diagnostics.body.providers.disabled.some((item) => item.key === "outlook-calendar")).toBe(
-      true
-    );
+    expect(
+      diagnostics.body.providers.disabled.some((item) => item.key === "outlook-calendar")
+    ).toBe(true);
   });
 });

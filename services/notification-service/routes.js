@@ -4,8 +4,7 @@ var sendNotificationWithRouting =
   require("./integrations/send-notification-with-routing").sendNotificationWithRouting;
 var loadTenantIntegrationConfig =
   require("../../packages/shared-utils/load-tenant-integration-config").loadTenantIntegrationConfig;
-var resolveSecretRef =
-  require("../../packages/shared-utils/resolve-secret-ref").resolveSecretRef;
+var resolveSecretRef = require("../../packages/shared-utils/resolve-secret-ref").resolveSecretRef;
 
 var router = express.Router();
 var notifications = [];
@@ -34,9 +33,7 @@ function findMessagingProvider(config, providerKey) {
 
 function getProviderSecretStatus(provider, defaultSecretKey) {
   var secretKey =
-    provider && provider.credentialsRef
-      ? provider.credentialsRef.secretKey
-      : defaultSecretKey;
+    provider && provider.credentialsRef ? provider.credentialsRef.secretKey : defaultSecretKey;
   var parsed = resolveSecretRef({
     secretKey: secretKey,
   });

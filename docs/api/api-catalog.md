@@ -107,6 +107,26 @@ Under `/ehr` (also mounted at `/api/ehr`):
 | PUT    | `/records/{id}`          | Update EHR record with optimistic version checks for write-path integrity.    |
 | DELETE | `/records/{id}`          | Soft-delete EHR record while preserving timeline continuity.                  |
 | GET    | `/records/{id}/timeline` | Fetch immutable timeline/history events for clinical create/update/delete flow. |
+| GET    | `/records/{id}/prescriptions` | List prescription entries linked to an EHR record.                         |
+| POST   | `/records/{id}/prescriptions` | Create prescription within EHR clinical context.                            |
+| POST   | `/records/{id}/prescriptions/{prescriptionId}/handoff` | Mark prescription as handed-off and emit pharmacy touchpoint metadata. |
+| PATCH  | `/records/{id}/prescriptions/{prescriptionId}/status` | Sync prescription lifecycle status updates back into EHR timeline.     |
+
+## Pharmacy Service Highlights
+
+Under `/api/pharmacy`:
+
+| Method | Endpoint                   | Purpose                                                                 |
+| ------ | -------------------------- | ----------------------------------------------------------------------- |
+| GET    | `/medications`             | List medication inventory.                                              |
+| POST   | `/medications`             | Create medication inventory entry.                                      |
+| GET    | `/medications/{id}`        | Fetch medication inventory entry by id.                                 |
+| PUT    | `/medications/{id}`        | Update medication inventory entry.                                      |
+| DELETE | `/medications/{id}`        | Delete medication inventory entry.                                      |
+| GET    | `/prescriptions`           | List pharmacy prescription orders by tenant/status filters.             |
+| GET    | `/prescriptions/{id}`      | Fetch pharmacy prescription order by order or prescription id.          |
+| POST   | `/prescriptions/handoff`   | Receive EHR prescription handoff into pharmacy queue.                   |
+| PUT    | `/prescriptions/{id}/status` | Update pharmacy prescription lifecycle status with history events.    |
 
 ## ABHA References
 

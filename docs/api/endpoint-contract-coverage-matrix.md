@@ -65,6 +65,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - EHR runtime now enforces actor-role requirements and optimistic version checks for clinical write paths.
 - Regression tests cover create/update/delete timeline sequence integrity and version-conflict behavior.
 
+## M3.4 Prescription Handoff Lifecycle Coverage
+
+- Critical schema assertions include `POST /ehr/records/{id}/prescriptions` and `POST /ehr/records/{id}/prescriptions/{prescriptionId}/handoff` in `ehr-service`.
+- Critical schema assertions include `POST /prescriptions/handoff` and `PUT /prescriptions/{id}/status` in `pharmacy-service`.
+- Regression tests cover EHR prescription creation, EHR-to-pharmacy handoff, pharmacy fulfillment status updates, and EHR status synchronization.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

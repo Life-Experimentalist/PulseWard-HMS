@@ -50,6 +50,7 @@ Under `/api/v1`:
 | GET    | `/admin/settings/storage`          | Admin settings store metadata.     |
 | GET    | `/admin/settings`                  | Read tenant admin settings.        |
 | PUT    | `/admin/settings`                  | Persist tenant admin settings.     |
+| POST   | `/admin/settings/auth-policy/validate` | Validate tenant auth policy payload. |
 | GET    | `/platform/domain-config`          | Resolve tenant domain config.      |
 | POST   | `/platform/domain-config/validate` | Validate origin for tenant.        |
 | GET    | `/platform/domain-config/all`      | Return full domain config model.   |

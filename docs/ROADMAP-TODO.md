@@ -307,4 +307,6 @@ Exit criteria:
 30. M5.2 evidence checkpoint: ABHA operational-readiness API and runbook coverage now provide setup/rollback diagnostics and operational checklists linked for daily and weekly runbook execution.
 31. M5.3 completed: webhook signature verification endpoint now validates signed payloads against tenant signing-secret configuration, with diagnostics-linked verification guidance.
 32. M5.3 evidence checkpoint: ABHA health-check now records checkId-scoped outcomes and exposes `/platform/abha/health-check/evidence` for incident drill artifact automation.
-33. M5.4 active next slice: extend provider adapters with production delivery retry-policy controls and ABHA consent-flow simulation checkpoints.
+33. M5.4 completed: messaging retry-policy diagnostics now expose production-safe retry controls and channel coverage visibility per provider.
+34. M5.4 evidence checkpoint: ABHA consent-flow simulation endpoint now provides scenario-driven operational drill checkpoints and evidence-link guidance.
+35. M5.5 active next slice: add connector fault-injection simulation controls and ABHA fallback decision telemetry.

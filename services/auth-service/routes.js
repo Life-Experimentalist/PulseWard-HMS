@@ -130,6 +130,111 @@ function summarizeAbhaHealthCheckEvents(events) {
   };
 }
 
+function getAbhaConsentScenarioSteps(scenario) {
+  if (scenario === "consent-denied") {
+    return [
+      {
+        key: "fetch-consent-request",
+        action: "Load pending consent request from ABHA gateway",
+        expectedOutcome: "Consent request payload is available",
+      },
+      {
+        key: "display-consent-screen",
+        action: "Render consent scope and validity window to patient",
+        expectedOutcome: "Patient sees clear data-sharing purpose and duration",
+      },
+      {
+        key: "submit-denial",
+        action: "Submit denied consent decision to ABHA gateway",
+        expectedOutcome: "Gateway records explicit consent denial",
+      },
+      {
+        key: "close-workflow",
+        action: "Close clinical workflow with denial-safe fallback",
+        expectedOutcome: "Journey remains in non-ABHA baseline path",
+      },
+    ];
+  }
+
+  if (scenario === "gateway-timeout") {
+    return [
+      {
+        key: "fetch-consent-request",
+        action: "Load pending consent request from ABHA gateway",
+        expectedOutcome: "Consent request payload is available",
+      },
+      {
+        key: "submit-consent",
+        action: "Submit granted consent decision to ABHA gateway",
+        expectedOutcome: "Gateway accepts consent payload",
+      },
+      {
+        key: "await-ack",
+        action: "Poll gateway acknowledgement for consent status",
+        expectedOutcome: "Gateway acknowledgement arrives within timeout",
+      },
+      {
+        key: "incident-evidence",
+        action: "Record timeout evidence and raise incident drill artifact",
+        expectedOutcome: "Ops evidence links are captured for retry and audit",
+      },
+    ];
+  }
+
+  return [
+    {
+      key: "fetch-consent-request",
+      action: "Load pending consent request from ABHA gateway",
+      expectedOutcome: "Consent request payload is available",
+    },
+    {
+      key: "display-consent-screen",
+      action: "Render consent scope and validity window to patient",
+      expectedOutcome: "Patient sees clear data-sharing purpose and duration",
+    },
+    {
+      key: "submit-consent",
+      action: "Submit granted consent decision to ABHA gateway",
+      expectedOutcome: "Gateway accepts consent payload",
+    },
+    {
+      key: "record-audit-evidence",
+      action: "Persist consent event and ABHA evidence references",
+      expectedOutcome: "Audit trace includes consent token and health-check linkage",
+    },
+  ];
+}
+
+function buildAbhaConsentSimulationSteps(scenario, simulationStatus) {
+  var steps = getAbhaConsentScenarioSteps(scenario);
+
+  return steps.map(function (step, index) {
+    var status = "pending";
+
+    if (simulationStatus === "disabled") {
+      status = "skipped";
+    } else if (simulationStatus === "at-risk") {
+      status = index === 0 ? "validated" : "blocked";
+    } else if (scenario === "gateway-timeout" && step.key === "await-ack") {
+      status = "timeout";
+    } else if (scenario === "gateway-timeout" && step.key === "incident-evidence") {
+      status = "required";
+    } else if (scenario === "consent-denied" && step.key === "close-workflow") {
+      status = "fallback-required";
+    } else {
+      status = "validated";
+    }
+
+    return {
+      stepNumber: index + 1,
+      key: step.key,
+      action: step.action,
+      expectedOutcome: step.expectedOutcome,
+      status: status,
+    };
+  });
+}
+
 function getWorkflowAllowedRoles(workflowKey) {
   return workflowRoleMatrix[String(workflowKey || "").trim()] || null;
 }
@@ -1047,6 +1152,49 @@ router.get("/platform/abha/health-check/evidence", function (req, res) {
   });
 });
 
+router.get("/platform/abha/consent-flow/simulation", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "default").trim() || "default";
+  var scenario = String(req.query.scenario || "happy-path")
+    .trim()
+    .toLowerCase();
+  if (["happy-path", "consent-denied", "gateway-timeout"].indexOf(scenario) < 0) {
+    scenario = "happy-path";
+  }
+
+  var enabled = process.env.ABHA_ENABLED === "true";
+  var configured =
+    hasRealConfigValue(process.env.ABHA_CLIENT_ID) &&
+    hasRealConfigValue(process.env.ABHA_CLIENT_SECRET) &&
+    hasRealConfigValue(process.env.ABHA_GATEWAY_BASE_URL);
+
+  var simulationStatus = "disabled";
+  if (enabled && configured) {
+    simulationStatus = "ready";
+  } else if (enabled && !configured) {
+    simulationStatus = "at-risk";
+  }
+
+  res.json({
+    tenantKey: tenantKey,
+    mode: process.env.ABHA_ENVIRONMENT || "sandbox",
+    scenario: scenario,
+    enabled: enabled,
+    configured: configured,
+    simulationStatus: simulationStatus,
+    steps: buildAbhaConsentSimulationSteps(scenario, simulationStatus),
+    evidence: {
+      healthCheckEndpoint: "GET /api/v1/platform/abha/health-check",
+      healthCheckEvidenceEndpoint: "GET /api/v1/platform/abha/health-check/evidence",
+      operationalReadinessEndpoint: "GET /api/v1/platform/abha/operational-readiness",
+      runbook: "docs/runbooks/abha-operational-readiness.md",
+    },
+    automation: {
+      recommendation:
+        "Capture simulation payload and latest health-check evidence as incident drill attachment",
+    },
+  });
+});
+
 router.get("/platform/abha/operational-readiness", function (_req, res) {
   var enabled = process.env.ABHA_ENABLED === "true";
   var hasClientId = hasRealConfigValue(process.env.ABHA_CLIENT_ID);
@@ -1076,6 +1224,7 @@ router.get("/platform/abha/operational-readiness", function (_req, res) {
       configStatusEndpoint: "GET /api/v1/platform/abha/config-status",
       gatewayHealthEndpoint: "GET /api/v1/platform/abha/health-check",
       healthCheckEvidenceEndpoint: "GET /api/v1/platform/abha/health-check/evidence",
+      consentFlowSimulationEndpoint: "GET /api/v1/platform/abha/consent-flow/simulation",
       healthCheckTimeoutMsDefault: 4000,
     },
     runbook: {

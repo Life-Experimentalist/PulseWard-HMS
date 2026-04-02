@@ -113,6 +113,92 @@ function getWebhookReadinessStatus(providerEnabled, endpointConfigured, endpoint
   return "healthy";
 }
 
+function parseRetryInt(value, fallback, minimum, maximum) {
+  var parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  var bounded = Math.trunc(parsed);
+  if (bounded < minimum) {
+    return minimum;
+  }
+
+  if (bounded > maximum) {
+    return maximum;
+  }
+
+  return bounded;
+}
+
+function parseRetryBool(value, fallback) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return fallback;
+  }
+
+  var normalized = String(value)
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+
+  return fallback;
+}
+
+function getProviderChannelCoverage(config, providerKey) {
+  var coverage = {
+    defaultChannels: [],
+    fallbackChannels: [],
+  };
+
+  if (!config || !Array.isArray(config.messagingRouting)) {
+    return coverage;
+  }
+
+  config.messagingRouting.forEach(function (route) {
+    if (!route || !route.channel) {
+      return;
+    }
+
+    if (route.defaultProvider === providerKey) {
+      coverage.defaultChannels.push(route.channel);
+    }
+
+    if (Array.isArray(route.fallbackProviders) && route.fallbackProviders.indexOf(providerKey) >= 0) {
+      coverage.fallbackChannels.push(route.channel);
+    }
+  });
+
+  return coverage;
+}
+
+function getMessagingRetryPolicy() {
+  var mode = String(process.env.INTEGRATION_RETRY_POLICY || "exponential-backoff").trim();
+  if (!mode) {
+    mode = "exponential-backoff";
+  }
+
+  var maxAttempts = parseRetryInt(process.env.INTEGRATION_RETRY_MAX_ATTEMPTS, 3, 1, 10);
+  var baseDelayMs = parseRetryInt(process.env.INTEGRATION_RETRY_BASE_DELAY_MS, 500, 100, 60000);
+  var maxDelayMs = parseRetryInt(process.env.INTEGRATION_RETRY_MAX_DELAY_MS, 5000, 100, 120000);
+
+  return {
+    mode: mode,
+    maxAttempts: maxAttempts,
+    baseDelayMs: Math.min(baseDelayMs, maxDelayMs),
+    maxDelayMs: maxDelayMs,
+    jitterEnabled: parseRetryBool(process.env.INTEGRATION_RETRY_JITTER, true),
+    retryOn: ["network-error", "timeout", "429", "5xx"],
+    nonRetryable: ["400", "401", "403", "404", "validation-error"],
+  };
+}
+
 function hasWebhookSigningSecret(parsedSecret) {
   if (!parsedSecret) {
     return false;
@@ -154,10 +240,7 @@ function serializeWebhookPayload(payload) {
 function buildWebhookSignature(payloadString, signingSecret) {
   return (
     "sha256=" +
-    crypto
-      .createHmac("sha256", signingSecret)
-      .update(payloadString, "utf8")
-      .digest("hex")
+    crypto.createHmac("sha256", signingSecret).update(payloadString, "utf8").digest("hex")
   );
 }
 
@@ -588,6 +671,35 @@ router.get("/integrations/messaging/webhook/diagnostics", function (req, res) {
         eventType: "appointment.created",
         appointmentId: "apt-1001",
       },
+    },
+  });
+});
+
+router.get("/integrations/messaging/retry-policy", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var providerKey = String(req.query.providerKey || "generic-webhook")
+    .trim()
+    .toLowerCase();
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, providerKey);
+  var channelCoverage = getProviderChannelCoverage(config, providerKey);
+
+  res.json({
+    tenantKey: tenantKey,
+    providerKey: providerKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    readinessStatus: provider && provider.enabled ? "ready" : "disabled",
+    policy: getMessagingRetryPolicy(),
+    channelCoverage: {
+      defaultChannels: channelCoverage.defaultChannels,
+      fallbackChannels: channelCoverage.fallbackChannels,
+      defaultChannelCount: channelCoverage.defaultChannels.length,
+      fallbackChannelCount: channelCoverage.fallbackChannels.length,
+    },
+    guidance: {
+      deliveryTestEndpoint: "POST /api/v1/integrations/messaging/test",
+      recommendation:
+        "Verify retry settings for each enabled provider before switching from dry-run to live delivery",
     },
   });
 });

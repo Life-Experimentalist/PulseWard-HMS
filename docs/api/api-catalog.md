@@ -51,7 +51,8 @@ Under `/api/v1`:
 | GET    | `/auth/oauth/google/config-status`     | Google OAuth env readiness probe.                                                                                           |
 | GET    | `/platform/abha/config-status`         | ABHA config readiness probe.                                                                                                |
 | GET    | `/platform/abha/health-check`          | ABHA gateway reachability check.                                                                                            |
-| GET    | `/platform/abha/health-check/evidence` | ABHA incident-drill evidence feed with recent gateway check outcomes and summary counters.                                 |
+| GET    | `/platform/abha/health-check/evidence` | ABHA incident-drill evidence feed with recent gateway check outcomes and summary counters.                                  |
+| GET    | `/platform/abha/consent-flow/simulation` | ABHA consent workflow simulation checkpoints for operational drill scenarios.                                               |
 | GET    | `/platform/abha/operational-readiness` | ABHA operational readiness summary with runbook-linked setup and rollback checklists.                                       |
 | GET    | `/admin/settings/storage`              | Admin settings store metadata.                                                                                              |
 | GET    | `/admin/settings`                      | Read tenant admin settings.                                                                                                 |
@@ -65,23 +66,24 @@ Under `/api/v1`:
 
 Under `/api/v1`:
 
-| Method | Endpoint                                         | Purpose                                                                    |
-| ------ | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| GET    | `/notifications`                                 | List notifications.                                                        |
-| POST   | `/notifications`                                 | Create notification.                                                       |
-| GET    | `/integrations/appointments/events`              | List appointment lifecycle event receipts.                                 |
-| POST   | `/integrations/appointments/events`              | Ingest appointment lifecycle event with dedupe.                            |
-| GET    | `/integrations/appointments/events/{id}`         | Fetch appointment event receipt by id.                                     |
-| GET    | `/notifications/{id}`                            | Fetch notification by id.                                                  |
-| DELETE | `/notifications/{id}`                            | Delete notification by id.                                                 |
-| GET    | `/integrations/messaging/providers`              | List tenant messaging providers.                                           |
-| POST   | `/integrations/messaging/test`                   | Trigger provider test delivery (dry run or live).                          |
-| GET    | `/integrations/messaging/telegram/setup`         | Telegram bootstrap checklist.                                              |
-| GET    | `/integrations/messaging/telegram/config-status` | Telegram secret/config readiness.                                          |
-| GET    | `/integrations/messaging/whatsapp/setup`         | WhatsApp Cloud onboarding checklist.                                       |
-| GET    | `/integrations/messaging/whatsapp/config-status` | WhatsApp secret/config readiness.                                          |
-| GET    | `/integrations/messaging/email/config-status`    | SMTP secret/config readiness.                                              |
-| GET    | `/integrations/messaging/webhook/diagnostics`    | Website webhook routing, endpoint, and signing-secret diagnostics summary. |
+| Method | Endpoint                                           | Purpose                                                                     |
+| ------ | -------------------------------------------------- | --------------------------------------------------------------------------- |
+| GET    | `/notifications`                                   | List notifications.                                                         |
+| POST   | `/notifications`                                   | Create notification.                                                        |
+| GET    | `/integrations/appointments/events`                | List appointment lifecycle event receipts.                                  |
+| POST   | `/integrations/appointments/events`                | Ingest appointment lifecycle event with dedupe.                             |
+| GET    | `/integrations/appointments/events/{id}`           | Fetch appointment event receipt by id.                                      |
+| GET    | `/notifications/{id}`                              | Fetch notification by id.                                                   |
+| DELETE | `/notifications/{id}`                              | Delete notification by id.                                                  |
+| GET    | `/integrations/messaging/providers`                | List tenant messaging providers.                                            |
+| POST   | `/integrations/messaging/test`                     | Trigger provider test delivery (dry run or live).                           |
+| GET    | `/integrations/messaging/telegram/setup`           | Telegram bootstrap checklist.                                               |
+| GET    | `/integrations/messaging/telegram/config-status`   | Telegram secret/config readiness.                                           |
+| GET    | `/integrations/messaging/whatsapp/setup`           | WhatsApp Cloud onboarding checklist.                                        |
+| GET    | `/integrations/messaging/whatsapp/config-status`   | WhatsApp secret/config readiness.                                           |
+| GET    | `/integrations/messaging/email/config-status`      | SMTP secret/config readiness.                                               |
+| GET    | `/integrations/messaging/webhook/diagnostics`      | Website webhook routing, endpoint, and signing-secret diagnostics summary.  |
+| GET    | `/integrations/messaging/retry-policy`             | Provider retry mode, backoff, jitter controls, and channel coverage diagnostics. |
 | POST   | `/integrations/messaging/webhook/signature/verify` | Verify webhook signature payloads against configured tenant signing secret. |
 
 ## Appointment Service Highlights

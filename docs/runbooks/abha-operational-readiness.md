@@ -23,6 +23,8 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
   - `GET /api/v1/platform/abha/health-check`
 - Incident-drill evidence feed:
   - `GET /api/v1/platform/abha/health-check/evidence`
+- Consent-flow simulation checkpoints:
+  - `GET /api/v1/platform/abha/consent-flow/simulation?scenario=happy-path`
 - Operational readiness summary:
   - `GET /api/v1/platform/abha/operational-readiness`
 
@@ -38,7 +40,8 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
 2. Run health-check with bounded timeout:
    - `GET /api/v1/platform/abha/health-check?timeoutMs=4000`
 3. Capture `checkId` from each health-check and verify evidence feed includes the same check outcomes.
-4. Confirm no secret-key drift between tenant config and deployment secret store.
+4. Execute consent simulation for `happy-path`, `consent-denied`, and `gateway-timeout` scenarios.
+5. Confirm no secret-key drift between tenant config and deployment secret store.
 
 ## Incident Triage
 
@@ -57,5 +60,6 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
 
 - Timestamped output from all readiness endpoints.
 - Health-check `checkId` values plus corresponding `/health-check/evidence` records.
+- Consent simulation output payload for all three scenarios.
 - Environment mode (`sandbox` or `production`) at incident time.
 - Applied remediation and post-fix health-check evidence.

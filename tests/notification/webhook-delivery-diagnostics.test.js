@@ -133,4 +133,26 @@ describe("notification webhook delivery diagnostics", () => {
     expect(invalid.body.valid).toBe(false);
     expect(invalid.body.detail).toContain("failed");
   });
+
+  test("returns messaging retry-policy controls and channel coverage", async () => {
+    const retryPolicy = await requestJson(
+      "/api/v1/integrations/messaging/retry-policy?tenantKey=default&providerKey=generic-webhook",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(retryPolicy.status).toBe(200);
+    expect(retryPolicy.body.tenantKey).toBe("default");
+    expect(retryPolicy.body.providerKey).toBe("generic-webhook");
+    expect(retryPolicy.body.providerEnabled).toBe(true);
+    expect(retryPolicy.body.readinessStatus).toBe("ready");
+    expect(retryPolicy.body.policy.mode).toBeTruthy();
+    expect(retryPolicy.body.policy.maxAttempts).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(retryPolicy.body.policy.retryOn)).toBe(true);
+    expect(retryPolicy.body.channelCoverage.defaultChannels).toContain("website-hook");
+    expect(retryPolicy.body.guidance.deliveryTestEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/test"
+    );
+  });
 });

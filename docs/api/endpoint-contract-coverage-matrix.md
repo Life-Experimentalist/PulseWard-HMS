@@ -132,6 +132,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Auth runtime now records ABHA health-check outcomes with stable `checkId` identifiers and exposes `GET /platform/abha/health-check/evidence` for incident drill evidence feeds.
 - Regression tests cover webhook signature verification pass/fail branches and ABHA health-check evidence retrieval under unreachable gateway conditions.
 
+## M5.4 Retry Policy Controls And ABHA Consent Simulation Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/retry-policy` for provider-scoped retry mode, attempt limits, backoff bounds, jitter flags, and channel-coverage diagnostics.
+- Auth runtime now exposes `GET /platform/abha/consent-flow/simulation` for scenario-based (`happy-path`, `consent-denied`, `gateway-timeout`) operational drill checkpoints.
+- ABHA operational-readiness diagnostics now link the consent simulation endpoint for drill planning workflows.
+- Regression tests cover retry-policy diagnostics response shape and ABHA consent simulation behavior under at-risk configuration conditions.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -174,10 +174,29 @@ describe("auth-service route surface coverage", () => {
     expect(abhaOperationalReadiness.body.diagnostics.healthCheckEvidenceEndpoint).toBe(
       "GET /api/v1/platform/abha/health-check/evidence"
     );
+    expect(abhaOperationalReadiness.body.diagnostics.consentFlowSimulationEndpoint).toBe(
+      "GET /api/v1/platform/abha/consent-flow/simulation"
+    );
     expect(abhaOperationalReadiness.body.runbook.document).toBe(
       "docs/runbooks/abha-operational-readiness.md"
     );
     expect(Array.isArray(abhaOperationalReadiness.body.runbook.setupChecklist)).toBe(true);
+
+    const abhaConsentSimulation = await requestJson(
+      "/api/v1/platform/abha/consent-flow/simulation?tenantKey=citycare-hospital&scenario=gateway-timeout",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(abhaConsentSimulation.status).toBe(200);
+    expect(abhaConsentSimulation.body.tenantKey).toBe("citycare-hospital");
+    expect(abhaConsentSimulation.body.scenario).toBe("gateway-timeout");
+    expect(abhaConsentSimulation.body.simulationStatus).toBe("at-risk");
+    expect(Array.isArray(abhaConsentSimulation.body.steps)).toBe(true);
+    expect(abhaConsentSimulation.body.evidence.healthCheckEvidenceEndpoint).toBe(
+      "GET /api/v1/platform/abha/health-check/evidence"
+    );
 
     const storageMeta = await requestJson("/api/v1/admin/settings/storage", {
       method: "GET",

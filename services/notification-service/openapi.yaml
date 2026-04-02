@@ -285,6 +285,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookDiagnosticsResponse"
+  /integrations/messaging/retry-policy:
+    get:
+      summary: Get messaging provider retry-policy controls and channel coverage
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: generic-webhook
+      responses:
+        "200":
+          description: Messaging retry-policy diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingRetryPolicyResponse"
   /integrations/messaging/webhook/signature/verify:
     post:
       summary: Verify website webhook signature against configured signing secret
@@ -648,6 +671,65 @@ components:
         fallbackChannelCount:
           type: integer
           example: 2
+    MessagingRetryPolicy:
+      type: object
+      properties:
+        mode:
+          type: string
+          example: exponential-backoff
+        maxAttempts:
+          type: integer
+          example: 3
+        baseDelayMs:
+          type: integer
+          example: 500
+        maxDelayMs:
+          type: integer
+          example: 5000
+        jitterEnabled:
+          type: boolean
+          example: true
+        retryOn:
+          type: array
+          items:
+            type: string
+        nonRetryable:
+          type: array
+          items:
+            type: string
+    MessagingRetryPolicyGuidance:
+      type: object
+      properties:
+        deliveryTestEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/test
+        recommendation:
+          type: string
+          example: Verify retry settings for each enabled provider before switching from dry-run to live delivery
+    MessagingRetryPolicyResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        providerKey:
+          type: string
+          example: generic-webhook
+        providerEnabled:
+          type: boolean
+          example: true
+        readinessStatus:
+          type: string
+          enum:
+            - ready
+            - disabled
+          example: ready
+        policy:
+          $ref: "#/components/schemas/MessagingRetryPolicy"
+        channelCoverage:
+          $ref: "#/components/schemas/WebhookRouteCoverage"
+        guidance:
+          $ref: "#/components/schemas/MessagingRetryPolicyGuidance"
     WebhookSigningSecretStatus:
       type: object
       properties:

@@ -10,6 +10,7 @@
 	- `GET /api/v1/integrations/messaging/whatsapp/config-status?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/email/config-status?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
+	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
 ## Weekly checks
@@ -21,6 +22,7 @@
 	- `GET /api/v1/platform/abha/config-status`
 	- `GET /api/v1/platform/abha/health-check`
 	- `GET /api/v1/platform/abha/health-check/evidence`
+	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario=gateway-timeout`
 	- `GET /api/v1/platform/abha/operational-readiness`
 
 ## Incident handling
@@ -40,9 +42,11 @@
 - Notification routing:
 	- `GET /api/v1/integrations/messaging/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
+	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify`
 	- `POST /api/v1/integrations/messaging/test`
 	- `GET /api/v1/platform/abha/health-check/evidence`
+	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario={scenario}`
 - Calendar routing:
 	- `GET /api/v1/integrations/calendars/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/calendars/interoperability/diagnostics?tenantKey={tenantKey}`

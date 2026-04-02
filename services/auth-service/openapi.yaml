@@ -423,6 +423,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/AbhaHealthCheckEvidenceResponse"
 
+  /platform/abha/consent-flow/simulation:
+    get:
+      summary: Simulate ABHA consent workflow checkpoints for operational drills
+      tags:
+        - Platform Domains
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - happy-path
+              - consent-denied
+              - gateway-timeout
+            default: happy-path
+      responses:
+        "200":
+          description: ABHA consent simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaConsentFlowSimulationResponse"
+
   /platform/abha/operational-readiness:
     get:
       summary: Get ABHA operational readiness checklist and diagnostics summary
@@ -1227,6 +1257,80 @@ components:
             $ref: "#/components/schemas/AbhaHealthCheckEvidenceEvent"
         automation:
           $ref: "#/components/schemas/AbhaHealthCheckEvidenceAutomation"
+    AbhaConsentSimulationStep:
+      type: object
+      properties:
+        stepNumber:
+          type: integer
+          example: 1
+        key:
+          type: string
+          example: fetch-consent-request
+        action:
+          type: string
+        expectedOutcome:
+          type: string
+        status:
+          type: string
+          example: validated
+    AbhaConsentSimulationEvidence:
+      type: object
+      properties:
+        healthCheckEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check
+        healthCheckEvidenceEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check/evidence
+        operationalReadinessEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/operational-readiness
+        runbook:
+          type: string
+          example: docs/runbooks/abha-operational-readiness.md
+    AbhaConsentSimulationAutomation:
+      type: object
+      properties:
+        recommendation:
+          type: string
+          example: Capture simulation payload and latest health-check evidence as incident drill attachment
+    AbhaConsentFlowSimulationResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        mode:
+          type: string
+          example: sandbox
+        scenario:
+          type: string
+          enum:
+            - happy-path
+            - consent-denied
+            - gateway-timeout
+          example: happy-path
+        enabled:
+          type: boolean
+          example: true
+        configured:
+          type: boolean
+          example: true
+        simulationStatus:
+          type: string
+          enum:
+            - ready
+            - at-risk
+            - disabled
+          example: ready
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbhaConsentSimulationStep"
+        evidence:
+          $ref: "#/components/schemas/AbhaConsentSimulationEvidence"
+        automation:
+          $ref: "#/components/schemas/AbhaConsentSimulationAutomation"
     AbhaOperationalReadinessChecks:
       type: object
       properties:
@@ -1254,6 +1358,9 @@ components:
         healthCheckEvidenceEndpoint:
           type: string
           example: GET /api/v1/platform/abha/health-check/evidence
+        consentFlowSimulationEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/consent-flow/simulation
         healthCheckTimeoutMsDefault:
           type: integer
           example: 4000

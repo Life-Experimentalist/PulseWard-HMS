@@ -20,27 +20,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+          cache: "npm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: npm ci
 
       - name: Check contract compatibility (M1)
-        run: pnpm run contracts:check -- --strict
+        run: npm run contracts:check -- --strict
 
       - name: Run tests
-        run: pnpm test
+        run: npm test
 
       - name: Build applications
-        run: pnpm run build:apps
+        run: npm run build:apps
 
       - name: Lint code
-        run: pnpm lint
+        run: npm run lint
 
       - name: Publish artifacts
         if: github.ref == 'refs/heads/main'

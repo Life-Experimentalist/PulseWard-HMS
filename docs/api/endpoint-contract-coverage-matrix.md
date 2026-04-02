@@ -42,6 +42,11 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Tenant role-provider compatibility behavior is enforced in auth runtime and covered by auth regression tests.
 - Tenant role-specific session TTL behavior is enforced in login/OAuth token issuance and covered by auth regression tests.
 
+## M2.5 OTP And MFA Guardrail Coverage
+
+- Critical schema assertions include OTP challenge and verification endpoints in `auth-service`.
+- Login schema assertions now include MFA-required response coverage for policy-driven auth flows.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

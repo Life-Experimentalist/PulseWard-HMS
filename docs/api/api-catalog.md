@@ -38,8 +38,10 @@ Under `/api/v1`:
 | Method | Endpoint                               | Purpose                                                      |
 | ------ | -------------------------------------- | ------------------------------------------------------------ |
 | GET    | `/auth/roles`                          | List supported role keys.                                    |
+| POST   | `/auth/otp/request`                    | Create tenant-scoped OTP challenge for policy-driven MFA.    |
+| POST   | `/auth/otp/verify`                     | Verify OTP challenge and return short-lived OTP verification token. |
 | POST   | `/auth/register`                       | Register role-scoped user.                                   |
-| POST   | `/auth/login`                          | Role login with tenant policy checks, role-provider compatibility, and policy-driven session TTL. |
+| POST   | `/auth/login`                          | Role login with tenant policy checks, optional MFA requirement, role-provider compatibility, and policy-driven session TTL. |
 | GET    | `/auth/oauth/providers`                | OAuth provider readiness list (environment + tenant policy). |
 | GET    | `/auth/oauth/google/start`             | Google OAuth bootstrap URL with tenant policy guard.         |
 | POST   | `/auth/oauth/google/callback`          | Exchange callback payload for JWT with tenant policy guard and role-driven session TTL.  |

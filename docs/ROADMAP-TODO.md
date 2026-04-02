@@ -282,4 +282,5 @@ Exit criteria:
 10. M2.2 completed: tenant-level auth policy schema validation and persistence validation paths are implemented with regression tests.
 11. M2.3 completed: auth policy consumption is enforced in login and OAuth flows with tenant-level policy guards and audit-ready denial semantics.
 12. M2.4 completed: role/provider compatibility and tenant policy-driven session controls are enforced with regression coverage.
-13. Active next slice (M2.5): add OTP provider execution path and MFA policy enforcement for selected roles.
+13. M2.5 completed: OTP provider execution path and MFA policy enforcement for selected roles are implemented with regression coverage.
+14. Active next slice (M3.1): connect auth policy outcomes to patient/clinical workflow entry checks and role-scoped session observability events.

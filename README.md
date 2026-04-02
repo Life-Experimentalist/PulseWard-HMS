@@ -48,6 +48,41 @@ An AI project manager agent is integrated into the system to assist with project
 
 To set up the PulseWard project locally, follow the instructions in the `scripts/setup.ps1` file. Ensure that all dependencies are installed and configured correctly.
 
+### Frontend App Commands
+
+PulseWard apps now follow a shared React + Vite workflow with root-linked scripts.
+
+Install all frontend app dependencies:
+
+```powershell
+npm run install:apps
+```
+
+Run individual app development servers:
+
+```powershell
+npm run start:landing
+npm run start:admin:dev
+npm run start:clinician:dev
+npm run start:operations:dev
+npm run start:patient:dev
+```
+
+Build all framework apps for deployment:
+
+```powershell
+npm run build:apps
+```
+
+Production static starts (compile-first):
+
+```powershell
+npm run start:admin
+npm run start:clinician
+npm run start:operations
+npm run start:patient
+```
+
 ### Contributing
 
 Contributions to PulseWard are welcome! Please refer to the project's governance documents for guidelines on contributing, decision-making, and risk management.

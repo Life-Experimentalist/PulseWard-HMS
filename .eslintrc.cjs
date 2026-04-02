@@ -35,6 +35,44 @@ module.exports = {
       },
     },
     {
+      files: [
+        "apps/admin-console/src/**/*.js",
+        "apps/admin-console/src/**/*.jsx",
+        "apps/clinician-portal/src/**/*.js",
+        "apps/clinician-portal/src/**/*.jsx",
+        "apps/operations-dashboard/src/**/*.js",
+        "apps/operations-dashboard/src/**/*.jsx",
+        "apps/patient-portal/src/**/*.js",
+        "apps/patient-portal/src/**/*.jsx"
+      ],
+      env: {
+        browser: true,
+        node: false,
+      },
+      parserOptions: {
+        ecmaVersion: 12,
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    {
+      files: [
+        "apps/admin-console/vite.config.js",
+        "apps/clinician-portal/vite.config.js",
+        "apps/operations-dashboard/vite.config.js",
+        "apps/patient-portal/vite.config.js"
+      ],
+      env: {
+        node: true,
+      },
+      parserOptions: {
+        ecmaVersion: 12,
+        sourceType: "module",
+      },
+    },
+    {
       files: ["services/**/*.js", "packages/**/*.js", "scripts/**/*.js", "scripts/**/*.mjs"],
       env: {
         node: true,

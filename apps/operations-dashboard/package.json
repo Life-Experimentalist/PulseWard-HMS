@@ -1,0 +1,23 @@
+{
+  "name": "@pulseward/operations-dashboard",
+  "version": "1.0.0",
+  "description": "React + Vite operations dashboard for service health, incidents, and throughput monitoring.",
+  "private": true,
+  "type": "module",
+  "main": "src/main.jsx",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode production",
+    "preview": "vite preview --host"
+  },
+  "author": "VKrishna04",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.19"
+  }
+}

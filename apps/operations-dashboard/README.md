@@ -1,71 +1,38 @@
-# PulseWard - Operations Dashboard
+# PulseWard Operations Dashboard
 
-Welcome to the **PulseWard Operations Dashboard**! This application is a crucial part of the PulseWard Hospital Management System, designed to provide real-time insights into hospital operations, streamline workflows, and enhance decision-making processes for hospital administrators and staff.
+Framework-based operations control surface built with React + Vite.
 
-## Project Overview
+## Scope
 
-The Operations Dashboard serves as a centralized hub for monitoring various operational metrics within the hospital. It integrates data from multiple services to present a comprehensive view of hospital performance, including patient flow, resource utilization, and staff management.
+- Service-health and throughput KPI presentation
+- Incident queue and command panel experience
+- Compile-first static deployment for faster startup
 
-## Features
+## Development
 
-- **Real-Time Analytics**: Monitor key performance indicators (KPIs) in real-time to make informed decisions.
-- **User-Friendly Interface**: An intuitive UI that allows users to navigate through various operational metrics effortlessly.
-- **Data Integration**: Seamlessly integrates with other services within the PulseWard ecosystem to provide a holistic view of hospital operations.
-- **Customizable Dashboards**: Users can customize their dashboards to focus on the metrics that matter most to them.
+From repository root:
 
-## Technology Stack
+```powershell
+npm run install:operations
+npm run start:operations:dev
+```
 
-- **Frontend**: React.js for building a dynamic user interface.
-- **Backend**: Node.js and Express for handling API requests and data processing.
-- **Database**: MongoDB for storing operational data.
-- **State Management**: Redux for managing application state.
-- **Styling**: Tailwind CSS for responsive and modern design.
+Default Vite dev host runs with automatic port selection near `4312`.
 
-## Development Model
+## Production-Fast Start
 
-This project follows an **iterative development model**, allowing for continuous feedback and improvement. Each iteration focuses on delivering specific features and enhancements based on user feedback and operational needs.
+From repository root:
 
-## API Documentation
+```powershell
+npm run build:operations
+npm run start:operations
+```
 
-The Operations Dashboard interacts with various APIs to fetch and display data. Comprehensive API documentation is available in the [API Catalog](../../docs/api/api-catalog.md).
+`start:operations` serves prebuilt static output from `dist` and avoids runtime bundling.
+Default static port is `4182` with automatic fallback to the next available port.
 
-## Getting Started
+## Related Documentation
 
-To set up the development environment for the Operations Dashboard, follow these steps:
-
-1. Clone the repository:
-
-   ```
-   git clone https://github.com/Life-Experimentalist/PulseWard-HMS.git
-   cd PulseWard-HMS/apps/operations-dashboard
-   ```
-
-2. Install dependencies:
-
-   ```
-   npm install
-   ```
-
-3. Start the development server:
-
-   ```
-   npm start
-   ```
-
-4. Access the dashboard at `http://localhost:3000`.
-
-## Contribution Guidelines
-
-We welcome contributions to the PulseWard Operations Dashboard! Please refer to the [project management charter](../../governance/project-management-charter.md) for guidelines on how to contribute effectively.
-
-## License
-
-This project is proprietary and confidential. All rights reserved. See the LICENSE.md file for internal licensing terms.
-
-## Contact
-
-For any inquiries or feedback, please reach out to the project maintainers via the [GitHub repository](https://github.com/Life-Experimentalist/PulseWard-HMS).
-
----
-
-Thank you for being a part of the PulseWard project! Together, we can enhance healthcare management and improve patient outcomes.
+- API catalog: `../../docs/api/api-catalog.md`
+- Governance charter: `../../governance/project-management-charter.md`
+- Operations runbooks: `../../docs/runbooks/`

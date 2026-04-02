@@ -1,0 +1,123 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background:
+    linear-gradient(160deg, rgba(225, 235, 255, 0.72), rgba(236, 253, 245, 0.75)),
+    repeating-linear-gradient(
+      -18deg,
+      rgba(16, 67, 87, 0.06),
+      rgba(16, 67, 87, 0.06) 10px,
+      transparent 10px,
+      transparent 22px
+    );
+  color: #143241;
+}
+
+.ops-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 1.3rem;
+}
+
+.ops-header p {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  color: #2b5871;
+}
+
+.ops-header h1 {
+  margin: 0.35rem 0 0;
+  font-family: "Sora", sans-serif;
+}
+
+.kpi-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.kpi-grid article {
+  background: #ffffff;
+  border: 1px solid rgba(20, 50, 65, 0.16);
+  border-radius: 14px;
+  padding: 0.8rem;
+}
+
+.kpi-grid h3 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  color: #0d667f;
+}
+
+.kpi-grid p {
+  margin: 0.3rem 0 0;
+  color: #4d6778;
+}
+
+.panels {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.8rem;
+}
+
+.panel {
+  border: 1px solid rgba(20, 50, 65, 0.16);
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 0.9rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 1.1rem;
+}
+
+.panel ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.panel li {
+  color: #4d6778;
+  margin-bottom: 0.45rem;
+}
+
+.panel li strong,
+.panel li span,
+.panel li time {
+  margin-right: 0.4rem;
+}
+
+.panel button {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 0.7rem;
+  margin-bottom: 0.5rem;
+  background: #0d667f;
+  color: #ffffff;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: #0b5570;
+}
+
+@media (max-width: 980px) {
+  .kpi-grid,
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}

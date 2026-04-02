@@ -37,6 +37,11 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Critical schema assertions now include auth policy-enforced login and OAuth flow endpoints in `auth-service`.
 - Policy enforcement denial responses are documented and verified with schema checks for `403` paths.
 
+## M2.4 Role And Session Guardrail Coverage
+
+- Tenant role-provider compatibility behavior is enforced in auth runtime and covered by auth regression tests.
+- Tenant role-specific session TTL behavior is enforced in login/OAuth token issuance and covered by auth regression tests.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

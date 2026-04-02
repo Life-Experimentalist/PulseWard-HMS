@@ -281,4 +281,5 @@ Exit criteria:
 9. M1.6 completed: contract checker now enforces endpoint-level request/response schema assertions for critical auth, booking, and notification APIs.
 10. M2.2 completed: tenant-level auth policy schema validation and persistence validation paths are implemented with regression tests.
 11. M2.3 completed: auth policy consumption is enforced in login and OAuth flows with tenant-level policy guards and audit-ready denial semantics.
-12. Active next slice (M2.4): enforce role/provider compatibility and tenant policy-driven session controls with regression coverage.
+12. M2.4 completed: role/provider compatibility and tenant policy-driven session controls are enforced with regression coverage.
+13. Active next slice (M2.5): add OTP provider execution path and MFA policy enforcement for selected roles.

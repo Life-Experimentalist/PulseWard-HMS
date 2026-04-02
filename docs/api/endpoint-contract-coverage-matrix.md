@@ -2,16 +2,16 @@
 
 This matrix tracks route-contract coverage and semantic parity for core PulseWard services in M1.
 
-| service              | base path                       | runtime route source                    | openapi/spec source                        | coverage status | parity status | notes                                                                                  |
-| -------------------- | ------------------------------- | --------------------------------------- | ------------------------------------------ | --------------- | ------------- | -------------------------------------------------------------------------------------- |
-| api-gateway          | /auth, /patients, /appointments | services/api-gateway/src                | services/api-gateway/openapi.yaml          | covered         | parity pass   | Core gateway runtime handlers are now implemented and aligned with OpenAPI operations. |
-| auth-service         | /api/v1 (also mounted at /api)  | services/auth-service/routes.js         | services/auth-service/openapi.yaml         | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
-| appointment-service  | /api/v1 (also mounted at /api)  | services/appointment-service/routes.js  | services/appointment-service/openapi.yaml  | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
-| notification-service | /api/v1 (also mounted at /api)  | services/notification-service/routes.js | services/notification-service/openapi.yaml | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                |
-| patient-service      | /api/patients                   | services/patient-service/src            | services/patient-service/openapi.yaml      | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
-| ehr-service          | /ehr/records/{id}               | services/ehr-service/routes.js          | services/ehr-service/openapi.yaml          | covered         | parity pass   | Runtime routes and OpenAPI are reconciled for EHR CRUD and timeline history paths.     |
-| lab-service          | /lab-tests (mounted at /api)    | services/lab-service/routes.js          | services/lab-service/openapi.yaml          | covered         | parity pass   | Runtime route module and OpenAPI are reconciled for catalog/order/result workflows.    |
-| pharmacy-service     | /api/pharmacy                   | services/pharmacy-service/src           | services/pharmacy-service/openapi.yaml     | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.             |
+| service              | base path                       | runtime route source                    | openapi/spec source                        | coverage status | parity status | notes                                                                                    |
+| -------------------- | ------------------------------- | --------------------------------------- | ------------------------------------------ | --------------- | ------------- | ---------------------------------------------------------------------------------------- |
+| api-gateway          | /auth, /patients, /appointments | services/api-gateway/src                | services/api-gateway/openapi.yaml          | covered         | parity pass   | Core gateway runtime handlers are now implemented and aligned with OpenAPI operations.   |
+| auth-service         | /api/v1 (also mounted at /api)  | services/auth-service/routes.js         | services/auth-service/openapi.yaml         | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                  |
+| appointment-service  | /api/v1 (also mounted at /api)  | services/appointment-service/routes.js  | services/appointment-service/openapi.yaml  | covered         | parity pass   | Runtime/OpenAPI aligned for OPD, lifecycle transitions, and conflict/version guardrails. |
+| notification-service | /api/v1 (also mounted at /api)  | services/notification-service/routes.js | services/notification-service/openapi.yaml | covered         | parity pass   | Runtime route module and OpenAPI spec are both present.                                  |
+| patient-service      | /api/patients                   | services/patient-service/src            | services/patient-service/openapi.yaml      | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.               |
+| ehr-service          | /ehr/records/{id}               | services/ehr-service/routes.js          | services/ehr-service/openapi.yaml          | covered         | parity pass   | Runtime routes and OpenAPI are reconciled for EHR CRUD and timeline history paths.       |
+| lab-service          | /lab-tests (mounted at /api)    | services/lab-service/routes.js          | services/lab-service/openapi.yaml          | covered         | parity pass   | Runtime route module and OpenAPI are reconciled for catalog/order/result workflows.      |
+| pharmacy-service     | /api/pharmacy                   | services/pharmacy-service/src           | services/pharmacy-service/openapi.yaml     | covered         | parity pass   | Runtime route declarations are inline in src; no dedicated routes.js file.               |
 | billing-service      | /billing                        | services/billing-service/src            | services/billing-service/openapi.yaml      | covered         | parity pass   | Runtime and OpenAPI are reconciled for billing CRUD and clinical trigger hook endpoints. |
 
 ## M1.2 Parity Rules
@@ -82,6 +82,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Critical schema assertions include `POST /billing/hooks/clinical-trigger` in `billing-service`.
 - Billing runtime now validates actor role, trigger semantics, and idempotent `correlationId` handling for lab and prescription workflow events.
 - Regression tests cover successful lab/prescription trigger processing, trigger receipt queries, and duplicate correlation rejection behavior.
+
+## M4.1 Appointment Lifecycle Conflict Reliability Coverage
+
+- Critical schema assertions for `POST /appointments` and `PUT /appointments/{id}` include conflict response coverage (`409`) for slot and lifecycle reliability paths.
+- Appointment runtime now enforces lifecycle transition matrix checks, clinician slot overlap detection, and optimistic `expectedVersion` conflict handling.
+- Regression tests cover conflict rejection, transition validity, stale-version conflict handling, and idempotent create retry behavior.
 
 ## Current Allowlisted Drifts
 

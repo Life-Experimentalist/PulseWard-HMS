@@ -292,4 +292,5 @@ Exit criteria:
 18. M3.4 completed: prescription lifecycle handoff and status synchronization are implemented across EHR and pharmacy touchpoints.
 19. M3.5 completed: lab-service now supports role-gated order lifecycle, result reporting, and downstream trigger alignment for EHR and billing touchpoints.
 20. M3.6 completed: billing-service now receives and processes clinical trigger hooks from lab and prescription workflows with idempotent correlation handling.
-21. Active next slice (M4.1): finalize appointment lifecycle state machine and conflict handling reliability semantics.
+21. M4.1 completed: appointment-service now enforces lifecycle state transitions, slot-conflict detection, idempotent create retries, and optimistic version checks.
+22. Active next slice (M4.2): wire appointment lifecycle events to notification-service with correlation-id propagation and retry-safe delivery semantics.

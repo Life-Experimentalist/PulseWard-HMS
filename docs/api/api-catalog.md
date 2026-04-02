@@ -19,16 +19,16 @@ For field-level schemas, always use each service OpenAPI file as the canonical c
 
 ## API Base Paths
 
-| Service              | Primary base path             | Notes                                      |
-| -------------------- | ----------------------------- | ------------------------------------------ |
-| API Gateway          | `/`                           | Routes traffic to service backends.        |
-| Auth Service         | `/api/v1`                     | Also mounted at `/api` in local runtime.   |
-| Appointment Service  | `/api/v1`                     | Also mounted at `/api` in local runtime.   |
-| Notification Service | `/api/v1`                     | Also mounted at `/api` in local runtime.   |
-| Patient Service      | `/api/patients`               | CRUD patient profile routes.               |
-| EHR Service          | `/ehr` and `/api/ehr`         | Runtime/spec aligned in M1.3.              |
-| Lab Service          | `/api/lab-tests`              | M3.5 order/result/report workflow surface. |
-| Pharmacy Service     | `/api/pharmacy`               | CRUD pharmacy routes.                      |
+| Service              | Primary base path             | Notes                                          |
+| -------------------- | ----------------------------- | ---------------------------------------------- |
+| API Gateway          | `/`                           | Routes traffic to service backends.            |
+| Auth Service         | `/api/v1`                     | Also mounted at `/api` in local runtime.       |
+| Appointment Service  | `/api/v1`                     | Also mounted at `/api` in local runtime.       |
+| Notification Service | `/api/v1`                     | Also mounted at `/api` in local runtime.       |
+| Patient Service      | `/api/patients`               | CRUD patient profile routes.                   |
+| EHR Service          | `/ehr` and `/api/ehr`         | Runtime/spec aligned in M1.3.                  |
+| Lab Service          | `/api/lab-tests`              | M3.5 order/result/report workflow surface.     |
+| Pharmacy Service     | `/api/pharmacy`               | CRUD pharmacy routes.                          |
 | Billing Service      | `/billing` and `/api/billing` | M3.6 clinical trigger hook processing surface. |
 
 ## Auth Service Highlights
@@ -87,13 +87,18 @@ OPD management alignment:
 | ------ | ----------------------------------- | ------------------------------------------------------------------------- |
 | GET    | `/appointments`                     | List appointments.                                                        |
 | GET    | `/appointments/{id}`                | Fetch appointment by id.                                                  |
-| POST   | `/appointments`                     | Create appointment with role-scoped entry checks and OPD linkage support. |
-| PUT    | `/appointments/{id}`                | Update appointment with role-scoped entry checks.                         |
-| DELETE | `/appointments/{id}`                | Cancel appointment with role-scoped entry checks.                         |
+| POST   | `/appointments`                     | Create appointment with role checks, idempotent retry handling, and slot-conflict validation. |
+| PUT    | `/appointments/{id}`                | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
+| DELETE | `/appointments/{id}`                | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics). |
 | GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.                |
 | POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.           |
 | GET    | `/integrations/calendars/providers` | List calendar providers.                                                  |
 | POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                               |
+
+Lifecycle reliability notes:
+- Appointment lifecycle states are transition-guarded (`pending-triage -> scheduled -> checked-in -> in-consultation -> completed`) with controlled cancel/no-show paths.
+- Scheduling writes reject clinician slot overlaps and stale version updates with conflict error semantics.
+- Client request id keys can replay safe create retries without duplicate appointment creation.
 
 ## EHR Service Highlights
 
@@ -150,16 +155,16 @@ Under `/api/pharmacy`:
 
 Under `/billing` (also supported through gateway mounts):
 
-| Method | Endpoint                             | Purpose                                                                   |
-| ------ | ------------------------------------ | ------------------------------------------------------------------------- |
-| GET    | `/billing`                           | List billing records with tenant/patient/status filters.                  |
-| POST   | `/billing`                           | Create manual billing record for operational adjustments.                 |
-| GET    | `/billing/{id}`                      | Fetch billing record by id.                                               |
-| PUT    | `/billing/{id}`                      | Update billing record amount/status.                                      |
-| DELETE | `/billing/{id}`                      | Delete billing record by id.                                              |
-| POST   | `/billing/hooks/clinical-trigger`    | Consume lab/prescription clinical trigger and create processed billing record. |
-| GET    | `/billing/hooks/clinical-trigger`    | List processed billing trigger receipts with tenant/patient/trigger filters. |
-| GET    | `/billing/hooks/clinical-trigger/{id}` | Retrieve a specific clinical trigger processing receipt.                 |
+| Method | Endpoint                               | Purpose                                                                        |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------ |
+| GET    | `/billing`                             | List billing records with tenant/patient/status filters.                       |
+| POST   | `/billing`                             | Create manual billing record for operational adjustments.                      |
+| GET    | `/billing/{id}`                        | Fetch billing record by id.                                                    |
+| PUT    | `/billing/{id}`                        | Update billing record amount/status.                                           |
+| DELETE | `/billing/{id}`                        | Delete billing record by id.                                                   |
+| POST   | `/billing/hooks/clinical-trigger`      | Consume lab/prescription clinical trigger and create processed billing record. |
+| GET    | `/billing/hooks/clinical-trigger`      | List processed billing trigger receipts with tenant/patient/trigger filters.   |
+| GET    | `/billing/hooks/clinical-trigger/{id}` | Retrieve a specific clinical trigger processing receipt.                       |
 
 ## ABHA References
 

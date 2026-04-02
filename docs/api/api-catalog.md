@@ -98,12 +98,16 @@ OPD management alignment:
 | GET    | `/integrations/calendars/providers`           | List calendar providers.                                                                           |
 | POST   | `/integrations/calendars/test`                | Test calendar booking flow.                                                                        |
 | GET    | `/integrations/notifications/dispatch-events` | List lifecycle notification dispatch attempts for delivery audit/debug.                            |
+| GET    | `/integrations/notifications/dead-letter`     | List dead-letter records for missed or delayed reminder dispatch workflows.                        |
+| GET    | `/integrations/notifications/dispatch-telemetry` | Return dispatch reliability counters and missed/delayed reminder telemetry summaries.            |
 
 Lifecycle reliability notes:
 - Appointment lifecycle states are transition-guarded (`pending-triage -> scheduled -> checked-in -> in-consultation -> completed`) with controlled cancel/no-show paths.
 - Scheduling writes reject clinician slot overlaps and stale version updates with conflict error semantics.
 - Client request id keys can replay safe create retries without duplicate appointment creation.
 - Lifecycle events are dispatched to notification-service with propagated correlation-id and retry-safe delivery semantics.
+- Dispatch dead-letter records now capture endpoint-not-configured, retry-exhausted, and late-delivery reminder outcomes.
+- Dispatch telemetry counters now report missed and delayed reminder trends for operational alerting workflows.
 
 ## EHR Service Highlights
 

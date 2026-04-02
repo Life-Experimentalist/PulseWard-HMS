@@ -104,6 +104,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Shared utility suites now cover tenant config/domain resolution, origin policy checks, secret-ref parsing, and route-provider resolution behavior.
 - Coverage quality gate is enforced with Jest global thresholds (statements >= 60, branches >= 55, functions >= 60, lines >= 60) to prevent slice regressions.
 
+## M4.4 Notification Dead-Letter And Telemetry Coverage
+
+- Appointment runtime now records dead-letter events for notification dispatch outcomes classified as missed (`failed`, `skipped`) and delayed (`delivered` beyond threshold) reminder paths.
+- Appointment runtime now exposes `GET /integrations/notifications/dead-letter` for dead-letter query workflows by tenant, appointment, event type, status, correlation-id, and reason.
+- Appointment runtime now exposes `GET /integrations/notifications/dispatch-telemetry` with counters for total, delivered, failed, skipped, dead-lettered, missed reminders, and delayed reminders plus event-type summaries.
+- Regression tests cover skipped endpoint-not-configured behavior, failed retry-exhausted behavior, delayed-delivery telemetry counters, and late-delivery dead-letter records.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

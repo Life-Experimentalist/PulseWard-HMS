@@ -299,4 +299,6 @@ Exit criteria:
 22. M4.2 completed: appointment-service now emits lifecycle events to notification-service with correlation-id propagation, bounded retries, and dispatch audit visibility.
 23. M4.3 completed (Test Coverage Completion Module): expanded route-edge, provider-adapter, shared-utils, and cross-service dispatch/ingestion test coverage so new functions and critical branches ship with unit and integration validation.
 24. M4.3 evidence checkpoint: full suite now reports 21 passing suites, 70 passing tests, and approximately 63.10% statements / 59.68% branches / 65.01% functions / 63.77% lines coverage.
-25. M4.4 active next slice: add notification dead-letter behavior and delivery telemetry counters for missed or delayed appointment reminders.
+25. M4.4 completed: appointment-service now records dead-letter entries for skipped, failed, and delayed reminder dispatches with queryable dead-letter filters and bounded retention controls.
+26. M4.4 evidence checkpoint: dispatch telemetry endpoint now exposes missed/delayed reminder counters, dead-letter totals, and event-type reliability summaries for operational monitoring.
+27. M5.1 active next slice: complete connector adapter hardening for Telegram/WhatsApp onboarding and calendar interoperability diagnostics.

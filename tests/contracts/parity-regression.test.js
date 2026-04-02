@@ -14,7 +14,10 @@ describe("M1 parity regression guard", () => {
     expect(result.status).toBe(0);
     expect(combinedOutput).toContain("Mode: strict");
     expect(combinedOutput).toContain(
-      "Contract check passed: presence and parity checks are within baseline."
+      "Schema check passed: critical request/response schema coverage is present."
+    );
+    expect(combinedOutput).toContain(
+      "Contract check passed: presence, parity, and schema checks are within baseline."
     );
   });
 
@@ -34,5 +37,20 @@ describe("M1 parity regression guard", () => {
 
     expect(output).toContain("runtime-only (0): none");
     expect(output).toContain("spec-only (0): none");
+  });
+
+  test("critical endpoint schema checks stay covered", () => {
+    const scriptPath = path.resolve(__dirname, "../../scripts/check-contract-coverage.mjs");
+    const result = spawnSync("node", [scriptPath, "--strict"], {
+      cwd: path.resolve(__dirname, "../.."),
+      encoding: "utf8",
+    });
+
+    const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+
+    expect(output).toContain("Critical endpoint schema checks:");
+    expect(output).toContain("PASS: appointment-service POST /appointments");
+    expect(output).toContain("PASS: notification-service POST /integrations/messaging/test");
+    expect(output).toContain("PASS: auth-service PUT /admin/settings");
   });
 });

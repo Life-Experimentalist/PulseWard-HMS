@@ -278,4 +278,5 @@ Exit criteria:
 6. M2 seed completed: auth service now exposes tenant admin-settings persistence plus ABHA configuration readiness and health-check endpoints.
 7. M5 seed completed: notification service now exposes live provider readiness endpoints for Telegram and SMTP credentials.
 8. M6 seed completed: admin console moved to production-style static runtime scaffold with service and integration diagnostics.
-9. Active next slice (M1.6): expand contract assertions to endpoint-level request/response schema checks for critical booking and notification APIs.
+9. M1.6 completed: contract checker now enforces endpoint-level request/response schema assertions for critical auth, booking, and notification APIs.
+10. Active next slice (M2.2): enforce tenant-level auth policy schema and persistence validation paths with regression tests.

@@ -102,6 +102,59 @@ const serviceChecks = [
 
 const parityAllowlist = {};
 
+const criticalSchemaChecks = [
+  {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
+    method: "PUT",
+    path: "/admin/settings",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200"],
+  },
+  {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
+    method: "POST",
+    path: "/platform/domain-config/validate",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200", "400"],
+  },
+  {
+    service: "appointment-service",
+    specSource: "services/appointment-service/openapi.yaml",
+    method: "POST",
+    path: "/appointments",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201"],
+  },
+  {
+    service: "appointment-service",
+    specSource: "services/appointment-service/openapi.yaml",
+    method: "PUT",
+    path: "/appointments/{id}",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200"],
+  },
+  {
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/notifications",
+    requireRequestBody: true,
+    requiredResponseCodes: ["201"],
+  },
+  {
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/test",
+    requireRequestBody: true,
+    requiredResponseCodes: ["200"],
+  },
+];
+
+const specLinesCache = new Map();
+
 function existsInRepo(relativePath) {
   if (!relativePath) {
     return false;
@@ -113,6 +166,222 @@ function existsInRepo(relativePath) {
 function pad(value, width) {
   const text = String(value);
   return text.length >= width ? text : text + " ".repeat(width - text.length);
+}
+
+function getLeadingIndent(line) {
+  const match = String(line || "").match(/^(\s*)/);
+  return match ? match[1].length : 0;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getSpecLines(specPath) {
+  if (!specLinesCache.has(specPath)) {
+    const absolutePath = path.resolve(process.cwd(), specPath);
+    const lines = fs.readFileSync(absolutePath, "utf8").split(/\r?\n/);
+    specLinesCache.set(specPath, lines);
+  }
+
+  return specLinesCache.get(specPath);
+}
+
+function findOperationBlock(lines, targetPath, method) {
+  let inPaths = false;
+  let currentPath = "";
+  const methodPattern = new RegExp(`^\\s{4}${escapeRegExp(String(method || "").toLowerCase())}:\\s*$`);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (!inPaths) {
+      if (/^paths:\s*$/.test(line)) {
+        inPaths = true;
+      }
+      continue;
+    }
+
+    if (/^[^\s#]/.test(line)) {
+      break;
+    }
+
+    const pathMatch = line.match(/^\s{2}(\/[^:]*):\s*$/);
+    if (pathMatch) {
+      currentPath = pathMatch[1];
+      continue;
+    }
+
+    if (currentPath !== targetPath) {
+      continue;
+    }
+
+    if (!methodPattern.test(line)) {
+      continue;
+    }
+
+    const start = index + 1;
+    let end = lines.length;
+
+    for (let cursor = start; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor];
+
+      if (/^[^\s#]/.test(candidate)) {
+        end = cursor;
+        break;
+      }
+
+      if (/^\s{2}\/[^:]*:\s*$/.test(candidate)) {
+        end = cursor;
+        break;
+      }
+
+      if (/^\s{4}(get|post|put|patch|delete|options|head|trace):\s*$/i.test(candidate)) {
+        end = cursor;
+        break;
+      }
+    }
+
+    return lines.slice(start, end);
+  }
+
+  return null;
+}
+
+function extractIndentedSection(lines, headerMatcher, indentLevel) {
+  const matcher =
+    headerMatcher instanceof RegExp
+      ? headerMatcher
+      : new RegExp(`^\\s{${indentLevel}}${escapeRegExp(headerMatcher)}:\\s*$`);
+
+  let start = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (matcher.test(lines[index])) {
+      start = index;
+      break;
+    }
+  }
+
+  if (start < 0) {
+    return null;
+  }
+
+  let end = lines.length;
+  for (let cursor = start + 1; cursor < lines.length; cursor += 1) {
+    const line = lines[cursor];
+    if (!line.trim()) {
+      continue;
+    }
+
+    if (getLeadingIndent(line) <= indentLevel) {
+      end = cursor;
+      break;
+    }
+  }
+
+  return lines.slice(start, end);
+}
+
+function hasJsonSchemaInSection(sectionLines) {
+  if (!sectionLines || sectionLines.length === 0) {
+    return false;
+  }
+
+  let applicationJsonIndent = -1;
+  let applicationJsonFound = false;
+
+  for (let index = 0; index < sectionLines.length; index += 1) {
+    const line = sectionLines[index];
+    if (!applicationJsonFound) {
+      if (line.trim() === "application/json:") {
+        applicationJsonFound = true;
+        applicationJsonIndent = getLeadingIndent(line);
+      }
+      continue;
+    }
+
+    if (!line.trim()) {
+      continue;
+    }
+
+    const indent = getLeadingIndent(line);
+    if (indent <= applicationJsonIndent) {
+      return false;
+    }
+
+    if (line.trim().startsWith("schema:")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function evaluateCriticalSchemaChecks() {
+  const results = criticalSchemaChecks.map((check) => {
+    const label = `${check.service} ${check.method.toUpperCase()} ${check.path}`;
+    const failures = [];
+
+    if (!existsInRepo(check.specSource)) {
+      failures.push(`missing spec source: ${check.specSource}`);
+      return { ...check, label, pass: false, failures };
+    }
+
+    const lines = getSpecLines(check.specSource);
+    const operationLines = findOperationBlock(lines, check.path, check.method);
+
+    if (!operationLines) {
+      failures.push(`missing operation in spec: ${check.method.toUpperCase()} ${check.path}`);
+      return { ...check, label, pass: false, failures };
+    }
+
+    if (check.requireRequestBody) {
+      const requestBodySection = extractIndentedSection(operationLines, "requestBody", 6);
+      if (!requestBodySection) {
+        failures.push("missing requestBody section");
+      } else {
+        const requestText = requestBodySection.join("\n");
+        if (!/^\s+required:\s*true\s*$/m.test(requestText)) {
+          failures.push("requestBody.required is not true");
+        }
+        if (!hasJsonSchemaInSection(requestBodySection)) {
+          failures.push("requestBody missing application/json schema");
+        }
+      }
+    }
+
+    const responsesSection = extractIndentedSection(operationLines, "responses", 6);
+    if (!responsesSection) {
+      failures.push("missing responses section");
+    } else {
+      for (const code of check.requiredResponseCodes || []) {
+        const responseSection = extractIndentedSection(
+          responsesSection,
+          new RegExp(`^\\s{8}["']?${escapeRegExp(code)}["']?:\\s*$`),
+          8
+        );
+
+        if (!responseSection) {
+          failures.push(`missing response ${code}`);
+          continue;
+        }
+
+        if (!hasJsonSchemaInSection(responseSection)) {
+          failures.push(`response ${code} missing application/json schema`);
+        }
+      }
+    }
+
+    return {
+      ...check,
+      label,
+      pass: failures.length === 0,
+      failures,
+    };
+  });
+
+  const failedResults = results.filter((result) => !result.pass);
+  return { results, failedResults };
 }
 
 function normalizePathSegment(value) {
@@ -460,10 +729,26 @@ rows.forEach((row) => {
   }
 });
 
+const schemaResults = evaluateCriticalSchemaChecks();
+
+console.log("\nCritical endpoint schema checks:");
+schemaResults.results.forEach((result) => {
+  if (result.pass) {
+    console.log(`- PASS: ${result.label}`);
+    return;
+  }
+
+  console.log(`- FAIL: ${result.label}`);
+  result.failures.forEach((failure) => {
+    console.log(`  - ${failure}`);
+  });
+});
+
 const failedPresenceRows = rows.filter((row) => row.presenceCheck === "FAIL");
 const failedParityRows = rows.filter((row) => row.parityCheck === "FAIL");
+const failedSchemaRows = schemaResults.failedResults;
 
-if (failedPresenceRows.length > 0 || failedParityRows.length > 0) {
+if (failedPresenceRows.length > 0 || failedParityRows.length > 0 || failedSchemaRows.length > 0) {
   console.error("\nContract check failed.");
 
   if (failedPresenceRows.length > 0) {
@@ -480,7 +765,15 @@ if (failedPresenceRows.length > 0 || failedParityRows.length > 0) {
     });
   }
 
+  if (failedSchemaRows.length > 0) {
+    console.error(`Schema failures (${failedSchemaRows.length}):`);
+    failedSchemaRows.forEach((result) => {
+      console.error(`- ${result.label}: ${result.failures.join("; ")}`);
+    });
+  }
+
   process.exit(1);
 }
 
-console.log("\nContract check passed: presence and parity checks are within baseline.");
+console.log("\nSchema check passed: critical request/response schema coverage is present.");
+console.log("Contract check passed: presence, parity, and schema checks are within baseline.");

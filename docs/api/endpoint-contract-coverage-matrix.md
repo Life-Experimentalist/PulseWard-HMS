@@ -23,6 +23,15 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Regression tests are tracked in `tests/contracts/parity-regression.test.js` and run in the standard Jest pipeline.
 - Known drifts can be explicitly allowlisted to prevent hidden breakage while documenting intentional exceptions.
 
+## M1.6 Schema Coverage Rules
+
+- Critical endpoint request/response schema coverage is now validated by `npm run contracts:check`.
+- The checker asserts required request bodies and `application/json` schema definitions for critical operations in:
+	- `auth-service`
+	- `appointment-service`
+	- `notification-service`
+- Any missing critical schema block fails the contract check and CI.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

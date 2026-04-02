@@ -272,6 +272,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CalendarProviderTestResponse"
+  /integrations/calendars/interoperability/diagnostics:
+    get:
+      summary: Get calendar interoperability diagnostics for routing and fallback readiness
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Calendar interoperability diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarInteroperabilityDiagnosticsResponse"
   /integrations/notifications/dispatch-events:
     get:
       summary: List appointment lifecycle notification dispatch attempts
@@ -844,6 +861,105 @@ components:
         detail:
           type: string
           example: Booking accepted by provider adapter.
+    CalendarProviderDiagnostics:
+      type: object
+      properties:
+        key:
+          type: string
+          example: google-calendar
+        displayName:
+          type: string
+          example: Google Calendar
+        enabled:
+          type: boolean
+          example: true
+        billingModel:
+          type: string
+          enum:
+            - free
+            - paid
+        adminActionRequired:
+          type: boolean
+          example: true
+        hasCredentialsRef:
+          type: boolean
+          example: true
+    CalendarInteroperabilityRouting:
+      type: object
+      properties:
+        defaultProvider:
+          type: string
+          example: google-calendar
+        fallbackProviders:
+          type: array
+          items:
+            type: string
+        routingOrder:
+          type: array
+          items:
+            type: string
+        unresolvedRoutingProviders:
+          type: array
+          items:
+            type: string
+        disabledRoutingProviders:
+          type: array
+          items:
+            type: string
+    CalendarInteroperabilityProviders:
+      type: object
+      properties:
+        configured:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarProviderDiagnostics"
+        enabled:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarProviderDiagnostics"
+        disabled:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarProviderDiagnostics"
+    CalendarInteroperabilitySummary:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - at-risk
+        defaultProviderReady:
+          type: boolean
+          example: true
+        fallbackCoverageCount:
+          type: integer
+          example: 2
+        crossProviderHandoffReady:
+          type: boolean
+          example: true
+        supportsIcsBridge:
+          type: boolean
+          example: true
+        supportsEnterpriseCalendars:
+          type: boolean
+          example: true
+    CalendarInteroperabilityDiagnosticsResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        generatedAt:
+          type: string
+          format: date-time
+        routing:
+          $ref: "#/components/schemas/CalendarInteroperabilityRouting"
+        providers:
+          $ref: "#/components/schemas/CalendarInteroperabilityProviders"
+        interoperability:
+          $ref: "#/components/schemas/CalendarInteroperabilitySummary"
     NotificationDispatchEvent:
       type: object
       properties:

@@ -217,6 +217,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TelegramConfigStatusResponse"
+  /integrations/messaging/whatsapp/setup:
+    get:
+      summary: Get WhatsApp Cloud API onboarding checklist for a tenant
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: WhatsApp setup guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppSetupResponse"
+  /integrations/messaging/whatsapp/config-status:
+    get:
+      summary: Get WhatsApp Cloud API configuration status from environment secret reference
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: WhatsApp configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppConfigStatusResponse"
   /integrations/messaging/email/config-status:
     get:
       summary: Get SMTP email configuration status from environment secret reference
@@ -501,6 +535,43 @@ components:
           type: boolean
           example: false
         hasChatId:
+          type: boolean
+          example: false
+    WhatsAppSetupResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        providerEnabled:
+          type: boolean
+          example: false
+        setupSteps:
+          type: array
+          items:
+            type: string
+    WhatsAppConfigStatusResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        providerEnabled:
+          type: boolean
+          example: false
+        secretKey:
+          type: string
+          example: INTEGRATION_WHATSAPP_CREDENTIALS
+        configured:
+          type: boolean
+          example: false
+        hasAccessToken:
+          type: boolean
+          example: false
+        hasPhoneNumberId:
+          type: boolean
+          example: false
+        hasSenderNumber:
           type: boolean
           example: false
     EmailConfigStatusResponse:

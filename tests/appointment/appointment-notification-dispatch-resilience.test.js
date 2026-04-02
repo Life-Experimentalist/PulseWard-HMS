@@ -240,8 +240,7 @@ describe("appointment notification dispatch resilience", () => {
   test("tracks delayed reminder telemetry and late-delivery dead-letter records", async () => {
     await startSlowNotificationRuntime();
 
-    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT =
-      `${slowNotificationBaseUrl}/api/v1/integrations/appointments/events`;
+    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT = `${slowNotificationBaseUrl}/api/v1/integrations/appointments/events`;
     process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES = "1";
     process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS = "1200";
     process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS = "50";

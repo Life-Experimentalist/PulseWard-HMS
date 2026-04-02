@@ -492,6 +492,116 @@ function getAppointmentLifecycleMessage(eventType, appointment) {
   return "Appointment status updated to " + appointment.status + " for " + patientRef;
 }
 
+function findProviderByKey(providerList, key) {
+  if (!Array.isArray(providerList)) {
+    return null;
+  }
+
+  for (var index = 0; index < providerList.length; index += 1) {
+    if (providerList[index].key === key) {
+      return providerList[index];
+    }
+  }
+
+  return null;
+}
+
+function buildCalendarInteroperabilityDiagnostics(tenantConfig) {
+  var calendarProviders = Array.isArray(tenantConfig.calendarProviders)
+    ? tenantConfig.calendarProviders
+    : [];
+  var calendarRouting = tenantConfig.calendarRouting || {};
+  var defaultProvider = String(calendarRouting.defaultProvider || "").trim();
+  var fallbackProviders = Array.isArray(calendarRouting.fallbackProviders)
+    ? calendarRouting.fallbackProviders.slice()
+    : [];
+
+  var routingOrder = [];
+  if (defaultProvider) {
+    routingOrder.push(defaultProvider);
+  }
+  fallbackProviders.forEach(function (providerKey) {
+    if (routingOrder.indexOf(providerKey) < 0) {
+      routingOrder.push(providerKey);
+    }
+  });
+
+  var configuredProviders = calendarProviders.map(function (provider) {
+    return {
+      key: provider.key,
+      displayName: provider.displayName || provider.key,
+      enabled: Boolean(provider.enabled),
+      billingModel:
+        provider && provider.billing && provider.billing.model ? provider.billing.model : "free",
+      adminActionRequired: Boolean(
+        provider && provider.billing && provider.billing.adminActionRequired
+      ),
+      hasCredentialsRef: Boolean(provider && provider.credentialsRef && provider.credentialsRef.secretKey),
+    };
+  });
+
+  var enabledProviders = configuredProviders.filter(function (provider) {
+    return provider.enabled;
+  });
+  var disabledProviders = configuredProviders.filter(function (provider) {
+    return !provider.enabled;
+  });
+
+  var unresolvedRoutingProviders = routingOrder.filter(function (providerKey) {
+    return !findProviderByKey(configuredProviders, providerKey);
+  });
+  var disabledRoutingProviders = routingOrder.filter(function (providerKey) {
+    var match = findProviderByKey(configuredProviders, providerKey);
+    return match && !match.enabled;
+  });
+
+  var defaultProviderConfig = findProviderByKey(configuredProviders, defaultProvider);
+  var enabledFallbackProviders = fallbackProviders.filter(function (providerKey) {
+    var provider = findProviderByKey(configuredProviders, providerKey);
+    return provider && provider.enabled;
+  });
+
+  var status = "healthy";
+  if (!defaultProviderConfig || !defaultProviderConfig.enabled) {
+    status = "at-risk";
+  } else if (enabledFallbackProviders.length === 0) {
+    status = "degraded";
+  }
+
+  var interoperability = {
+    status: status,
+    defaultProviderReady: Boolean(defaultProviderConfig && defaultProviderConfig.enabled),
+    fallbackCoverageCount: enabledFallbackProviders.length,
+    crossProviderHandoffReady: enabledProviders.length >= 2,
+    supportsIcsBridge: enabledProviders.some(function (provider) {
+      return provider.key === "ics-calendar";
+    }),
+    supportsEnterpriseCalendars: enabledProviders.some(function (provider) {
+      return (
+        provider.key === "google-calendar" ||
+        provider.key === "apple-calendar" ||
+        provider.key === "outlook-calendar"
+      );
+    }),
+  };
+
+  return {
+    routing: {
+      defaultProvider: defaultProvider,
+      fallbackProviders: fallbackProviders,
+      routingOrder: routingOrder,
+      unresolvedRoutingProviders: unresolvedRoutingProviders,
+      disabledRoutingProviders: disabledRoutingProviders,
+    },
+    providers: {
+      configured: configuredProviders,
+      enabled: enabledProviders,
+      disabled: disabledProviders,
+    },
+    interoperability: interoperability,
+  };
+}
+
 function createNotificationDispatchRecord(eventPayload, endpoint) {
   return {
     dispatchId: randomUUID(),
@@ -1441,6 +1551,20 @@ router.post("/integrations/calendars/test", function (req, res) {
         detail: error.message,
       });
     });
+});
+
+router.get("/integrations/calendars/interoperability/diagnostics", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var diagnostics = buildCalendarInteroperabilityDiagnostics(config);
+
+  res.json({
+    tenantKey: tenantKey,
+    generatedAt: new Date().toISOString(),
+    routing: diagnostics.routing,
+    providers: diagnostics.providers,
+    interoperability: diagnostics.interoperability,
+  });
 });
 
 module.exports = router;

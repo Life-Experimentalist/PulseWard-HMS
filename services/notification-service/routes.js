@@ -4,6 +4,8 @@ var sendNotificationWithRouting =
   require("./integrations/send-notification-with-routing").sendNotificationWithRouting;
 var loadTenantIntegrationConfig =
   require("../../packages/shared-utils/load-tenant-integration-config").loadTenantIntegrationConfig;
+var resolveSecretRef =
+  require("../../packages/shared-utils/resolve-secret-ref").resolveSecretRef;
 
 var router = express.Router();
 var notifications = [];
@@ -15,6 +17,35 @@ var supportedAppointmentEventTypes = [
   "appointment.rescheduled",
   "appointment.cancelled",
 ];
+
+function findMessagingProvider(config, providerKey) {
+  if (!config || !Array.isArray(config.messagingProviders)) {
+    return null;
+  }
+
+  for (var index = 0; index < config.messagingProviders.length; index += 1) {
+    if (config.messagingProviders[index].key === providerKey) {
+      return config.messagingProviders[index];
+    }
+  }
+
+  return null;
+}
+
+function getProviderSecretStatus(provider, defaultSecretKey) {
+  var secretKey =
+    provider && provider.credentialsRef
+      ? provider.credentialsRef.secretKey
+      : defaultSecretKey;
+  var parsed = resolveSecretRef({
+    secretKey: secretKey,
+  });
+
+  return {
+    secretKey: secretKey,
+    parsed: parsed,
+  };
+}
 
 function findAppointmentReceiptByCorrelationId(correlationId) {
   if (!correlationId) {
@@ -306,62 +337,74 @@ router.get("/integrations/messaging/telegram/setup", function (req, res) {
 router.get("/integrations/messaging/telegram/config-status", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
   var config = loadTenantIntegrationConfig(tenantKey);
-  var provider = config.messagingProviders.find(function (item) {
-    return item.key === "telegram-bot";
-  });
-
-  var secretKey =
-    provider && provider.credentialsRef
-      ? provider.credentialsRef.secretKey
-      : "INTEGRATION_TELEGRAM_CREDENTIALS";
-  var raw = process.env[secretKey];
-
-  var parsed = null;
-  if (raw) {
-    try {
-      parsed = JSON.parse(raw);
-    } catch (_error) {
-      parsed = { raw: raw };
-    }
-  }
+  var provider = findMessagingProvider(config, "telegram-bot");
+  var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_TELEGRAM_CREDENTIALS");
 
   res.json({
     tenantKey: tenantKey,
     providerEnabled: Boolean(provider && provider.enabled),
-    secretKey: secretKey,
-    configured: Boolean(parsed && parsed.botToken),
-    hasChatId: Boolean(parsed && parsed.chatId),
+    secretKey: secretStatus.secretKey,
+    configured: Boolean(secretStatus.parsed && secretStatus.parsed.botToken),
+    hasChatId: Boolean(secretStatus.parsed && secretStatus.parsed.chatId),
   });
 });
 
 router.get("/integrations/messaging/email/config-status", function (req, res) {
   var tenantKey = req.query.tenantKey || "default";
   var config = loadTenantIntegrationConfig(tenantKey);
-  var provider = config.messagingProviders.find(function (item) {
-    return item.key === "email-smtp";
-  });
-
-  var secretKey =
-    provider && provider.credentialsRef
-      ? provider.credentialsRef.secretKey
-      : "INTEGRATION_EMAIL_SMTP_CREDENTIALS";
-  var raw = process.env[secretKey];
-
-  var parsed = null;
-  if (raw) {
-    try {
-      parsed = JSON.parse(raw);
-    } catch (_error) {
-      parsed = { raw: raw };
-    }
-  }
+  var provider = findMessagingProvider(config, "email-smtp");
+  var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_EMAIL_SMTP_CREDENTIALS");
 
   res.json({
     tenantKey: tenantKey,
     providerEnabled: Boolean(provider && provider.enabled),
-    secretKey: secretKey,
-    configured: Boolean(parsed && parsed.host && parsed.user && parsed.pass),
-    hasFromAddress: Boolean(parsed && parsed.from),
+    secretKey: secretStatus.secretKey,
+    configured: Boolean(
+      secretStatus.parsed &&
+        secretStatus.parsed.host &&
+        secretStatus.parsed.user &&
+        secretStatus.parsed.pass
+    ),
+    hasFromAddress: Boolean(secretStatus.parsed && secretStatus.parsed.from),
+  });
+});
+
+router.get("/integrations/messaging/whatsapp/setup", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, "whatsapp-cloud-api");
+
+  res.json({
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    setupSteps: [
+      "Provision WhatsApp business account in Meta Business Manager",
+      "Complete billing and sender number onboarding",
+      "Generate permanent access token for WhatsApp Cloud API",
+      "Set INTEGRATION_WHATSAPP_CREDENTIALS secret reference",
+      "Run POST /api/v1/integrations/messaging/test with providerKey=whatsapp-cloud-api",
+    ],
+  });
+});
+
+router.get("/integrations/messaging/whatsapp/config-status", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, "whatsapp-cloud-api");
+  var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_WHATSAPP_CREDENTIALS");
+
+  res.json({
+    tenantKey: tenantKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    secretKey: secretStatus.secretKey,
+    configured: Boolean(
+      secretStatus.parsed &&
+        secretStatus.parsed.accessToken &&
+        (secretStatus.parsed.phoneNumberId || secretStatus.parsed.senderNumber)
+    ),
+    hasAccessToken: Boolean(secretStatus.parsed && secretStatus.parsed.accessToken),
+    hasPhoneNumberId: Boolean(secretStatus.parsed && secretStatus.parsed.phoneNumberId),
+    hasSenderNumber: Boolean(secretStatus.parsed && secretStatus.parsed.senderNumber),
   });
 });
 

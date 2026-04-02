@@ -22,6 +22,13 @@ module.exports = {
   },
   overrides: [
     {
+      files: ["tests/**/*.js"],
+      env: {
+        node: true,
+        jest: true,
+      },
+    },
+    {
       files: ["**/*.mjs"],
       parserOptions: {
         sourceType: "module",

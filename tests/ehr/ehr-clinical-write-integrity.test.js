@@ -51,12 +51,9 @@ describe("ehr-service clinical write integrity", () => {
     expect(createResponse.body.id).toBeTruthy();
     expect(createResponse.body.version).toBe(1);
 
-    const timelineResponse = await requestJson(
-      `/ehr/records/${createResponse.body.id}/timeline`,
-      {
-        method: "GET",
-      }
-    );
+    const timelineResponse = await requestJson(`/ehr/records/${createResponse.body.id}/timeline`, {
+      method: "GET",
+    });
 
     expect(timelineResponse.status).toBe(200);
     expect(timelineResponse.body.totalEvents).toBe(1);

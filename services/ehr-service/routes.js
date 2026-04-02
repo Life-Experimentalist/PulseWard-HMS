@@ -552,7 +552,9 @@ router.patch("/records/:id/prescriptions/:prescriptionId/status", function (req,
     return;
   }
 
-  var status = String(payload.status || "").trim().toLowerCase();
+  var status = String(payload.status || "")
+    .trim()
+    .toLowerCase();
   var allowedStatuses = [
     "drafted",
     "handed-off",

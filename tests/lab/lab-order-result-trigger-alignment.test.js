@@ -180,15 +180,18 @@ describe("lab-service order, result, and trigger alignment", () => {
     expect(invalidStatus.status).toBe(400);
     expect(invalidStatus.body.code).toBe("LAB_ORDER_STATUS_INVALID");
 
-    const reportBeforeResult = await requestJson(`/api/lab-tests/orders/${createOrder.body.id}/report`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        actorRole: "operations",
-      }),
-    });
+    const reportBeforeResult = await requestJson(
+      `/api/lab-tests/orders/${createOrder.body.id}/report`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          actorRole: "operations",
+        }),
+      }
+    );
 
     expect(reportBeforeResult.status).toBe(400);
     expect(reportBeforeResult.body.code).toBe("LAB_RESULT_MISSING");

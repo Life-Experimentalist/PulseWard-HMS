@@ -36,15 +36,15 @@ $patientId = 'demo-patient-001'
 $clinicianId = 'demo-clinician-001'
 
 $opdCreateBody = @{
-    actorRole = 'frontdesk'
-    tenantKey = $tenantKey
-    patientId = $patientId
-    clinicianId = $clinicianId
-    visitReason = 'fever and follow-up consultation'
-    triageLevel = 'high'
-    visitType = 'walk-in'
+    actorRole         = 'frontdesk'
+    tenantKey         = $tenantKey
+    patientId         = $patientId
+    clinicianId       = $clinicianId
+    visitReason       = 'fever and follow-up consultation'
+    triageLevel       = 'high'
+    visitType         = 'walk-in'
     requestedDateTime = [DateTime]::UtcNow.AddMinutes(30).ToString('o')
-    notes = 'Demo intake created from PowerShell runner'
+    notes             = 'Demo intake created from PowerShell runner'
     createAppointment = $true
 }
 
@@ -61,7 +61,7 @@ Write-Host "Filtered OPD entries returned: $($opdList.returned)"
 try {
     $blockedUpdateBody = @{
         actorRole = 'patient'
-        status = 'completed'
+        status    = 'completed'
     }
 
     $null = Invoke-DemoRequest -Method 'PUT' -Url "$BaseUrl/appointments/$appointmentId" -Body $blockedUpdateBody
@@ -79,7 +79,7 @@ catch {
 
 $allowedUpdateBody = @{
     actorRole = 'operations'
-    status = 'scheduled'
+    status    = 'scheduled'
 }
 
 $allowedUpdate = Invoke-DemoRequest -Method 'PUT' -Url "$BaseUrl/appointments/$appointmentId" -Body $allowedUpdateBody

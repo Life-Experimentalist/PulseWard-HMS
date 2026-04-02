@@ -110,7 +110,13 @@ function normalizeDurationMinutes(value, fallbackMinutes) {
 }
 
 function isSlotOccupancyStatus(status) {
-  return slotOccupancyStatuses.indexOf(String(status || "").trim().toLowerCase()) >= 0;
+  return (
+    slotOccupancyStatuses.indexOf(
+      String(status || "")
+        .trim()
+        .toLowerCase()
+    ) >= 0
+  );
 }
 
 function canTransitionStatus(currentStatus, nextStatus) {
@@ -148,7 +154,13 @@ function windowsOverlap(first, second) {
   return first.startMs < second.endMs && second.startMs < first.endMs;
 }
 
-function findConflictingAppointment(tenantKey, clinicianId, appointmentDate, durationMinutes, excludeId) {
+function findConflictingAppointment(
+  tenantKey,
+  clinicianId,
+  appointmentDate,
+  durationMinutes,
+  excludeId
+) {
   if (!clinicianId) {
     return null;
   }
@@ -173,7 +185,10 @@ function findConflictingAppointment(tenantKey, clinicianId, appointmentDate, dur
       continue;
     }
 
-    var existingWindow = getAppointmentWindowRange(existing.appointmentDate, existing.durationMinutes);
+    var existingWindow = getAppointmentWindowRange(
+      existing.appointmentDate,
+      existing.durationMinutes
+    );
     if (windowsOverlap(candidateWindow, existingWindow)) {
       return {
         appointment: existing,
@@ -210,7 +225,10 @@ function findAppointmentByClientRequestId(tenantKey, clientRequestId) {
   var normalizedRequestId = String(clientRequestId).trim();
   for (var index = 0; index < appointments.length; index += 1) {
     var appointment = appointments[index];
-    if (appointment.tenantKey === tenantKey && appointment.clientRequestId === normalizedRequestId) {
+    if (
+      appointment.tenantKey === tenantKey &&
+      appointment.clientRequestId === normalizedRequestId
+    ) {
       return appointment;
     }
   }
@@ -464,7 +482,11 @@ router.put("/appointments/:id", function (req, res) {
 
   if (payload.durationMinutes !== undefined) {
     var parsedDuration = Number(payload.durationMinutes);
-    if (!Number.isFinite(parsedDuration) || parsedDuration < MIN_DURATION_MINUTES || parsedDuration > MAX_DURATION_MINUTES) {
+    if (
+      !Number.isFinite(parsedDuration) ||
+      parsedDuration < MIN_DURATION_MINUTES ||
+      parsedDuration > MAX_DURATION_MINUTES
+    ) {
       res.status(400).json({
         message: "durationMinutes must be between 5 and 240",
         code: "APPOINTMENT_PAYLOAD_INVALID",
@@ -591,10 +613,17 @@ router.put("/appointments/:id", function (req, res) {
   }
 
   if (currentStatus !== nextStatus) {
-    appendStatusHistory(updated, "appointment.status-updated", access.actorRole, currentStatus, nextStatus, {
-      previousDateTime: appointments[index].appointmentDate,
-      nextDateTime: nextAppointmentDate,
-    });
+    appendStatusHistory(
+      updated,
+      "appointment.status-updated",
+      access.actorRole,
+      currentStatus,
+      nextStatus,
+      {
+        previousDateTime: appointments[index].appointmentDate,
+        nextDateTime: nextAppointmentDate,
+      }
+    );
   }
 
   if (
@@ -769,9 +798,16 @@ router.post("/opd/entries", function (req, res) {
       statusHistory: [],
     };
 
-    appendStatusHistory(appointmentDraft, "appointment.created", access.actorRole, "", "pending-triage", {
-      source: "opd",
-    });
+    appendStatusHistory(
+      appointmentDraft,
+      "appointment.created",
+      access.actorRole,
+      "",
+      "pending-triage",
+      {
+        source: "opd",
+      }
+    );
 
     appointments.push(appointmentDraft);
   }

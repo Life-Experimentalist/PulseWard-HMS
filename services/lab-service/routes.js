@@ -169,7 +169,9 @@ router.delete("/lab-tests/:id", function (req, res) {
 router.get("/lab-tests/orders", function (req, res) {
   var tenantKey = String(req.query.tenantKey || "").trim();
   var patientId = String(req.query.patientId || "").trim();
-  var status = String(req.query.status || "").trim().toLowerCase();
+  var status = String(req.query.status || "")
+    .trim()
+    .toLowerCase();
 
   var filtered = labOrders.filter(function (order) {
     if (tenantKey && order.tenantKey !== tenantKey) {
@@ -200,7 +202,12 @@ router.post("/lab-tests/orders", function (req, res) {
     return;
   }
 
-  if (!payload.patientId || !payload.testCode || !payload.orderedAt || !payload.requestedByClinicianId) {
+  if (
+    !payload.patientId ||
+    !payload.testCode ||
+    !payload.orderedAt ||
+    !payload.requestedByClinicianId
+  ) {
     res.status(400).json({
       message: "patientId, testCode, orderedAt, and requestedByClinicianId are required",
       code: "LAB_ORDER_PAYLOAD_INVALID",
@@ -216,7 +223,9 @@ router.post("/lab-tests/orders", function (req, res) {
     return;
   }
 
-  var priority = String(payload.priority || "routine").trim().toLowerCase();
+  var priority = String(payload.priority || "routine")
+    .trim()
+    .toLowerCase();
   if (allowedPriorities.indexOf(priority) === -1) {
     res.status(400).json({
       message: "priority is invalid",
@@ -280,7 +289,9 @@ router.put("/lab-tests/orders/:id/status", function (req, res) {
     return;
   }
 
-  var nextStatus = String(payload.status || "").trim().toLowerCase();
+  var nextStatus = String(payload.status || "")
+    .trim()
+    .toLowerCase();
   if (!nextStatus || allowedStatuses.indexOf(nextStatus) === -1) {
     res.status(400).json({
       message: "status is invalid",

@@ -8,481 +8,491 @@ var triggerReceipts = [];
 var billingSequence = 1;
 
 var supportedTriggerTypes = [
-    "clinical.lab.result.reported",
-    "clinical.prescription.handed-off",
-    "clinical.prescription.fulfilled",
+  "clinical.lab.result.reported",
+  "clinical.prescription.handed-off",
+  "clinical.prescription.fulfilled",
 ];
 
 var supportedSourceServices = ["lab-service", "ehr-service", "pharmacy-service"];
 var allowedActorRoles = ["admin", "operations", "system", "billing"];
-var allowedBillingStatuses = ["draft", "pending-verification", "ready-for-invoice", "paid", "cancelled"];
+var allowedBillingStatuses = [
+  "draft",
+  "pending-verification",
+  "ready-for-invoice",
+  "paid",
+  "cancelled",
+];
 
 var defaultAmountByTriggerType = {
-    "clinical.lab.result.reported": 50,
-    "clinical.prescription.handed-off": 0,
-    "clinical.prescription.fulfilled": 25,
+  "clinical.lab.result.reported": 50,
+  "clinical.prescription.handed-off": 0,
+  "clinical.prescription.fulfilled": 25,
 };
 
 function normalizeRole(value) {
-    return String(value || "")
-        .trim()
-        .toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeNumber(value) {
-    var converted = Number(value);
-    if (!Number.isFinite(converted)) {
-        return NaN;
-    }
+  var converted = Number(value);
+  if (!Number.isFinite(converted)) {
+    return NaN;
+  }
 
-    return Number(converted.toFixed(2));
+  return Number(converted.toFixed(2));
 }
 
 function nextBillingId() {
-    var id = billingSequence;
-    billingSequence += 1;
-    return id;
+  var id = billingSequence;
+  billingSequence += 1;
+  return id;
 }
 
 function findBillingRecordById(recordId) {
-    for (var index = 0; index < billingRecords.length; index += 1) {
-        if (billingRecords[index].id === recordId) {
-            return {
-                index: index,
-                record: billingRecords[index],
-            };
-        }
+  for (var index = 0; index < billingRecords.length; index += 1) {
+    if (billingRecords[index].id === recordId) {
+      return {
+        index: index,
+        record: billingRecords[index],
+      };
     }
+  }
 
-    return {
-        index: -1,
-        record: null,
-    };
+  return {
+    index: -1,
+    record: null,
+  };
 }
 
 function findReceiptById(receiptId) {
-    for (var index = 0; index < triggerReceipts.length; index += 1) {
-        if (triggerReceipts[index].id === receiptId) {
-            return triggerReceipts[index];
-        }
+  for (var index = 0; index < triggerReceipts.length; index += 1) {
+    if (triggerReceipts[index].id === receiptId) {
+      return triggerReceipts[index];
     }
+  }
 
-    return null;
+  return null;
 }
 
 function findReceiptByCorrelationId(correlationId) {
-    if (!correlationId) {
-        return null;
-    }
-
-    for (var index = 0; index < triggerReceipts.length; index += 1) {
-        if (triggerReceipts[index].correlationId === correlationId) {
-            return triggerReceipts[index];
-        }
-    }
-
+  if (!correlationId) {
     return null;
+  }
+
+  for (var index = 0; index < triggerReceipts.length; index += 1) {
+    if (triggerReceipts[index].correlationId === correlationId) {
+      return triggerReceipts[index];
+    }
+  }
+
+  return null;
 }
 
 function resolveActorRole(req, payload) {
-    return normalizeRole(req.headers["x-actor-role"] || payload.actorRole || "");
+  return normalizeRole(req.headers["x-actor-role"] || payload.actorRole || "");
 }
 
 function requireActorRole(req, res, payload, action) {
-    var actorRole = resolveActorRole(req, payload);
-    if (!actorRole) {
-        res.status(400).json({
-            message: "actorRole is required",
-            code: "BILLING_ACTOR_ROLE_REQUIRED",
-            details: {
-                action: action,
-            },
-        });
-        return "";
-    }
+  var actorRole = resolveActorRole(req, payload);
+  if (!actorRole) {
+    res.status(400).json({
+      message: "actorRole is required",
+      code: "BILLING_ACTOR_ROLE_REQUIRED",
+      details: {
+        action: action,
+      },
+    });
+    return "";
+  }
 
-    if (allowedActorRoles.indexOf(actorRole) === -1) {
-        res.status(403).json({
-            message: "actorRole is not allowed for billing operations",
-            code: "BILLING_ACTOR_ROLE_NOT_ALLOWED",
-            details: {
-                actorRole: actorRole,
-                allowedActorRoles: allowedActorRoles,
-            },
-        });
-        return "";
-    }
+  if (allowedActorRoles.indexOf(actorRole) === -1) {
+    res.status(403).json({
+      message: "actorRole is not allowed for billing operations",
+      code: "BILLING_ACTOR_ROLE_NOT_ALLOWED",
+      details: {
+        actorRole: actorRole,
+        allowedActorRoles: allowedActorRoles,
+      },
+    });
+    return "";
+  }
 
-    return actorRole;
+  return actorRole;
 }
 
 function resolveDefaultStatus(triggerType) {
-    if (triggerType === "clinical.prescription.handed-off") {
-        return "pending-verification";
-    }
+  if (triggerType === "clinical.prescription.handed-off") {
+    return "pending-verification";
+  }
 
-    return "ready-for-invoice";
+  return "ready-for-invoice";
 }
 
 function validateClinicalTriggerPayload(payload) {
-    var failures = [];
+  var failures = [];
 
-    if (!payload.tenantKey) {
-        failures.push("tenantKey is required");
+  if (!payload.tenantKey) {
+    failures.push("tenantKey is required");
+  }
+
+  if (!payload.patientId) {
+    failures.push("patientId is required");
+  }
+
+  if (!payload.triggerType) {
+    failures.push("triggerType is required");
+  }
+
+  if (!payload.sourceService) {
+    failures.push("sourceService is required");
+  }
+
+  if (!payload.sourceReferenceId) {
+    failures.push("sourceReferenceId is required");
+  }
+
+  if (!payload.correlationId) {
+    failures.push("correlationId is required");
+  }
+
+  if (payload.triggerType && supportedTriggerTypes.indexOf(payload.triggerType) === -1) {
+    failures.push("triggerType is invalid");
+  }
+
+  if (payload.sourceService && supportedSourceServices.indexOf(payload.sourceService) === -1) {
+    failures.push("sourceService is invalid");
+  }
+
+  if (payload.amount !== undefined) {
+    var amount = normalizeNumber(payload.amount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      failures.push("amount must be a non-negative number");
     }
+  }
 
-    if (!payload.patientId) {
-        failures.push("patientId is required");
-    }
-
-    if (!payload.triggerType) {
-        failures.push("triggerType is required");
-    }
-
-    if (!payload.sourceService) {
-        failures.push("sourceService is required");
-    }
-
-    if (!payload.sourceReferenceId) {
-        failures.push("sourceReferenceId is required");
-    }
-
-    if (!payload.correlationId) {
-        failures.push("correlationId is required");
-    }
-
-    if (payload.triggerType && supportedTriggerTypes.indexOf(payload.triggerType) === -1) {
-        failures.push("triggerType is invalid");
-    }
-
-    if (payload.sourceService && supportedSourceServices.indexOf(payload.sourceService) === -1) {
-        failures.push("sourceService is invalid");
-    }
-
-    if (payload.amount !== undefined) {
-        var amount = normalizeNumber(payload.amount);
-        if (!Number.isFinite(amount) || amount < 0) {
-            failures.push("amount must be a non-negative number");
-        }
-    }
-
-    return failures;
+  return failures;
 }
 
 router.post("/billing", function (req, res) {
-    var payload = req.body || {};
+  var payload = req.body || {};
 
-    if (!payload.patientId || payload.amount === undefined || !payload.status) {
-        res.status(400).json({
-            message: "patientId, amount, and status are required",
-            code: "BILLING_RECORD_PAYLOAD_INVALID",
-        });
-        return;
-    }
+  if (!payload.patientId || payload.amount === undefined || !payload.status) {
+    res.status(400).json({
+      message: "patientId, amount, and status are required",
+      code: "BILLING_RECORD_PAYLOAD_INVALID",
+    });
+    return;
+  }
 
-    var amount = normalizeNumber(payload.amount);
-    if (!Number.isFinite(amount) || amount < 0) {
-        res.status(400).json({
-            message: "amount must be a non-negative number",
-            code: "BILLING_RECORD_PAYLOAD_INVALID",
-        });
-        return;
-    }
+  var amount = normalizeNumber(payload.amount);
+  if (!Number.isFinite(amount) || amount < 0) {
+    res.status(400).json({
+      message: "amount must be a non-negative number",
+      code: "BILLING_RECORD_PAYLOAD_INVALID",
+    });
+    return;
+  }
 
-    var status = String(payload.status || "")
-        .trim()
-        .toLowerCase();
+  var status = String(payload.status || "")
+    .trim()
+    .toLowerCase();
 
-    if (allowedBillingStatuses.indexOf(status) === -1) {
-        res.status(400).json({
-            message: "status is invalid",
-            code: "BILLING_RECORD_PAYLOAD_INVALID",
-            details: {
-                allowedStatuses: allowedBillingStatuses,
-            },
-        });
-        return;
-    }
+  if (allowedBillingStatuses.indexOf(status) === -1) {
+    res.status(400).json({
+      message: "status is invalid",
+      code: "BILLING_RECORD_PAYLOAD_INVALID",
+      details: {
+        allowedStatuses: allowedBillingStatuses,
+      },
+    });
+    return;
+  }
 
-    var now = new Date().toISOString();
-    var newRecord = {
-        id: nextBillingId(),
-        tenantKey: String(payload.tenantKey || "default").trim() || "default",
-        patientId: payload.patientId,
-        amount: amount,
-        currency: String(payload.currency || "INR").trim().toUpperCase(),
-        status: status,
-        source: payload.source || {
-            triggerType: "manual.billing.entry",
-            sourceService: "billing-service",
-            sourceReferenceId: payload.sourceReferenceId || "manual",
-            correlationId: payload.correlationId || "manual-" + randomUUID(),
-        },
-        createdAt: now,
-        updatedAt: now,
-    };
+  var now = new Date().toISOString();
+  var newRecord = {
+    id: nextBillingId(),
+    tenantKey: String(payload.tenantKey || "default").trim() || "default",
+    patientId: payload.patientId,
+    amount: amount,
+    currency: String(payload.currency || "INR")
+      .trim()
+      .toUpperCase(),
+    status: status,
+    source: payload.source || {
+      triggerType: "manual.billing.entry",
+      sourceService: "billing-service",
+      sourceReferenceId: payload.sourceReferenceId || "manual",
+      correlationId: payload.correlationId || "manual-" + randomUUID(),
+    },
+    createdAt: now,
+    updatedAt: now,
+  };
 
-    billingRecords.push(newRecord);
-    res.status(201).json(newRecord);
+  billingRecords.push(newRecord);
+  res.status(201).json(newRecord);
 });
 
 router.get("/billing", function (req, res) {
-    var tenantKey = String(req.query.tenantKey || "").trim();
-    var patientId = String(req.query.patientId || "").trim();
-    var status = String(req.query.status || "")
-        .trim()
-        .toLowerCase();
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var patientId = String(req.query.patientId || "").trim();
+  var status = String(req.query.status || "")
+    .trim()
+    .toLowerCase();
 
-    var filtered = billingRecords.filter(function (record) {
-        if (tenantKey && record.tenantKey !== tenantKey) {
-            return false;
-        }
+  var filtered = billingRecords.filter(function (record) {
+    if (tenantKey && record.tenantKey !== tenantKey) {
+      return false;
+    }
 
-        if (patientId && record.patientId !== patientId) {
-            return false;
-        }
+    if (patientId && record.patientId !== patientId) {
+      return false;
+    }
 
-        if (status && record.status !== status) {
-            return false;
-        }
+    if (status && record.status !== status) {
+      return false;
+    }
 
-        return true;
-    });
+    return true;
+  });
 
-    res.json({
-        records: filtered,
-        total: filtered.length,
-    });
+  res.json({
+    records: filtered,
+    total: filtered.length,
+  });
 });
 
 router.get("/billing/:id", function (req, res) {
-    var recordId = Number(req.params.id);
-    if (!Number.isInteger(recordId)) {
-        res.status(400).json({
-            message: "billing record id must be an integer",
-            code: "BILLING_RECORD_ID_INVALID",
-        });
-        return;
-    }
+  var recordId = Number(req.params.id);
+  if (!Number.isInteger(recordId)) {
+    res.status(400).json({
+      message: "billing record id must be an integer",
+      code: "BILLING_RECORD_ID_INVALID",
+    });
+    return;
+  }
 
-    var lookup = findBillingRecordById(recordId);
-    if (!lookup.record) {
-        res.status(404).json({
-            message: "Billing record not found",
-            code: "BILLING_RECORD_NOT_FOUND",
-        });
-        return;
-    }
+  var lookup = findBillingRecordById(recordId);
+  if (!lookup.record) {
+    res.status(404).json({
+      message: "Billing record not found",
+      code: "BILLING_RECORD_NOT_FOUND",
+    });
+    return;
+  }
 
-    res.json(lookup.record);
+  res.json(lookup.record);
 });
 
 router.put("/billing/:id", function (req, res) {
-    var recordId = Number(req.params.id);
-    if (!Number.isInteger(recordId)) {
-        res.status(400).json({
-            message: "billing record id must be an integer",
-            code: "BILLING_RECORD_ID_INVALID",
-        });
-        return;
+  var recordId = Number(req.params.id);
+  if (!Number.isInteger(recordId)) {
+    res.status(400).json({
+      message: "billing record id must be an integer",
+      code: "BILLING_RECORD_ID_INVALID",
+    });
+    return;
+  }
+
+  var lookup = findBillingRecordById(recordId);
+  if (!lookup.record) {
+    res.status(404).json({
+      message: "Billing record not found",
+      code: "BILLING_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  var payload = req.body || {};
+  if (payload.amount !== undefined) {
+    var amount = normalizeNumber(payload.amount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      res.status(400).json({
+        message: "amount must be a non-negative number",
+        code: "BILLING_RECORD_PAYLOAD_INVALID",
+      });
+      return;
     }
 
-    var lookup = findBillingRecordById(recordId);
-    if (!lookup.record) {
-        res.status(404).json({
-            message: "Billing record not found",
-            code: "BILLING_RECORD_NOT_FOUND",
-        });
-        return;
+    lookup.record.amount = amount;
+  }
+
+  if (payload.status !== undefined) {
+    var status = String(payload.status || "")
+      .trim()
+      .toLowerCase();
+
+    if (allowedBillingStatuses.indexOf(status) === -1) {
+      res.status(400).json({
+        message: "status is invalid",
+        code: "BILLING_RECORD_PAYLOAD_INVALID",
+        details: {
+          allowedStatuses: allowedBillingStatuses,
+        },
+      });
+      return;
     }
 
-    var payload = req.body || {};
-    if (payload.amount !== undefined) {
-        var amount = normalizeNumber(payload.amount);
-        if (!Number.isFinite(amount) || amount < 0) {
-            res.status(400).json({
-                message: "amount must be a non-negative number",
-                code: "BILLING_RECORD_PAYLOAD_INVALID",
-            });
-            return;
-        }
+    lookup.record.status = status;
+  }
 
-        lookup.record.amount = amount;
-    }
+  lookup.record.updatedAt = new Date().toISOString();
+  billingRecords[lookup.index] = lookup.record;
 
-    if (payload.status !== undefined) {
-        var status = String(payload.status || "")
-            .trim()
-            .toLowerCase();
-
-        if (allowedBillingStatuses.indexOf(status) === -1) {
-            res.status(400).json({
-                message: "status is invalid",
-                code: "BILLING_RECORD_PAYLOAD_INVALID",
-                details: {
-                    allowedStatuses: allowedBillingStatuses,
-                },
-            });
-            return;
-        }
-
-        lookup.record.status = status;
-    }
-
-    lookup.record.updatedAt = new Date().toISOString();
-    billingRecords[lookup.index] = lookup.record;
-
-    res.json(lookup.record);
+  res.json(lookup.record);
 });
 
 router.delete("/billing/:id", function (req, res) {
-    var recordId = Number(req.params.id);
-    if (!Number.isInteger(recordId)) {
-        res.status(400).json({
-            message: "billing record id must be an integer",
-            code: "BILLING_RECORD_ID_INVALID",
-        });
-        return;
-    }
-
-    var recordIndex = billingRecords.findIndex(function (record) {
-        return record.id === recordId;
+  var recordId = Number(req.params.id);
+  if (!Number.isInteger(recordId)) {
+    res.status(400).json({
+      message: "billing record id must be an integer",
+      code: "BILLING_RECORD_ID_INVALID",
     });
+    return;
+  }
 
-    if (recordIndex === -1) {
-        res.status(404).json({
-            message: "Billing record not found",
-            code: "BILLING_RECORD_NOT_FOUND",
-        });
-        return;
-    }
+  var recordIndex = billingRecords.findIndex(function (record) {
+    return record.id === recordId;
+  });
 
-    billingRecords.splice(recordIndex, 1);
-    res.status(204).send();
+  if (recordIndex === -1) {
+    res.status(404).json({
+      message: "Billing record not found",
+      code: "BILLING_RECORD_NOT_FOUND",
+    });
+    return;
+  }
+
+  billingRecords.splice(recordIndex, 1);
+  res.status(204).send();
 });
 
 router.post("/billing/hooks/clinical-trigger", function (req, res) {
-    var payload = req.body || {};
-    var actorRole = requireActorRole(req, res, payload, "billing.hook.clinical-trigger.consume");
-    if (!actorRole) {
-        return;
-    }
+  var payload = req.body || {};
+  var actorRole = requireActorRole(req, res, payload, "billing.hook.clinical-trigger.consume");
+  if (!actorRole) {
+    return;
+  }
 
-    var failures = validateClinicalTriggerPayload(payload);
-    if (failures.length > 0) {
-        res.status(400).json({
-            message: "clinical trigger payload is invalid",
-            code: "BILLING_TRIGGER_PAYLOAD_INVALID",
-            details: {
-                failures: failures,
-                supportedTriggerTypes: supportedTriggerTypes,
-                supportedSourceServices: supportedSourceServices,
-            },
-        });
-        return;
-    }
-
-    var existingReceipt = findReceiptByCorrelationId(payload.correlationId);
-    if (existingReceipt) {
-        res.status(409).json({
-            message: "clinical trigger correlationId already processed",
-            code: "BILLING_TRIGGER_DUPLICATE",
-            details: {
-                correlationId: payload.correlationId,
-                receiptId: existingReceipt.id,
-                billingRecordId: existingReceipt.billingRecordId,
-            },
-        });
-        return;
-    }
-
-    var triggerType = payload.triggerType;
-    var amount =
-        payload.amount !== undefined
-            ? normalizeNumber(payload.amount)
-            : defaultAmountByTriggerType[triggerType] || 0;
-    var now = new Date().toISOString();
-
-    var billingRecord = {
-        id: nextBillingId(),
-        tenantKey: String(payload.tenantKey || "default").trim() || "default",
-        patientId: String(payload.patientId || "").trim(),
-        amount: amount,
-        currency: String(payload.currency || "INR").trim().toUpperCase(),
-        status: resolveDefaultStatus(triggerType),
-        source: {
-            triggerType: triggerType,
-            sourceService: payload.sourceService,
-            sourceReferenceId: payload.sourceReferenceId,
-            correlationId: payload.correlationId,
-        },
-        metadata: payload.metadata || {},
-        createdAt: now,
-        updatedAt: now,
-    };
-
-    billingRecords.push(billingRecord);
-
-    var receipt = {
-        id: randomUUID(),
-        actorRole: actorRole,
-        tenantKey: billingRecord.tenantKey,
-        patientId: billingRecord.patientId,
-        triggerType: triggerType,
-        sourceService: payload.sourceService,
-        sourceReferenceId: payload.sourceReferenceId,
-        correlationId: payload.correlationId,
-        billingRecordId: billingRecord.id,
-        processingStatus: "processed",
-        processedAt: now,
-    };
-
-    triggerReceipts.push(receipt);
-
-    res.status(201).json({
-        receipt: receipt,
-        billingRecord: billingRecord,
+  var failures = validateClinicalTriggerPayload(payload);
+  if (failures.length > 0) {
+    res.status(400).json({
+      message: "clinical trigger payload is invalid",
+      code: "BILLING_TRIGGER_PAYLOAD_INVALID",
+      details: {
+        failures: failures,
+        supportedTriggerTypes: supportedTriggerTypes,
+        supportedSourceServices: supportedSourceServices,
+      },
     });
+    return;
+  }
+
+  var existingReceipt = findReceiptByCorrelationId(payload.correlationId);
+  if (existingReceipt) {
+    res.status(409).json({
+      message: "clinical trigger correlationId already processed",
+      code: "BILLING_TRIGGER_DUPLICATE",
+      details: {
+        correlationId: payload.correlationId,
+        receiptId: existingReceipt.id,
+        billingRecordId: existingReceipt.billingRecordId,
+      },
+    });
+    return;
+  }
+
+  var triggerType = payload.triggerType;
+  var amount =
+    payload.amount !== undefined
+      ? normalizeNumber(payload.amount)
+      : defaultAmountByTriggerType[triggerType] || 0;
+  var now = new Date().toISOString();
+
+  var billingRecord = {
+    id: nextBillingId(),
+    tenantKey: String(payload.tenantKey || "default").trim() || "default",
+    patientId: String(payload.patientId || "").trim(),
+    amount: amount,
+    currency: String(payload.currency || "INR")
+      .trim()
+      .toUpperCase(),
+    status: resolveDefaultStatus(triggerType),
+    source: {
+      triggerType: triggerType,
+      sourceService: payload.sourceService,
+      sourceReferenceId: payload.sourceReferenceId,
+      correlationId: payload.correlationId,
+    },
+    metadata: payload.metadata || {},
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  billingRecords.push(billingRecord);
+
+  var receipt = {
+    id: randomUUID(),
+    actorRole: actorRole,
+    tenantKey: billingRecord.tenantKey,
+    patientId: billingRecord.patientId,
+    triggerType: triggerType,
+    sourceService: payload.sourceService,
+    sourceReferenceId: payload.sourceReferenceId,
+    correlationId: payload.correlationId,
+    billingRecordId: billingRecord.id,
+    processingStatus: "processed",
+    processedAt: now,
+  };
+
+  triggerReceipts.push(receipt);
+
+  res.status(201).json({
+    receipt: receipt,
+    billingRecord: billingRecord,
+  });
 });
 
 router.get("/billing/hooks/clinical-trigger", function (req, res) {
-    var tenantKey = String(req.query.tenantKey || "").trim();
-    var patientId = String(req.query.patientId || "").trim();
-    var triggerType = String(req.query.triggerType || "").trim();
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var patientId = String(req.query.patientId || "").trim();
+  var triggerType = String(req.query.triggerType || "").trim();
 
-    var filtered = triggerReceipts.filter(function (receipt) {
-        if (tenantKey && receipt.tenantKey !== tenantKey) {
-            return false;
-        }
+  var filtered = triggerReceipts.filter(function (receipt) {
+    if (tenantKey && receipt.tenantKey !== tenantKey) {
+      return false;
+    }
 
-        if (patientId && receipt.patientId !== patientId) {
-            return false;
-        }
+    if (patientId && receipt.patientId !== patientId) {
+      return false;
+    }
 
-        if (triggerType && receipt.triggerType !== triggerType) {
-            return false;
-        }
+    if (triggerType && receipt.triggerType !== triggerType) {
+      return false;
+    }
 
-        return true;
-    });
+    return true;
+  });
 
-    res.json({
-        receipts: filtered,
-        total: filtered.length,
-    });
+  res.json({
+    receipts: filtered,
+    total: filtered.length,
+  });
 });
 
 router.get("/billing/hooks/clinical-trigger/:id", function (req, res) {
-    var receipt = findReceiptById(req.params.id);
-    if (!receipt) {
-        res.status(404).json({
-            message: "Billing trigger receipt not found",
-            code: "BILLING_TRIGGER_NOT_FOUND",
-        });
-        return;
-    }
+  var receipt = findReceiptById(req.params.id);
+  if (!receipt) {
+    res.status(404).json({
+      message: "Billing trigger receipt not found",
+      code: "BILLING_TRIGGER_NOT_FOUND",
+    });
+    return;
+  }
 
-    res.json(receipt);
+  res.json(receipt);
 });
 
 module.exports = router;

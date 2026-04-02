@@ -103,25 +103,29 @@ describe("ehr-pharmacy prescription lifecycle handoff", () => {
     expect(handoff.status).toBe(200);
     expect(handoff.body.prescription.status).toBe("handed-off");
 
-    const pharmacyHandoff = await requestJson(pharmacyBaseUrl, "/api/pharmacy/prescriptions/handoff", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        actorRole: "doctor",
-        tenantKey: createPrescription.body.tenantKey,
-        prescriptionId: createPrescription.body.id,
-        ehrRecordId: createRecord.body.id,
-        patientId: createPrescription.body.patientId,
-        clinicianId: createPrescription.body.clinicianId,
-        medicationName: createPrescription.body.medicationName,
-        dosage: createPrescription.body.dosage,
-        frequency: createPrescription.body.frequency,
-        durationDays: createPrescription.body.durationDays,
-        notes: createPrescription.body.notes,
-      }),
-    });
+    const pharmacyHandoff = await requestJson(
+      pharmacyBaseUrl,
+      "/api/pharmacy/prescriptions/handoff",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          actorRole: "doctor",
+          tenantKey: createPrescription.body.tenantKey,
+          prescriptionId: createPrescription.body.id,
+          ehrRecordId: createRecord.body.id,
+          patientId: createPrescription.body.patientId,
+          clinicianId: createPrescription.body.clinicianId,
+          medicationName: createPrescription.body.medicationName,
+          dosage: createPrescription.body.dosage,
+          frequency: createPrescription.body.frequency,
+          durationDays: createPrescription.body.durationDays,
+          notes: createPrescription.body.notes,
+        }),
+      }
+    );
 
     expect(pharmacyHandoff.status).toBe(201);
     expect(pharmacyHandoff.body.status).toBe("received");
@@ -162,9 +166,13 @@ describe("ehr-pharmacy prescription lifecycle handoff", () => {
     expect(ehrStatusSync.status).toBe(200);
     expect(ehrStatusSync.body.status).toBe("fulfilled");
 
-    const timeline = await requestJson(ehrBaseUrl, `/ehr/records/${createRecord.body.id}/timeline`, {
-      method: "GET",
-    });
+    const timeline = await requestJson(
+      ehrBaseUrl,
+      `/ehr/records/${createRecord.body.id}/timeline`,
+      {
+        method: "GET",
+      }
+    );
 
     expect(timeline.status).toBe(200);
     expect(timeline.body.events.map((event) => event.eventType)).toEqual([

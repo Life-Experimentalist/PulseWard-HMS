@@ -86,9 +86,12 @@ describe("billing-service clinical trigger hook processing", () => {
       "clinical.prescription.handed-off",
     ]);
 
-    const listBilling = await requestJson("/billing?tenantKey=citycare-hospital&patientId=pat-billing-1001", {
-      method: "GET",
-    });
+    const listBilling = await requestJson(
+      "/billing?tenantKey=citycare-hospital&patientId=pat-billing-1001",
+      {
+        method: "GET",
+      }
+    );
 
     expect(listBilling.status).toBe(200);
     expect(listBilling.body.total).toBe(2);
@@ -97,9 +100,12 @@ describe("billing-service clinical trigger hook processing", () => {
       "pending-verification",
     ]);
 
-    const getReceipt = await requestJson(`/billing/hooks/clinical-trigger/${labHook.body.receipt.id}`, {
-      method: "GET",
-    });
+    const getReceipt = await requestJson(
+      `/billing/hooks/clinical-trigger/${labHook.body.receipt.id}`,
+      {
+        method: "GET",
+      }
+    );
 
     expect(getReceipt.status).toBe(200);
     expect(getReceipt.body.correlationId).toBe("corr-lab-1001");

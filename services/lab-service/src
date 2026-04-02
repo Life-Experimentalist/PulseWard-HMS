@@ -11,47 +11,47 @@ var PORT = Number(process.env.LAB_SERVICE_PORT || process.env.PORT || 5107);
 app.use(bodyParser.json());
 
 var allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "*")
-    .split(",")
-    .map(function (item) {
-        return item.trim();
-    })
-    .filter(Boolean);
+  .split(",")
+  .map(function (item) {
+    return item.trim();
+  })
+  .filter(Boolean);
 
 function isPrivateNetworkOrigin(origin) {
-    try {
-        var parsed = new URL(origin);
-        var host = parsed.hostname;
-        return (
-            host === "localhost" ||
-            host === "127.0.0.1" ||
-            host === "0.0.0.0" ||
-            host.endsWith(".local") ||
-            host.startsWith("192.168.") ||
-            host.startsWith("10.") ||
-            /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
-        );
-    } catch (_error) {
-        return false;
-    }
+  try {
+    var parsed = new URL(origin);
+    var host = parsed.hostname;
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    );
+  } catch (_error) {
+    return false;
+  }
 }
 
 var allowAllOrigins = process.env.NODE_ENV !== "production" || allowedOrigins.indexOf("*") !== -1;
 
 var corsOptions = {
-    origin: function (origin, callback) {
-        if (
-            !origin ||
-            allowAllOrigins ||
-            allowedOrigins.indexOf(origin) !== -1 ||
-            isPrivateNetworkOrigin(origin)
-        ) {
-            callback(null, true);
-            return;
-        }
+  origin: function (origin, callback) {
+    if (
+      !origin ||
+      allowAllOrigins ||
+      allowedOrigins.indexOf(origin) !== -1 ||
+      isPrivateNetworkOrigin(origin)
+    ) {
+      callback(null, true);
+      return;
+    }
 
-        callback(null, false);
-    },
-    optionsSuccessStatus: 200,
+    callback(null, false);
+  },
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
@@ -59,24 +59,24 @@ app.options("*", cors(corsOptions));
 app.use("/api", routes);
 
 function startWithFallback(port, retriesLeft) {
-    var server = app.listen(port, function () {
-        console.log("Lab service running on port " + port);
-    });
+  var server = app.listen(port, function () {
+    console.log("Lab service running on port " + port);
+  });
 
-    server.on("error", function (error) {
-        if (error.code === "EADDRINUSE" && retriesLeft > 0) {
-            var nextPort = port + 1;
-            console.log("Lab service port " + port + " in use, retrying on " + nextPort);
-            startWithFallback(nextPort, retriesLeft - 1);
-            return;
-        }
+  server.on("error", function (error) {
+    if (error.code === "EADDRINUSE" && retriesLeft > 0) {
+      var nextPort = port + 1;
+      console.log("Lab service port " + port + " in use, retrying on " + nextPort);
+      startWithFallback(nextPort, retriesLeft - 1);
+      return;
+    }
 
-        throw error;
-    });
+    throw error;
+  });
 }
 
 if (require.main === module) {
-    startWithFallback(PORT, 20);
+  startWithFallback(PORT, 20);
 }
 
 module.exports = app;

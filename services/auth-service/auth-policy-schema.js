@@ -51,7 +51,9 @@ function uniqueStrings(values) {
 }
 
 function normalizeRoleKey(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function getDefaultAuthPolicy() {
@@ -185,7 +187,9 @@ function validateAndNormalizeAuthPolicy(rawPolicy) {
       });
       if (invalidRoleProviders.length > 0) {
         errors.push(
-          "roleProviderOverrides." + roleKey + " contains unsupported providers: " +
+          "roleProviderOverrides." +
+            roleKey +
+            " contains unsupported providers: " +
             invalidRoleProviders.join(", ")
         );
       }

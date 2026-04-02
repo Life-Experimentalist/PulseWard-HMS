@@ -83,17 +83,17 @@ OPD management alignment:
 - OPD registration and frontdesk scheduling flows should be implemented on top of the appointment lifecycle endpoints below.
 - OPD workflow milestones should treat create/update/cancel appointment operations as the canonical scheduling surface.
 
-| Method | Endpoint                            | Purpose                                                                   |
-| ------ | ----------------------------------- | ------------------------------------------------------------------------- |
-| GET    | `/appointments`                     | List appointments.                                                        |
-| GET    | `/appointments/{id}`                | Fetch appointment by id.                                                  |
-| POST   | `/appointments`                     | Create appointment with role checks, idempotent retry handling, and slot-conflict validation. |
+| Method | Endpoint                            | Purpose                                                                                            |
+| ------ | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/appointments`                     | List appointments.                                                                                 |
+| GET    | `/appointments/{id}`                | Fetch appointment by id.                                                                           |
+| POST   | `/appointments`                     | Create appointment with role checks, idempotent retry handling, and slot-conflict validation.      |
 | PUT    | `/appointments/{id}`                | Update appointment with lifecycle transition checks, version checks, and slot-conflict validation. |
-| DELETE | `/appointments/{id}`                | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics). |
-| GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.                |
-| POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.           |
-| GET    | `/integrations/calendars/providers` | List calendar providers.                                                  |
-| POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                               |
+| DELETE | `/appointments/{id}`                | Cancel appointment as a guarded lifecycle transition (non-destructive cancel semantics).           |
+| GET    | `/opd/entries`                      | List OPD intake entries with tenant/status/triage filters.                                         |
+| POST   | `/opd/entries`                      | Create OPD intake entry and optional appointment draft handoff.                                    |
+| GET    | `/integrations/calendars/providers` | List calendar providers.                                                                           |
+| POST   | `/integrations/calendars/test`      | Test calendar booking flow.                                                                        |
 
 Lifecycle reliability notes:
 - Appointment lifecycle states are transition-guarded (`pending-triage -> scheduled -> checked-in -> in-consultation -> completed`) with controlled cancel/no-show paths.

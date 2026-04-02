@@ -2,18 +2,9 @@ name: Automated Visuals
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - docs/**/*.md
-      - scripts/generate-mermaid-visuals.mjs
-  pull_request:
-    branches:
-      - main
-    paths:
-      - docs/**/*.md
-      - scripts/generate-mermaid-visuals.mjs
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   generate-visuals:
@@ -26,7 +17,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Generate SVG visuals from Mermaid diagrams
         run: node ./scripts/generate-mermaid-visuals.mjs

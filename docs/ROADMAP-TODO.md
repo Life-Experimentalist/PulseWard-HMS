@@ -290,4 +290,5 @@ Exit criteria:
 16. M3.3 completed: EHR CRUD now enforces version-safe clinical write semantics with immutable timeline/history integrity.
 17. Demo checkpoint: rudimentary OPD and appointments demo is available after M3.2 via `npm run demo:opd` once appointment-service is running.
 18. M3.4 completed: prescription lifecycle handoff and status synchronization are implemented across EHR and pharmacy touchpoints.
-19. Active next slice (M3.5): complete lab-service order and result workflows with clinical event trigger alignment.
+19. M3.5 completed: lab-service now supports role-gated order lifecycle, result reporting, and downstream trigger alignment for EHR and billing touchpoints.
+20. Active next slice (M3.6): ensure billing-service receives and processes required clinical trigger hooks from lab and prescription workflow events.

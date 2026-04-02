@@ -27,7 +27,7 @@ For field-level schemas, always use each service OpenAPI file as the canonical c
 | Notification Service | `/api/v1`                     | Also mounted at `/api` in local runtime. |
 | Patient Service      | `/api/patients`               | CRUD patient profile routes.             |
 | EHR Service          | `/ehr` and `/api/ehr`         | Runtime/spec aligned in M1.3.            |
-| Lab Service          | `/api/lab-tests`              | Runtime/spec aligned in M1.3.            |
+| Lab Service          | `/api/lab-tests`              | M3.5 order/result/report workflow surface. |
 | Pharmacy Service     | `/api/pharmacy`               | CRUD pharmacy routes.                    |
 | Billing Service      | `/billing` and `/api/billing` | Runtime/spec aligned in M1.3.            |
 
@@ -99,34 +99,52 @@ OPD management alignment:
 
 Under `/ehr` (also mounted at `/api/ehr`):
 
-| Method | Endpoint                 | Purpose                                                                       |
-| ------ | ------------------------ | ----------------------------------------------------------------------------- |
-| GET    | `/records`               | List EHR records with patient/tenant filters and deleted-record controls.     |
-| POST   | `/records`               | Create EHR record with actor-role validation and timeline seed event.         |
-| GET    | `/records/{id}`          | Retrieve EHR record by record id (with optional deleted-record visibility).   |
-| PUT    | `/records/{id}`          | Update EHR record with optimistic version checks for write-path integrity.    |
-| DELETE | `/records/{id}`          | Soft-delete EHR record while preserving timeline continuity.                  |
-| GET    | `/records/{id}/timeline` | Fetch immutable timeline/history events for clinical create/update/delete flow. |
-| GET    | `/records/{id}/prescriptions` | List prescription entries linked to an EHR record.                         |
-| POST   | `/records/{id}/prescriptions` | Create prescription within EHR clinical context.                            |
-| POST   | `/records/{id}/prescriptions/{prescriptionId}/handoff` | Mark prescription as handed-off and emit pharmacy touchpoint metadata. |
-| PATCH  | `/records/{id}/prescriptions/{prescriptionId}/status` | Sync prescription lifecycle status updates back into EHR timeline.     |
+| Method | Endpoint                                               | Purpose                                                                         |
+| ------ | ------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| GET    | `/records`                                             | List EHR records with patient/tenant filters and deleted-record controls.       |
+| POST   | `/records`                                             | Create EHR record with actor-role validation and timeline seed event.           |
+| GET    | `/records/{id}`                                        | Retrieve EHR record by record id (with optional deleted-record visibility).     |
+| PUT    | `/records/{id}`                                        | Update EHR record with optimistic version checks for write-path integrity.      |
+| DELETE | `/records/{id}`                                        | Soft-delete EHR record while preserving timeline continuity.                    |
+| GET    | `/records/{id}/timeline`                               | Fetch immutable timeline/history events for clinical create/update/delete flow. |
+| GET    | `/records/{id}/prescriptions`                          | List prescription entries linked to an EHR record.                              |
+| POST   | `/records/{id}/prescriptions`                          | Create prescription within EHR clinical context.                                |
+| POST   | `/records/{id}/prescriptions/{prescriptionId}/handoff` | Mark prescription as handed-off and emit pharmacy touchpoint metadata.          |
+| PATCH  | `/records/{id}/prescriptions/{prescriptionId}/status`  | Sync prescription lifecycle status updates back into EHR timeline.              |
+
+## Lab Service Highlights
+
+Under `/api` with OpenAPI paths rooted at `/lab-tests`:
+
+| Method | Endpoint                           | Purpose                                                                    |
+| ------ | ---------------------------------- | -------------------------------------------------------------------------- |
+| GET    | `/lab-tests`                       | List cataloged lab tests.                                                  |
+| POST   | `/lab-tests`                       | Create lab test catalog entry.                                             |
+| PUT    | `/lab-tests/{id}`                  | Update lab test catalog entry.                                             |
+| DELETE | `/lab-tests/{id}`                  | Delete lab test catalog entry.                                             |
+| GET    | `/lab-tests/orders`                | List lab orders with tenant/patient/status filters.                        |
+| POST   | `/lab-tests/orders`                | Create lab order and emit clinical trigger alignment metadata.             |
+| GET    | `/lab-tests/orders/{id}`           | Fetch lab order details by id.                                             |
+| PUT    | `/lab-tests/orders/{id}/status`    | Progress lab order lifecycle state.                                        |
+| POST   | `/lab-tests/orders/{id}/result`    | Record result payload and mark order as result-ready.                      |
+| POST   | `/lab-tests/orders/{id}/report`    | Mark result as reported and emit EHR/billing downstream trigger events.    |
+| GET    | `/lab-tests/orders/{id}/triggers`  | Retrieve emitted clinical trigger history for a lab order.                 |
 
 ## Pharmacy Service Highlights
 
 Under `/api/pharmacy`:
 
-| Method | Endpoint                   | Purpose                                                                 |
-| ------ | -------------------------- | ----------------------------------------------------------------------- |
-| GET    | `/medications`             | List medication inventory.                                              |
-| POST   | `/medications`             | Create medication inventory entry.                                      |
-| GET    | `/medications/{id}`        | Fetch medication inventory entry by id.                                 |
-| PUT    | `/medications/{id}`        | Update medication inventory entry.                                      |
-| DELETE | `/medications/{id}`        | Delete medication inventory entry.                                      |
-| GET    | `/prescriptions`           | List pharmacy prescription orders by tenant/status filters.             |
-| GET    | `/prescriptions/{id}`      | Fetch pharmacy prescription order by order or prescription id.          |
-| POST   | `/prescriptions/handoff`   | Receive EHR prescription handoff into pharmacy queue.                   |
-| PUT    | `/prescriptions/{id}/status` | Update pharmacy prescription lifecycle status with history events.    |
+| Method | Endpoint                     | Purpose                                                            |
+| ------ | ---------------------------- | ------------------------------------------------------------------ |
+| GET    | `/medications`               | List medication inventory.                                         |
+| POST   | `/medications`               | Create medication inventory entry.                                 |
+| GET    | `/medications/{id}`          | Fetch medication inventory entry by id.                            |
+| PUT    | `/medications/{id}`          | Update medication inventory entry.                                 |
+| DELETE | `/medications/{id}`          | Delete medication inventory entry.                                 |
+| GET    | `/prescriptions`             | List pharmacy prescription orders by tenant/status filters.        |
+| GET    | `/prescriptions/{id}`        | Fetch pharmacy prescription order by order or prescription id.     |
+| POST   | `/prescriptions/handoff`     | Receive EHR prescription handoff into pharmacy queue.              |
+| PUT    | `/prescriptions/{id}/status` | Update pharmacy prescription lifecycle status with history events. |
 
 ## ABHA References
 

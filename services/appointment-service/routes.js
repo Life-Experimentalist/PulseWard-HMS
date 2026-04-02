@@ -9,6 +9,7 @@ var router = express.Router();
 var appointments = [];
 var opdEntries = [];
 var notificationDispatchEvents = [];
+var notificationDeadLetterEvents = [];
 
 var appointmentStatusValues = [
   "pending-triage",
@@ -42,6 +43,13 @@ var MIN_DURATION_MINUTES = 5;
 var MAX_DURATION_MINUTES = 240;
 var NOTIFICATION_DISPATCH_MAX_ATTEMPTS = 3;
 var NOTIFICATION_DISPATCH_TIMEOUT_MS = 1500;
+var NOTIFICATION_LATE_THRESHOLD_MS = 2 * 60 * 1000;
+var NOTIFICATION_DEAD_LETTER_MAX_EVENTS = 500;
+var reminderLifecycleEvents = [
+  "appointment.created",
+  "appointment.rescheduled",
+  "appointment.status-updated",
+];
 
 function normalizeRoleKey(value) {
   return String(value || "")
@@ -269,6 +277,185 @@ function getNotificationDispatchTimeoutMs() {
   return Math.min(10_000, Math.max(200, Math.floor(parsed)));
 }
 
+function getNotificationLateThresholdMs() {
+  var parsed = Number(
+    process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS || NOTIFICATION_LATE_THRESHOLD_MS
+  );
+  if (!Number.isFinite(parsed) || parsed < 50) {
+    return NOTIFICATION_LATE_THRESHOLD_MS;
+  }
+
+  return Math.min(24 * 60 * 60 * 1000, Math.max(50, Math.floor(parsed)));
+}
+
+function getNotificationDeadLetterMaxEvents() {
+  var parsed = Number(
+    process.env.APPOINTMENT_NOTIFICATION_DEAD_LETTER_MAX || NOTIFICATION_DEAD_LETTER_MAX_EVENTS
+  );
+  if (!Number.isFinite(parsed) || parsed < 10) {
+    return NOTIFICATION_DEAD_LETTER_MAX_EVENTS;
+  }
+
+  return Math.min(5000, Math.max(10, Math.floor(parsed)));
+}
+
+function isReminderLifecycleEvent(eventType) {
+  var normalized = String(eventType || "")
+    .trim()
+    .toLowerCase();
+  return reminderLifecycleEvents.indexOf(normalized) >= 0;
+}
+
+function calculateDispatchLatencyMs(dispatchRecord) {
+  if (!dispatchRecord) {
+    return null;
+  }
+
+  var createdMs = Date.parse(String(dispatchRecord.createdAt || ""));
+  var updatedMs = Date.parse(String(dispatchRecord.updatedAt || ""));
+  if (!Number.isFinite(createdMs) || !Number.isFinite(updatedMs) || updatedMs < createdMs) {
+    return null;
+  }
+
+  return updatedMs - createdMs;
+}
+
+function isDelayedReminderDispatch(dispatchRecord, lateThresholdMs) {
+  if (!dispatchRecord || dispatchRecord.status !== "delivered") {
+    return false;
+  }
+
+  if (!isReminderLifecycleEvent(dispatchRecord.eventType)) {
+    return false;
+  }
+
+  var latencyMs = calculateDispatchLatencyMs(dispatchRecord);
+  if (!Number.isFinite(latencyMs)) {
+    return false;
+  }
+
+  return latencyMs > lateThresholdMs;
+}
+
+function appendDeadLetterDispatch(dispatchRecord, reason) {
+  var deadLetterRecord = Object.assign({}, dispatchRecord, {
+    deadLetterId: randomUUID(),
+    deadLetterReason: reason || "unspecified",
+    deadLetteredAt: new Date().toISOString(),
+    latencyMs: calculateDispatchLatencyMs(dispatchRecord),
+  });
+
+  notificationDeadLetterEvents.push(deadLetterRecord);
+
+  var maxEvents = getNotificationDeadLetterMaxEvents();
+  if (notificationDeadLetterEvents.length > maxEvents) {
+    notificationDeadLetterEvents.splice(0, notificationDeadLetterEvents.length - maxEvents);
+  }
+
+  return deadLetterRecord;
+}
+
+function parseWindowMinutes(value, fallbackMinutes) {
+  var parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallbackMinutes;
+  }
+
+  return Math.min(7 * 24 * 60, Math.max(1, Math.floor(parsed)));
+}
+
+function isWithinWindow(isoDateTime, cutoffMs) {
+  var dateMs = Date.parse(String(isoDateTime || ""));
+  if (!Number.isFinite(dateMs)) {
+    return false;
+  }
+
+  return dateMs >= cutoffMs;
+}
+
+function buildDispatchTelemetry(dispatchEvents, deadLetterEvents, lateThresholdMs) {
+  var counters = {
+    totalDispatches: 0,
+    delivered: 0,
+    failed: 0,
+    skipped: 0,
+    pending: 0,
+    deadLettered: deadLetterEvents.length,
+    missedReminders: 0,
+    delayedReminders: 0,
+  };
+  var byEventType = {};
+
+  dispatchEvents.forEach(function (eventItem) {
+    var eventType = String(eventItem.eventType || "unknown");
+    var status = String(eventItem.status || "pending")
+      .trim()
+      .toLowerCase();
+
+    counters.totalDispatches += 1;
+    if (Object.prototype.hasOwnProperty.call(counters, status)) {
+      counters[status] += 1;
+    }
+
+    if (!byEventType[eventType]) {
+      byEventType[eventType] = {
+        totalDispatches: 0,
+        delivered: 0,
+        failed: 0,
+        skipped: 0,
+        pending: 0,
+        deadLettered: 0,
+        missedReminders: 0,
+        delayedReminders: 0,
+      };
+    }
+
+    byEventType[eventType].totalDispatches += 1;
+    if (Object.prototype.hasOwnProperty.call(byEventType[eventType], status)) {
+      byEventType[eventType][status] += 1;
+    }
+
+    if (isReminderLifecycleEvent(eventType) && (status === "failed" || status === "skipped")) {
+      counters.missedReminders += 1;
+      byEventType[eventType].missedReminders += 1;
+    }
+
+    if (isDelayedReminderDispatch(eventItem, lateThresholdMs)) {
+      counters.delayedReminders += 1;
+      byEventType[eventType].delayedReminders += 1;
+    }
+  });
+
+  deadLetterEvents.forEach(function (deadLetterItem) {
+    var eventType = String(deadLetterItem.eventType || "unknown");
+    if (!byEventType[eventType]) {
+      byEventType[eventType] = {
+        totalDispatches: 0,
+        delivered: 0,
+        failed: 0,
+        skipped: 0,
+        pending: 0,
+        deadLettered: 0,
+        missedReminders: 0,
+        delayedReminders: 0,
+      };
+    }
+
+    byEventType[eventType].deadLettered += 1;
+  });
+
+  var deliveryRatePct =
+    counters.totalDispatches > 0
+      ? Number(((counters.delivered / counters.totalDispatches) * 100).toFixed(2))
+      : 0;
+
+  return {
+    counters: counters,
+    byEventType: byEventType,
+    deliveryRatePct: deliveryRatePct,
+  };
+}
+
 function buildLifecycleCorrelationId(req, payload, appointment, eventType) {
   var requested = String(
     req.headers["x-correlation-id"] || payload.correlationId || payload.clientRequestId || ""
@@ -317,6 +504,8 @@ function createNotificationDispatchRecord(eventPayload, endpoint) {
     attempts: 0,
     responseStatus: null,
     lastError: "",
+    latencyMs: null,
+    deliveryClass: "pending",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -331,11 +520,15 @@ async function dispatchLifecycleNotificationEvent(eventPayload) {
     dispatchRecord.status = "skipped";
     dispatchRecord.lastError = "notification endpoint not configured";
     dispatchRecord.updatedAt = new Date().toISOString();
+    dispatchRecord.latencyMs = calculateDispatchLatencyMs(dispatchRecord);
+    dispatchRecord.deliveryClass = "missed";
+    appendDeadLetterDispatch(dispatchRecord, "endpoint-not-configured");
     return dispatchRecord;
   }
 
   var maxAttempts = getNotificationDispatchMaxAttempts();
   var timeoutMs = getNotificationDispatchTimeoutMs();
+  var lateThresholdMs = getNotificationLateThresholdMs();
 
   for (var attempt = 1; attempt <= maxAttempts; attempt += 1) {
     dispatchRecord.attempts = attempt;
@@ -368,6 +561,14 @@ async function dispatchLifecycleNotificationEvent(eventPayload) {
         dispatchRecord.status = "delivered";
         dispatchRecord.remoteReceiptId = responseBody.receipt ? responseBody.receipt.id : null;
         dispatchRecord.updatedAt = new Date().toISOString();
+        dispatchRecord.latencyMs = calculateDispatchLatencyMs(dispatchRecord);
+        dispatchRecord.deliveryClass = "on-time";
+
+        if (isDelayedReminderDispatch(dispatchRecord, lateThresholdMs)) {
+          dispatchRecord.deliveryClass = "delayed";
+          appendDeadLetterDispatch(dispatchRecord, "late-delivery");
+        }
+
         return dispatchRecord;
       }
 
@@ -381,6 +582,9 @@ async function dispatchLifecycleNotificationEvent(eventPayload) {
 
   dispatchRecord.status = "failed";
   dispatchRecord.updatedAt = new Date().toISOString();
+  dispatchRecord.latencyMs = calculateDispatchLatencyMs(dispatchRecord);
+  dispatchRecord.deliveryClass = "missed";
+  appendDeadLetterDispatch(dispatchRecord, "retry-exhausted");
   return dispatchRecord;
 }
 
@@ -970,6 +1174,108 @@ router.get("/integrations/notifications/dispatch-events", function (req, res) {
   res.json({
     events: filtered,
     total: filtered.length,
+  });
+});
+
+router.get("/integrations/notifications/dead-letter", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var appointmentId = String(req.query.appointmentId || "").trim();
+  var eventType = String(req.query.eventType || "")
+    .trim()
+    .toLowerCase();
+  var status = String(req.query.status || "")
+    .trim()
+    .toLowerCase();
+  var correlationId = String(req.query.correlationId || "").trim();
+  var reason = String(req.query.reason || "")
+    .trim()
+    .toLowerCase();
+  var limit = Number(req.query.limit || 50);
+
+  var filtered = notificationDeadLetterEvents.filter(function (eventItem) {
+    if (tenantKey && eventItem.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (appointmentId && eventItem.appointmentId !== appointmentId) {
+      return false;
+    }
+
+    if (eventType && String(eventItem.eventType || "").toLowerCase() !== eventType) {
+      return false;
+    }
+
+    if (status && String(eventItem.status || "").toLowerCase() !== status) {
+      return false;
+    }
+
+    if (correlationId && eventItem.correlationId !== correlationId) {
+      return false;
+    }
+
+    if (reason && String(eventItem.deadLetterReason || "").toLowerCase() !== reason) {
+      return false;
+    }
+
+    return true;
+  });
+
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.floor(limit), 200)) : 50;
+  var events = filtered.slice(Math.max(0, filtered.length - boundedLimit));
+
+  res.json({
+    events: events,
+    total: filtered.length,
+    returned: events.length,
+    limit: boundedLimit,
+  });
+});
+
+router.get("/integrations/notifications/dispatch-telemetry", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var eventType = String(req.query.eventType || "")
+    .trim()
+    .toLowerCase();
+  var windowMinutes = parseWindowMinutes(req.query.windowMinutes, 24 * 60);
+  var lateThresholdCandidate = Number(req.query.lateThresholdMs);
+  var lateThresholdMs = Number.isFinite(lateThresholdCandidate)
+    ? Math.max(50, Math.min(Math.floor(lateThresholdCandidate), 24 * 60 * 60 * 1000))
+    : getNotificationLateThresholdMs();
+  var cutoffMs = Date.now() - windowMinutes * 60 * 1000;
+
+  var dispatchEvents = notificationDispatchEvents.filter(function (eventItem) {
+    if (tenantKey && eventItem.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (eventType && String(eventItem.eventType || "").toLowerCase() !== eventType) {
+      return false;
+    }
+
+    return isWithinWindow(eventItem.createdAt, cutoffMs);
+  });
+
+  var deadLetterEvents = notificationDeadLetterEvents.filter(function (eventItem) {
+    if (tenantKey && eventItem.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (eventType && String(eventItem.eventType || "").toLowerCase() !== eventType) {
+      return false;
+    }
+
+    return isWithinWindow(eventItem.deadLetteredAt, cutoffMs);
+  });
+
+  var telemetry = buildDispatchTelemetry(dispatchEvents, deadLetterEvents, lateThresholdMs);
+
+  res.json({
+    generatedAt: new Date().toISOString(),
+    windowMinutes: windowMinutes,
+    lateThresholdMs: lateThresholdMs,
+    counters: telemetry.counters,
+    byEventType: telemetry.byEventType,
+    deliveryRatePct: telemetry.deliveryRatePct,
   });
 });
 

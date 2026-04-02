@@ -5,9 +5,13 @@ const appointmentRoutes = require("../../services/appointment-service/routes");
 describe("appointment notification dispatch resilience", () => {
   let appointmentServer;
   let appointmentBaseUrl;
+  let slowNotificationServer;
+  let slowNotificationBaseUrl;
   const originalEndpoint = process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT;
   const originalRetries = process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES;
   const originalTimeout = process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS;
+  const originalLateThreshold = process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS;
+  const originalDeadLetterMax = process.env.APPOINTMENT_NOTIFICATION_DEAD_LETTER_MAX;
 
   async function requestJson(relativePath, options) {
     const response = await fetch(`${appointmentBaseUrl}${relativePath}`, options);
@@ -28,6 +32,28 @@ describe("appointment notification dispatch resilience", () => {
     appointmentBaseUrl = `http://127.0.0.1:${address.port}`;
   }
 
+  async function startSlowNotificationRuntime() {
+    const app = express();
+    app.use(express.json());
+    app.post("/api/v1/integrations/appointments/events", function (_req, res) {
+      setTimeout(function () {
+        res.status(201).json({
+          duplicate: false,
+          receipt: {
+            id: "slow-receipt-id",
+          },
+        });
+      }, 250);
+    });
+
+    slowNotificationServer = await new Promise((resolve) => {
+      const next = app.listen(0, () => resolve(next));
+    });
+
+    const address = slowNotificationServer.address();
+    slowNotificationBaseUrl = `http://127.0.0.1:${address.port}`;
+  }
+
   beforeAll(async () => {
     await startAppointmentRuntime();
   });
@@ -35,6 +61,10 @@ describe("appointment notification dispatch resilience", () => {
   afterAll(async () => {
     if (appointmentServer) {
       await new Promise((resolve) => appointmentServer.close(resolve));
+    }
+
+    if (slowNotificationServer) {
+      await new Promise((resolve) => slowNotificationServer.close(resolve));
     }
 
     if (originalEndpoint === undefined) {
@@ -53,6 +83,18 @@ describe("appointment notification dispatch resilience", () => {
       delete process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS;
     } else {
       process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS = originalTimeout;
+    }
+
+    if (originalLateThreshold === undefined) {
+      delete process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS;
+    } else {
+      process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS = originalLateThreshold;
+    }
+
+    if (originalDeadLetterMax === undefined) {
+      delete process.env.APPOINTMENT_NOTIFICATION_DEAD_LETTER_MAX;
+    } else {
+      process.env.APPOINTMENT_NOTIFICATION_DEAD_LETTER_MAX = originalDeadLetterMax;
     }
   });
 
@@ -96,6 +138,19 @@ describe("appointment notification dispatch resilience", () => {
     expect(dispatchEvents.body.events[0].status).toBe("skipped");
     expect(dispatchEvents.body.events[0].attempts).toBe(0);
     expect(dispatchEvents.body.events[0].lastError).toContain("not configured");
+
+    const deadLetter = await requestJson(
+      `/api/v1/integrations/notifications/dead-letter?correlationId=${encodeURIComponent(
+        correlationId
+      )}`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(deadLetter.status).toBe(200);
+    expect(deadLetter.body.total).toBe(1);
+    expect(deadLetter.body.events[0].deadLetterReason).toBe("endpoint-not-configured");
   });
 
   test("marks dispatch as failed with bounded attempts when endpoint is unreachable", async () => {
@@ -155,5 +210,88 @@ describe("appointment notification dispatch resilience", () => {
     expect(
       filteredFailed.body.events.some((eventItem) => eventItem.correlationId === correlationId)
     ).toBe(true);
+
+    const deadLetter = await requestJson(
+      `/api/v1/integrations/notifications/dead-letter?correlationId=${encodeURIComponent(
+        correlationId
+      )}`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(deadLetter.status).toBe(200);
+    expect(deadLetter.body.total).toBe(1);
+    expect(deadLetter.body.events[0].deadLetterReason).toBe("retry-exhausted");
+
+    const telemetry = await requestJson(
+      "/api/v1/integrations/notifications/dispatch-telemetry?tenantKey=m43-appointment-dispatch&windowMinutes=120",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(telemetry.status).toBe(200);
+    expect(telemetry.body.counters.totalDispatches).toBeGreaterThanOrEqual(1);
+    expect(telemetry.body.counters.missedReminders).toBeGreaterThanOrEqual(1);
+    expect(telemetry.body.counters.deadLettered).toBeGreaterThanOrEqual(1);
+  });
+
+  test("tracks delayed reminder telemetry and late-delivery dead-letter records", async () => {
+    await startSlowNotificationRuntime();
+
+    process.env.APPOINTMENT_NOTIFICATION_EVENT_ENDPOINT =
+      `${slowNotificationBaseUrl}/api/v1/integrations/appointments/events`;
+    process.env.APPOINTMENT_NOTIFICATION_MAX_RETRIES = "1";
+    process.env.APPOINTMENT_NOTIFICATION_TIMEOUT_MS = "1200";
+    process.env.APPOINTMENT_NOTIFICATION_LATE_THRESHOLD_MS = "50";
+    process.env.APPOINTMENT_NOTIFICATION_DEAD_LETTER_MAX = "100";
+
+    const correlationSeed = "m44-dispatch-delayed";
+    const created = await requestJson("/api/v1/appointments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-correlation-id": correlationSeed,
+      },
+      body: JSON.stringify({
+        actorRole: "frontdesk",
+        tenantKey: "m44-appointment-dispatch",
+        patientId: "pat-m44-delayed",
+        clinicianId: "cln-m44-delayed",
+        appointmentDate: "2026-05-03T11:00:00Z",
+        status: "scheduled",
+      }),
+    });
+
+    expect(created.status).toBe(201);
+    const correlationId = `${correlationSeed}:appointment.created:${created.body.id}`;
+
+    const telemetry = await requestJson(
+      "/api/v1/integrations/notifications/dispatch-telemetry?tenantKey=m44-appointment-dispatch&windowMinutes=120&lateThresholdMs=50",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(telemetry.status).toBe(200);
+    expect(telemetry.body.counters.totalDispatches).toBeGreaterThanOrEqual(1);
+    expect(telemetry.body.counters.delivered).toBeGreaterThanOrEqual(1);
+    expect(telemetry.body.counters.delayedReminders).toBeGreaterThanOrEqual(1);
+    expect(telemetry.body.counters.deadLettered).toBeGreaterThanOrEqual(1);
+
+    const deadLetter = await requestJson(
+      `/api/v1/integrations/notifications/dead-letter?tenantKey=m44-appointment-dispatch&correlationId=${encodeURIComponent(
+        correlationId
+      )}&reason=late-delivery`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(deadLetter.status).toBe(200);
+    expect(deadLetter.body.total).toBe(1);
+    expect(deadLetter.body.events[0].deadLetterReason).toBe("late-delivery");
+    expect(deadLetter.body.events[0].status).toBe("delivered");
   });
 });

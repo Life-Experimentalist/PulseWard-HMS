@@ -318,6 +318,110 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotificationDispatchEventsResponse"
+  /integrations/notifications/dead-letter:
+    get:
+      summary: List notification dead-letter records for missed or delayed reminders
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: appointmentId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - appointment.created
+              - appointment.status-updated
+              - appointment.rescheduled
+              - appointment.cancelled
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - delivered
+              - failed
+              - skipped
+        - name: correlationId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: reason
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - endpoint-not-configured
+              - retry-exhausted
+              - late-delivery
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Dead-letter events filtered by optional query fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationDeadLetterEventsResponse"
+  /integrations/notifications/dispatch-telemetry:
+    get:
+      summary: Get dispatch reliability telemetry counters for reminder delivery
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - appointment.created
+              - appointment.status-updated
+              - appointment.rescheduled
+              - appointment.cancelled
+        - name: windowMinutes
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10080
+            default: 1440
+        - name: lateThresholdMs
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 50
+            maximum: 86400000
+      responses:
+        "200":
+          description: Aggregated telemetry counters for dispatch reliability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationDispatchTelemetryResponse"
 components:
   schemas:
     Appointment:
@@ -784,6 +888,17 @@ components:
         lastError:
           type: string
           example: ""
+        latencyMs:
+          type: integer
+          nullable: true
+          example: 221
+        deliveryClass:
+          type: string
+          enum:
+            - pending
+            - on-time
+            - delayed
+            - missed
         remoteReceiptId:
           type: string
           nullable: true
@@ -804,3 +919,90 @@ components:
         total:
           type: integer
           example: 1
+    NotificationDeadLetterEvent:
+      allOf:
+        - $ref: "#/components/schemas/NotificationDispatchEvent"
+        - type: object
+          properties:
+            deadLetterId:
+              type: string
+              example: f569620e-df67-4f9e-9d77-14fcd1dfa7a5
+            deadLetterReason:
+              type: string
+              enum:
+                - endpoint-not-configured
+                - retry-exhausted
+                - late-delivery
+              example: retry-exhausted
+            deadLetteredAt:
+              type: string
+              format: date-time
+            latencyMs:
+              type: integer
+              nullable: true
+              example: 980
+    NotificationDeadLetterEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationDeadLetterEvent"
+        total:
+          type: integer
+          example: 1
+        returned:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 50
+    NotificationDispatchTelemetryCounters:
+      type: object
+      properties:
+        totalDispatches:
+          type: integer
+          example: 10
+        delivered:
+          type: integer
+          example: 7
+        failed:
+          type: integer
+          example: 2
+        skipped:
+          type: integer
+          example: 1
+        pending:
+          type: integer
+          example: 0
+        deadLettered:
+          type: integer
+          example: 3
+        missedReminders:
+          type: integer
+          example: 3
+        delayedReminders:
+          type: integer
+          example: 1
+    NotificationDispatchTelemetryResponse:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        windowMinutes:
+          type: integer
+          example: 1440
+        lateThresholdMs:
+          type: integer
+          example: 120000
+        counters:
+          $ref: "#/components/schemas/NotificationDispatchTelemetryCounters"
+        byEventType:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/NotificationDispatchTelemetryCounters"
+        deliveryRatePct:
+          type: number
+          format: float
+          example: 70

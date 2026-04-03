@@ -1053,6 +1053,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.highestAnomalySeverity` type `string`
 - Mutation-based parity regressions now prove strict-check failure when retention-telemetry `highestAnomalySeverity` property type drifts from OpenAPI baseline.
 
+## M6.111 Retention-Telemetry Anomaly-Tracking Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry anomaly-tracking-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.anomalyTracking` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `anomalyTracking` property is removed from OpenAPI baseline.
+
+## M6.112 Retention-Telemetry Escalation Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry escalation-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.escalation` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `escalation` property is removed from OpenAPI baseline.
+
+## M6.113 Retention-Telemetry Recently-Closed-Anomalies Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry recently-closed-anomalies anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.recentlyClosedAnomalies` type `array`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `recentlyClosedAnomalies` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

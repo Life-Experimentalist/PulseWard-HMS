@@ -483,6 +483,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry highestAnomalySeverity schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry anomalyTracking schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry escalation schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry recentlyClosedAnomalies schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3461,6 +3470,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.highestAnomalySeverity type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry anomalyTracking property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?)\n\s{8}anomalyTracking:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary"/,
+          "$1",
+          "retention telemetry anomalyTracking property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry anomalyTracking schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.anomalyTracking"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry escalation property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?)\n\s{8}escalation:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptEscalationTelemetry"/,
+          "$1",
+          "retention telemetry escalation property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry escalation schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.escalation"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry recentlyClosedAnomalies type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?recentlyClosedAnomalies:[\s\S]*?type:\s*)array/,
+          "$1object",
+          "retention telemetry recentlyClosedAnomalies type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry recentlyClosedAnomalies schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.recentlyClosedAnomalies type expected array got object"
         );
       }
     );

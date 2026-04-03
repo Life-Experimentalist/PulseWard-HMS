@@ -57,6 +57,27 @@ var faultManifestVerifyDedupeMaxEntries = parseRetryInt(
   50,
   5000
 );
+var faultManifestVerifyRetentionSaturationWarningPercent = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_WARNING_PERCENT,
+  75,
+  1,
+  99
+);
+var faultManifestVerifyRetentionSaturationCriticalPercent = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_CRITICAL_PERCENT,
+  90,
+  2,
+  100
+);
+if (
+  faultManifestVerifyRetentionSaturationCriticalPercent <=
+  faultManifestVerifyRetentionSaturationWarningPercent
+) {
+  faultManifestVerifyRetentionSaturationCriticalPercent = Math.min(
+    100,
+    faultManifestVerifyRetentionSaturationWarningPercent + 1
+  );
+}
 var faultManifestVerifyRetentionSource =
   faultManifestVerifyRetentionWindowEnvValue || faultManifestVerifyRetentionMaxEntriesEnvValue
     ? "env"
@@ -592,6 +613,37 @@ function pruneFaultManifestVerifyAttempts(nowMs) {
   };
 }
 
+function buildFaultManifestVerifyAttemptSaturation(totalRecorded) {
+  var maxEntries = Math.max(faultManifestVerifyDedupeMaxEntries, 1);
+  var currentEntries = Math.max(totalRecorded, 0);
+  var utilizationPercent = Number(((currentEntries / maxEntries) * 100).toFixed(1));
+  var remainingEntries = Math.max(maxEntries - currentEntries, 0);
+  var alertLevel = "normal";
+  var recommendedAction =
+    "Capacity healthy: continue monitoring telemetry.saturation during replay-heavy drills.";
+
+  if (utilizationPercent >= faultManifestVerifyRetentionSaturationCriticalPercent) {
+    alertLevel = "critical";
+    recommendedAction =
+      "Capacity critical: increase maxEntries or prune stale entries via retention apply immediately to preserve replay-attempt visibility.";
+  } else if (utilizationPercent >= faultManifestVerifyRetentionSaturationWarningPercent) {
+    alertLevel = "warning";
+    recommendedAction =
+      "Near capacity: increase maxEntries or prune stale entries via retention apply before sustained replay traffic.";
+  }
+
+  return {
+    currentEntries: currentEntries,
+    maxEntries: maxEntries,
+    utilizationPercent: utilizationPercent,
+    remainingEntries: remainingEntries,
+    warningThresholdPercent: faultManifestVerifyRetentionSaturationWarningPercent,
+    criticalThresholdPercent: faultManifestVerifyRetentionSaturationCriticalPercent,
+    alertLevel: alertLevel,
+    recommendedAction: recommendedAction,
+  };
+}
+
 function summarizeFaultManifestVerifyAttemptTelemetry() {
   var totalSuppressedEvents = 0;
   var duplicateSuppressedAttempts = 0;
@@ -620,6 +672,7 @@ function summarizeFaultManifestVerifyAttemptTelemetry() {
         ? faultManifestVerifyAttemptCache[0].firstVerifiedAt
         : null,
     latestLastVerifiedAt: latestLastVerifiedAt,
+    saturation: buildFaultManifestVerifyAttemptSaturation(faultManifestVerifyAttemptCache.length),
   };
 }
 
@@ -1891,6 +1944,9 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
       replayAttemptsRetentionApplyEndpoint:
         "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      retentionSaturationEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+      retentionSaturationPath: "telemetry.saturation",
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -1948,6 +2004,9 @@ router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", f
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
       retentionApplyEndpoint:
         "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      retentionSaturationEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+      retentionSaturationPath: "telemetry.saturation",
     },
     attempts: audit.attempts,
   });
@@ -2001,6 +2060,9 @@ router.get(
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
         retentionApplyEndpoint:
           "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+        retentionSaturationEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionSaturationPath: "telemetry.saturation",
       },
       attempts: audit.attempts,
     });
@@ -2034,6 +2096,9 @@ router.get(
         verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
         applyEndpoint:
           "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+        retentionSaturationEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionSaturationPath: "telemetry.saturation",
       },
     });
   }
@@ -2076,6 +2141,9 @@ router.post(
         attemptsExportEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
         verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+        retentionSaturationEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionSaturationPath: "telemetry.saturation",
       },
     });
   }

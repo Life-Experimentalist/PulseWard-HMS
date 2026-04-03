@@ -382,6 +382,10 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.diagnostics.replayAttemptsRetentionApplyEndpoint).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
     );
+    expect(verified.body.diagnostics.retentionSaturationEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(verified.body.diagnostics.retentionSaturationPath).toBe("telemetry.saturation");
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -441,6 +445,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(auditByFingerprint.body.diagnostics.retentionApplyEndpoint).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
     );
+    expect(auditByFingerprint.body.diagnostics.retentionSaturationEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(auditByFingerprint.body.diagnostics.retentionSaturationPath).toBe(
+      "telemetry.saturation"
+    );
 
     const attemptsExportJson = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint=${encodeURIComponent(
@@ -463,6 +473,12 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(attemptsExportJson.body.diagnostics.retentionApplyEndpoint).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionSaturationEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionSaturationPath).toBe(
+      "telemetry.saturation"
     );
     expect(Array.isArray(attemptsExportJson.body.attempts)).toBe(true);
 
@@ -589,8 +605,29 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionStatus.body.retention.dedupeWindowSeconds).toBeGreaterThanOrEqual(30);
     expect(attemptsRetentionStatus.body.retention.maxEntries).toBeGreaterThanOrEqual(50);
     expect(attemptsRetentionStatus.body.telemetry.totalRecorded).toBeGreaterThanOrEqual(1);
+    expect(attemptsRetentionStatus.body.telemetry.saturation.currentEntries).toBe(
+      attemptsRetentionStatus.body.telemetry.totalRecorded
+    );
+    expect(attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent).toBeGreaterThanOrEqual(
+      0
+    );
+    expect(attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent).toBeLessThanOrEqual(
+      100
+    );
+    expect(["normal", "warning", "critical"]).toContain(
+      attemptsRetentionStatus.body.telemetry.saturation.alertLevel
+    );
+    expect(attemptsRetentionStatus.body.telemetry.saturation.recommendedAction.length).toBeGreaterThan(
+      0
+    );
     expect(attemptsRetentionStatus.body.diagnostics.applyEndpoint).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
+    expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationPath).toBe(
+      "telemetry.saturation"
     );
 
     const attemptsRetentionApplied = await requestJson(
@@ -612,8 +649,23 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionApplied.body.retention.dedupeWindowSeconds).toBe(300);
     expect(attemptsRetentionApplied.body.retention.maxEntries).toBe(300);
     expect(attemptsRetentionApplied.body.retention.source).toBe("api");
+    expect(attemptsRetentionApplied.body.telemetry.saturation.currentEntries).toBe(
+      attemptsRetentionApplied.body.telemetry.totalRecorded
+    );
+    expect(["normal", "warning", "critical"]).toContain(
+      attemptsRetentionApplied.body.telemetry.saturation.alertLevel
+    );
+    expect(attemptsRetentionApplied.body.telemetry.saturation.recommendedAction.length).toBeGreaterThan(
+      0
+    );
     expect(attemptsRetentionApplied.body.diagnostics.statusEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationPath).toBe(
+      "telemetry.saturation"
     );
 
     const attemptsRetentionMissingPayload = await requestJson(

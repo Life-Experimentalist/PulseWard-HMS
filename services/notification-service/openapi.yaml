@@ -1546,6 +1546,12 @@ components:
         replayAttemptsRetentionApplyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+        retentionSaturationEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionSaturationPath:
+          type: string
+          example: telemetry.saturation
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1656,6 +1662,12 @@ components:
         retentionApplyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+        retentionSaturationEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionSaturationPath:
+          type: string
+          example: telemetry.saturation
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1708,6 +1720,12 @@ components:
         retentionApplyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+        retentionSaturationEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionSaturationPath:
+          type: string
+          example: telemetry.saturation
     MessagingFaultManifestVerifyAttemptExportResponse:
       type: object
       properties:
@@ -1789,6 +1807,37 @@ components:
           type: string
           format: date-time
           nullable: true
+        saturation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturation"
+    MessagingFaultManifestVerifyAttemptRetentionSaturation:
+      type: object
+      properties:
+        currentEntries:
+          type: integer
+          example: 412
+        maxEntries:
+          type: integer
+          example: 500
+        utilizationPercent:
+          type: number
+          format: float
+          example: 82.4
+        remainingEntries:
+          type: integer
+          example: 88
+        warningThresholdPercent:
+          type: integer
+          example: 75
+        criticalThresholdPercent:
+          type: integer
+          example: 90
+        alertLevel:
+          type: string
+          enum: [normal, warning, critical]
+          example: warning
+        recommendedAction:
+          type: string
+          example: "Near capacity: increase maxEntries or prune stale entries via retention apply before sustained replay traffic."
     MessagingFaultManifestVerifyAttemptRetentionStatusDiagnostics:
       type: object
       properties:
@@ -1804,6 +1853,12 @@ components:
         applyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+        retentionSaturationEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionSaturationPath:
+          type: string
+          example: telemetry.saturation
     MessagingFaultManifestVerifyAttemptRetentionStatusResponse:
       type: object
       properties:
@@ -1883,6 +1938,12 @@ components:
             verifyEndpoint:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
+            retentionSaturationEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+            retentionSaturationPath:
+              type: string
+              example: telemetry.saturation
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

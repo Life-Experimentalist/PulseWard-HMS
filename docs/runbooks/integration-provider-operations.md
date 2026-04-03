@@ -20,6 +20,8 @@
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds` and/or `maxEntries`; keep `pruneNow=true` for immediate cleanup)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
+- If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
+- If replay-attempt retention `telemetry.saturation.alertLevel=critical`, execute immediate retention apply or prune action, then attach before/after telemetry to incident evidence.
 
 ## Weekly checks
 
@@ -41,6 +43,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&format=json&limit=100`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window and cache size)
+	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 
 ## Incident handling
 

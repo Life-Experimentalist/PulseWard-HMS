@@ -204,6 +204,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verify, attempts query, and attempts export diagnostics now link replay-attempt retention status/apply endpoints for operational pivot continuity.
 - Regression tests cover retention status payload semantics, retention apply success paths, and missing-payload rejection behavior.
 
+## M5.14 Replay-Attempt Retention Saturation Coverage
+
+- Replay-attempt retention telemetry now exposes saturation diagnostics (`currentEntries`, `maxEntries`, `utilizationPercent`, `remainingEntries`) with warning/critical threshold visibility.
+- Retention telemetry now returns operator-ready `alertLevel` (`normal|warning|critical`) and `recommendedAction` guidance for proactive near-capacity response.
+- Verify, attempts query, attempts export, and retention status/apply diagnostics now include saturation discoverability links (`retentionSaturationEndpoint`, `retentionSaturationPath`).
+- Regression tests cover saturation payload shape, utilization bounds, alert-level enum behavior, and retention diagnostics link consistency.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

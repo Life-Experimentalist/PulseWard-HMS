@@ -822,6 +822,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.escalationExportPolicy` property presence
 - Mutation-based parity regressions now prove strict-check failure when retention-apply request `escalationExportPolicy` property is removed from OpenAPI baseline.
 
+## M6.78 Retention-Apply Response Applied-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply response applied-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.appliedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-apply response `appliedAt` property type drifts from OpenAPI baseline.
+
+## M6.79 Retention-Apply Response Telemetry Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply response telemetry-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.telemetry` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-apply response `telemetry` property is removed from OpenAPI baseline.
+
+## M6.80 Retention-Apply Response Diagnostics Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply response diagnostics anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.diagnostics` type `object`
+- Mutation-based parity regressions now prove strict-check failure when retention-apply response `diagnostics` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

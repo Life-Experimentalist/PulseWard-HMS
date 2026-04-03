@@ -365,3 +365,5 @@ Exit criteria:
 88. M6.10 evidence checkpoint: mutation regressions now prove strict-check failure when triage request schema ref drifts or triage boolean defaults diverge from the OpenAPI contract baseline.
 89. M6.11 completed: strict contract checker now enforces notification operations command-surface guardrails for escalation-export boolean filters and retention-apply policy default anchors.
 90. M6.11 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export boolean filter types or retention-apply policy defaults drift from OpenAPI baseline.
+91. M6.12 completed: strict contract checker now enforces notification operations command response-schema ref guardrails for retention status/trend, escalation export, anomaly triage, and retention apply endpoints.
+92. M6.12 evidence checkpoint: mutation regressions now prove strict-check failure when command response schema refs drift from expected OpenAPI components, preventing silent dashboard handoff response-contract breakage.

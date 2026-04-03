@@ -334,6 +334,17 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat` default `json`
 - Mutation-based parity regressions now prove strict checker failure on boolean filter type drift and policy default drift, preventing silent dashboard command incompatibility.
 
+## M6.12 Notification Operations Response-Schema Ref Guardrail Coverage
+
+- Contract checker critical parameter assertions now include response-schema-ref checks for notification operations command endpoints used by dashboard handoff workflows.
+- Response schema ref contract checks now enforce:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention` -> `#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse`
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend` -> `#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse`
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export` (`application/json`) -> `#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse`
+	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` -> `#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse`
+	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` -> `#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse`
+- Mutation-based parity regressions now prove strict checker failure on response-schema ref drift, preventing silent command response payload incompatibility.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

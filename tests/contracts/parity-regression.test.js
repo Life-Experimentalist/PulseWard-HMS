@@ -168,6 +168,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy defaultFormat anchor"
     );
     expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export JSON response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply response schema ref contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
     );
   });
@@ -445,6 +460,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat default expected json got csv"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention status response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention:[\s\S]*?"200":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse$2",
+          "retention status response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation-trend response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/saturation-trend:[\s\S]*?"200":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse$2",
+          "retention saturation-trend response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export JSON response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?"200":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse$2",
+          "escalation export JSON response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export JSON response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/anomalies\/\{anomalyInstanceId\}\/triage:[\s\S]*?"200":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse$2",
+          "anomaly triage response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention apply response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/apply:[\s\S]*?"200":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse$2",
+          "retention apply response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse"
         );
       }
     );

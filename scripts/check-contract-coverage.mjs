@@ -678,6 +678,71 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+    type: "response-schema-ref",
+    responseCode: "200",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse",
+  },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+    type: "response-schema-ref",
+    responseCode: "200",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse",
+  },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export JSON response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "response-schema-ref",
+    responseCode: "200",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse",
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "response-schema-ref",
+    responseCode: "200",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse",
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "response-schema-ref",
+    responseCode: "200",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse",
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -1040,6 +1105,61 @@ function getOperationResponseContentTypes(operationLines, responseCode) {
   return contentTypes;
 }
 
+function getOperationResponseSchemaRef(operationLines, responseCode, contentType) {
+  const responsesSection = extractIndentedSection(operationLines, "responses", 6);
+  if (!responsesSection) {
+    return {
+      responseExists: false,
+      contentTypeExists: false,
+      schemaRef: null,
+    };
+  }
+
+  const responseSection = extractIndentedSection(
+    responsesSection,
+    new RegExp(`^\\s{8}["']?${escapeRegExp(responseCode)}["']?:\\s*$`),
+    8
+  );
+  if (!responseSection) {
+    return {
+      responseExists: false,
+      contentTypeExists: false,
+      schemaRef: null,
+    };
+  }
+
+  const contentSection = extractIndentedSection(responseSection, "content", 10);
+  if (!contentSection) {
+    return {
+      responseExists: true,
+      contentTypeExists: false,
+      schemaRef: null,
+    };
+  }
+
+  const responseContentSection = extractIndentedSection(
+    contentSection,
+    new RegExp(`^\\s{12}${escapeRegExp(contentType)}:\\s*$`),
+    12
+  );
+  if (!responseContentSection) {
+    return {
+      responseExists: true,
+      contentTypeExists: false,
+      schemaRef: null,
+    };
+  }
+
+  const responseText = responseContentSection.join("\n");
+  const refMatch = responseText.match(/\$ref:\s*["']?(#\/components\/schemas\/[^"'\s]+)["']?/m);
+
+  return {
+    responseExists: true,
+    contentTypeExists: true,
+    schemaRef: refMatch ? refMatch[1] : null,
+  };
+}
+
 function findSchemaPropertyContract(lines, schemaName, propertyName) {
   const schemaPattern = new RegExp(`^\\s{4}${escapeRegExp(schemaName)}:\\s*$`);
   let schemaStart = -1;
@@ -1366,6 +1486,29 @@ function evaluateCriticalParameterContractChecks() {
             );
           }
         });
+      }
+    } else if (check.type === "response-schema-ref") {
+      const responseCode = String(check.responseCode || "200");
+      const responseContentType = String(check.responseContentType || "application/json");
+      const responseSchema = getOperationResponseSchemaRef(
+        operationLines,
+        responseCode,
+        responseContentType
+      );
+
+      if (!responseSchema.responseExists) {
+        failures.push(`missing response ${responseCode}`);
+      } else if (!responseSchema.contentTypeExists) {
+        failures.push(`response ${responseCode} missing content type ${responseContentType}`);
+      } else if (
+        check.expectedResponseBodySchemaRef &&
+        responseSchema.schemaRef !== check.expectedResponseBodySchemaRef
+      ) {
+        failures.push(
+          `responseBody schema ref expected ${check.expectedResponseBodySchemaRef} got ${String(
+            responseSchema.schemaRef || ""
+          )}`
+        );
       }
     }
 

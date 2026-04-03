@@ -43,6 +43,54 @@ PulseWard is production ready when all conditions below are true:
 | M8 Performance, Resilience, and Release Candidate | 23-25 | Load validation, failure drills, and release candidate signoff           |
 | M9 Pilot, Cutover, and Production Go-Live         | 26-28 | Controlled rollout, hypercare, and final production acceptance           |
 
+## Slice Budget Rebaseline (Execution Policy Update)
+
+This section formalizes slice sizing so milestone progress stays meaningful and avoids micro-fragmented execution.
+
+### Slice Size Rules (Effective Immediately)
+
+- Contract-hardening slices must bundle `3-5` related anchors per execution, including mutation regressions and docs.
+- Service/adapter slices must ship one end-to-end behavior path (`runtime + tests + docs`) in the same execution.
+- UI/mobile slices must ship one complete operator/user workflow (`API integration + UI state + tests + docs`) in one execution.
+- Single-atomic slices are only allowed for hotfix or blocker-unblock scenarios.
+- Every execution is considered complete only when `validate -> commit -> push -> CI observed` is done.
+
+### Module Slice Budget (Grouped Planning View)
+
+| Milestone | Atomic History (Observed) | Grouped Execution Waves (Target/Used) | Status |
+| --- | --- | --- | --- |
+| M1 | 6 slices | 2-3 grouped waves (used: 3) | Completed |
+| M2 | 5 slices | 2-3 grouped waves (used: 3) | Completed |
+| M3 | 6 slices | 3-4 grouped waves (used: 4) | Completed |
+| M4 | 4 slices | 2-3 grouped waves (used: 3) | Completed |
+| M5 | 20 slices | 4 grouped waves (`M5-A` to `M5-D`) | Completed |
+| M6 | 41 slices so far | 8-10 grouped waves (used so far: 9) | In progress |
+| M7 | planned | 8 grouped waves | Pending |
+| M8 | planned | 6 grouped waves | Pending |
+| M9 | planned | 5 grouped waves | Pending |
+
+### Remaining Effort Estimate (From Current State)
+
+- `M6` closeout: about `2-4` grouped waves.
+- `M7`: about `8` grouped waves.
+- `M8`: about `6` grouped waves.
+- `M9`: about `5` grouped waves.
+- Remaining total: about `21-23` grouped waves.
+
+Time estimate at current cadence:
+
+- Fast track (`3 waves/week`): about `7-8 weeks`.
+- Balanced track (`2 waves/week`): about `10-12 weeks`.
+- Risk-adjusted envelope (integration delays/rework): about `8-14 weeks`.
+
+### Large-Slice Handling
+
+- Large milestone items should be delivered as one vertical slice, not split into tiny atomic entries.
+- Expected large one-go slices include:
+  - `M7` observability and alerting baseline rollout.
+  - `M8` load + resilience validation cycle.
+  - `M9` pilot cutover execution pack.
+
 ## Detailed Milestones
 
 ### M0 Program Alignment and Baseline (Weeks 1-2)

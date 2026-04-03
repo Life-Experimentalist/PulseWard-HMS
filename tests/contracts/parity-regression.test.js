@@ -183,6 +183,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply response schema ref contract"
     );
     expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 400 error response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 403 error response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 400 error response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 404 error response schema ref contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply 400 error response schema ref contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
     );
   });
@@ -570,6 +585,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "responseBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export 400 error response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?"400":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse$2",
+          "escalation export 400 error response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 400 error response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export 403 error response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?"403":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse$2",
+          "escalation export 403 error response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 403 error response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage 400 error response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/anomalies\/\{anomalyInstanceId\}\/triage:[\s\S]*?"400":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse$2",
+          "anomaly triage 400 error response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 400 error response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage 404 error response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/anomalies\/\{anomalyInstanceId\}\/triage:[\s\S]*?"404":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse$2",
+          "anomaly triage 404 error response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 404 error response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention apply 400 error response schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/apply:[\s\S]*?"400":[\s\S]*?application\/json:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse$2",
+          "retention apply 400 error response schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply 400 error response schema ref contract"
+        );
+        expect(output).toContain(
+          "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
         );
       }
     );

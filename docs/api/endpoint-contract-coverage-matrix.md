@@ -345,6 +345,15 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` -> `#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse`
 - Mutation-based parity regressions now prove strict checker failure on response-schema ref drift, preventing silent command response payload incompatibility.
 
+## M6.13 Notification Operations Error Response-Schema Ref Guardrail Coverage
+
+- Contract checker critical parameter assertions now include error-response schema ref checks for notification operations command endpoints.
+- Response schema ref contract checks now enforce `NotificationErrorResponse` on:
+	- escalation export (`400`, `403`)
+	- anomaly triage (`400`, `404`)
+	- retention apply (`400`)
+- Mutation-based parity regressions now prove strict checker failure on error response-schema ref drift, preventing silent dashboard command error-handling incompatibility.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -743,6 +743,66 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 400 error response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "response-schema-ref",
+    responseCode: "400",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
+  },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export 403 error response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "response-schema-ref",
+    responseCode: "403",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 400 error response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "response-schema-ref",
+    responseCode: "400",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage 404 error response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "response-schema-ref",
+    responseCode: "404",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply 400 error response schema ref contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "response-schema-ref",
+    responseCode: "400",
+    responseContentType: "application/json",
+    expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

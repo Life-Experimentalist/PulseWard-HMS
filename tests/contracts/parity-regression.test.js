@@ -555,6 +555,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary averageAcknowledgementSeconds schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary p95AcknowledgementSeconds schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry byState schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry acknowledgementSla schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4061,6 +4070,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.averageAcknowledgementSeconds type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation acknowledgement SLA summary p95AcknowledgementSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary:[\s\S]*?p95AcknowledgementSeconds:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation acknowledgement SLA summary p95AcknowledgementSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary p95AcknowledgementSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.p95AcknowledgementSeconds type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation telemetry byState type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationTelemetry:[\s\S]*?byState:[\s\S]*?type:\s*)object/,
+          "$1array",
+          "escalation telemetry byState type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry byState schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.byState type expected object got array"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation telemetry acknowledgementSla property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationTelemetry:[\s\S]*?)\n\s{8}acknowledgementSla:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary"/,
+          "$1",
+          "escalation telemetry acknowledgementSla property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry acknowledgementSla schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.acknowledgementSla"
         );
       }
     );

@@ -1221,6 +1221,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.averageAcknowledgementSeconds` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `averageAcknowledgementSeconds` property type drifts from OpenAPI baseline.
 
+## M6.135 Escalation-Acknowledgement-SLA-Summary P95-Acknowledgement-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary p95-acknowledgement-seconds anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.p95AcknowledgementSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `p95AcknowledgementSeconds` property type drifts from OpenAPI baseline.
+
+## M6.136 Escalation-Telemetry By-State Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-telemetry by-state anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.byState` type `object`
+- Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `byState` property type drifts from OpenAPI baseline.
+
+## M6.137 Escalation-Telemetry Acknowledgement-SLA Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-telemetry acknowledgement-sla-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.acknowledgementSla` property presence
+- Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `acknowledgementSla` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

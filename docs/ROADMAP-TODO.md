@@ -677,3 +677,9 @@ Exit criteria:
 352. M6.142 evidence checkpoint: mutation regressions now prove strict-check failure when recently-closed-anomaly `closedReason` schema-property type drifts from OpenAPI baseline.
 353. M6.143 completed: strict contract checker now enforces recently-closed-anomaly clearance-evidence anchor for `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.clearanceEvidence` object compatibility.
 354. M6.143 evidence checkpoint: mutation regressions now prove strict-check failure when recently-closed-anomaly `clearanceEvidence` schema-property type drifts from OpenAPI baseline.
+355. M6.144 completed: strict contract checker now enforces recently-closed-anomaly clearance-evidence additional-properties anchor for `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.clearanceEvidence` additionalProperties compatibility.
+356. M6.144 evidence checkpoint: mutation regressions now prove strict-check failure when recently-closed-anomaly `clearanceEvidence` additionalProperties contract drifts from OpenAPI baseline.
+357. M6.145 completed: strict contract checker now enforces anomaly-triage-note note-id anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.noteId` string compatibility.
+358. M6.145 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `noteId` schema-property type drifts from OpenAPI baseline.
+359. M6.146 completed: strict contract checker now enforces anomaly-triage-note note-type anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.noteType` string compatibility.
+360. M6.146 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `noteType` schema-property type drifts from OpenAPI baseline.

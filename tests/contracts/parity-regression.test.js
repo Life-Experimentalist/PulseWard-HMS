@@ -582,6 +582,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly clearanceEvidence schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly clearanceEvidence additionalProperties contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageNote noteId schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageNote noteType schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4286,6 +4295,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.clearanceEvidence type expected object got array"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when recently closed anomaly clearanceEvidence additionalProperties drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly:[\s\S]*?clearanceEvidence:[\s\S]*?additionalProperties:\s*)true/,
+          "$1false",
+          "recently closed anomaly clearanceEvidence additionalProperties"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly clearanceEvidence additionalProperties contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.clearanceEvidence additionalProperties expected true got false"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage note noteId type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageNote:[\s\S]*?noteId:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly triage note noteId type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageNote noteId schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageNote.noteId type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage note noteType type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageNote:[\s\S]*?noteType:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly triage note noteType type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageNote noteType schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageNote.noteType type expected string got boolean"
         );
       }
     );

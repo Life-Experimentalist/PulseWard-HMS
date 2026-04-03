@@ -339,6 +339,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse format schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters escalationSeverity schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionEndpoint schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionTrendEndpoint schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -2261,6 +2270,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportResponse.format type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export filters escalationSeverity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportFilters:[\s\S]*?escalationSeverity:[\s\S]*?type:\s*)array/,
+          "$1boolean",
+          "escalation export filters escalationSeverity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters escalationSeverity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportFilters.escalationSeverity type expected array got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export diagnostics retentionEndpoint type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics:[\s\S]*?retentionEndpoint:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export diagnostics retentionEndpoint type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionEndpoint schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionEndpoint type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export diagnostics retentionTrendEndpoint type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics:[\s\S]*?retentionTrendEndpoint:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export diagnostics retentionTrendEndpoint type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionTrendEndpoint schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionTrendEndpoint type expected string got boolean"
         );
       }
     );

@@ -717,6 +717,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.format` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export response `format` property type drifts from OpenAPI baseline.
 
+## M6.63 Escalation-Export Filters Escalation-Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filters escalation-severity anchors for export filter compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.escalationSeverity` type `array`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filters `escalationSeverity` property type drifts from OpenAPI baseline.
+
+## M6.64 Escalation-Export Diagnostics Retention-Endpoint Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export diagnostics retention-endpoint anchors for operator handoff metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionEndpoint` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export diagnostics `retentionEndpoint` property type drifts from OpenAPI baseline.
+
+## M6.65 Escalation-Export Diagnostics Retention-Trend-Endpoint Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export diagnostics retention-trend-endpoint anchors for operator handoff metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionTrendEndpoint` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export diagnostics `retentionTrendEndpoint` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

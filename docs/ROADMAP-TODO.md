@@ -377,3 +377,9 @@ Exit criteria:
 100. M6.16 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply escalation policy property anchors drift from OpenAPI baseline.
 101. M6.17 completed: strict contract checker now enforces anomaly-triage metadata property anchors for note, noteType, and mitigationEvidenceRef payload compatibility.
 102. M6.17 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage metadata property types drift from OpenAPI baseline.
+103. M6.18 completed: strict contract checker now enforces retention-apply numeric tuning property anchors for `dedupeWindowSeconds` and `maxEntries` payload compatibility.
+104. M6.18 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply numeric tuning property types drift from OpenAPI baseline.
+105. M6.19 completed: strict contract checker now enforces escalation policy threshold property anchors for warning and critical escalation timing controls.
+106. M6.19 evidence checkpoint: mutation regressions now prove strict-check failure when escalation policy threshold property types drift from OpenAPI baseline.
+107. M6.20 completed: strict contract checker now enforces anomaly escalation acknowledgement SLA property anchors for `status`, `breached`, and `acknowledged` payload compatibility.
+108. M6.20 evidence checkpoint: mutation regressions now prove strict-check failure when acknowledgement SLA property types drift from OpenAPI baseline.

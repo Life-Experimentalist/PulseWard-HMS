@@ -803,6 +803,110 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dedupeWindowSeconds anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+      propertyName: "dedupeWindowSeconds",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema maxEntries anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+      propertyName: "maxEntries",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy warningUnacknowledgedEscalateAfterSeconds schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "warningUnacknowledgedEscalateAfterSeconds",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy criticalUnacknowledgedEscalateAfterSeconds schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "criticalUnacknowledgedEscalateAfterSeconds",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy criticalUnmitigatedEscalateAfterSeconds schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "criticalUnmitigatedEscalateAfterSeconds",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla status schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla",
+      propertyName: "status",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla breached schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla",
+      propertyName: "breached",
+      type: "boolean",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla acknowledged schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla",
+      propertyName: "acknowledged",
+      type: "boolean",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

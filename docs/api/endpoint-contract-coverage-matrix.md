@@ -391,6 +391,32 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationEvidenceRef` type `string`
 - Mutation-based parity regressions now prove strict-check failure when anomaly triage metadata property types drift from OpenAPI baseline.
 
+## M6.18 Retention-Apply Numeric Tuning Property Anchor Guardrail Coverage
+
+- Contract checker request-schema-property assertions now include retention-apply numeric tuning property anchors for replay-attempt retention command payloads.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.dedupeWindowSeconds` type `integer`
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.maxEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-apply numeric tuning property types drift from OpenAPI baseline.
+
+## M6.19 Escalation Policy Threshold Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation policy threshold anchors used by replay-attempt anomaly escalation controls.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.warningUnacknowledgedEscalateAfterSeconds` type `integer`
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.criticalUnacknowledgedEscalateAfterSeconds` type `integer`
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.criticalUnmitigatedEscalateAfterSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation policy threshold property types drift from OpenAPI baseline.
+
+## M6.20 Anomaly Escalation Acknowledgement SLA Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include acknowledgement SLA anchors for anomaly escalation payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.status` type `string`
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.breached` type `boolean`
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledged` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when acknowledgement SLA property types drift from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -118,6 +118,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Regression tests cover skipped endpoint-not-configured behavior, failed retry-exhausted behavior, delayed-delivery telemetry counters, and late-delivery dead-letter records.
 
 # M5 Connector and Adapter Completion
+## M5 Reporting Consolidation Guidance
+- M5 delivery was broad and valid but became too granular in reporting.
+- Recommended grouped reporting labels:
+	- `M5-A` adapters and readiness (`M5.1-M5.4`)
+	- `M5-B` fault evidence trust chain (`M5.5-M5.9`)
+	- `M5-C` replay forensics and retention telemetry (`M5.10-M5.15`)
+	- `M5-D` anomaly lifecycle, escalation, SLA, and handoff export (`M5.16-M5.19`)
 
 ## M5.1 Connector Diagnostics Hardening Coverage
 
@@ -1539,15 +1546,51 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.trendDirection` type `string`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `trendDirection` property type drifts from OpenAPI baseline.
 
-## M5 Reporting Consolidation Guidance
+## M6.179 Retention-Saturation-Trend-Summary Anomalies Anchor Guardrail Coverage
 
-- M5 delivery was broad and valid but became too granular in reporting.
-- Recommended grouped reporting labels:
-	- `M5-A` adapters and readiness (`M5.1-M5.4`)
-	- `M5-B` fault evidence trust chain (`M5.5-M5.9`)
-	- `M5-C` replay forensics and retention telemetry (`M5.10-M5.15`)
-	- `M5-D` anomaly lifecycle, escalation, SLA, and handoff export (`M5.16-M5.19`)
+- Contract checker schema-property assertions now include retention-saturation-trend-summary anomalies anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.anomalies` type `array`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `anomalies` property type drifts from OpenAPI baseline.
+
+## M6.180 Retention-Saturation-Trend-Summary Highest-Anomaly-Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary highest-anomaly-severity anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.highestAnomalySeverity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `highestAnomalySeverity` property type drifts from OpenAPI baseline.
+
+## M6.181 Retention-Saturation-Trend-Summary Anomaly-Tracking Property Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary anomaly-tracking property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.anomalyTracking` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `anomalyTracking` property is removed from OpenAPI baseline.
+
+## M6.182 Retention-Saturation-Trend-Summary Escalation Property Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary escalation property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.escalation` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `escalation` property is removed from OpenAPI baseline.
+
+## M6.183 Retention-Saturation-Trend-Summary Recently-Closed-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary recently-closed-count anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.recentlyClosedCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `recentlyClosedCount` property type drifts from OpenAPI baseline.
+
+
+# M7 Security, Observability, and Operability
+
+
+# M8 Performance, Resilience, and Release Candidate
+
+
+# M9 Pilot, Cutover, and Production Go-Live
+
 
 ## Current Allowlisted Drifts
 
-- None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.
+- None.

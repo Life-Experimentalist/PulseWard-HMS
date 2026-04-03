@@ -747,3 +747,13 @@ Exit criteria:
 422. M6.177 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `latestAlertLevel` schema-property type drifts from OpenAPI baseline.
 423. M6.178 completed: strict contract checker now enforces retention-saturation-trend-summary trend-direction anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.trendDirection` string compatibility.
 424. M6.178 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `trendDirection` schema-property type drifts from OpenAPI baseline.
+425. M6.179 completed: strict contract checker now enforces retention-saturation-trend-summary anomalies anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.anomalies` array compatibility.
+426. M6.179 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `anomalies` schema-property type drifts from OpenAPI baseline.
+427. M6.180 completed: strict contract checker now enforces retention-saturation-trend-summary highest-anomaly-severity anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.highestAnomalySeverity` string compatibility.
+428. M6.180 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `highestAnomalySeverity` schema-property type drifts from OpenAPI baseline.
+429. M6.181 completed: strict contract checker now enforces retention-saturation-trend-summary anomaly-tracking property anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.anomalyTracking` presence compatibility.
+430. M6.181 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `anomalyTracking` property is removed from OpenAPI baseline.
+431. M6.182 completed: strict contract checker now enforces retention-saturation-trend-summary escalation property anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.escalation` presence compatibility.
+432. M6.182 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `escalation` property is removed from OpenAPI baseline.
+433. M6.183 completed: strict contract checker now enforces retention-saturation-trend-summary recently-closed-count anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.recentlyClosedCount` integer compatibility.
+434. M6.183 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `recentlyClosedCount` schema-property type drifts from OpenAPI baseline.

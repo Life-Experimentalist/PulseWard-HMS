@@ -1263,6 +1263,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.severity` type `string`
 - Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `severity` property type drifts from OpenAPI baseline.
 
+## M6.141 Recently-Closed-Anomaly Closed-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly closed-at anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.closedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `closedAt` property type drifts from OpenAPI baseline.
+
+## M6.142 Recently-Closed-Anomaly Closed-Reason Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly closed-reason anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.closedReason` type `string`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `closedReason` property type drifts from OpenAPI baseline.
+
+## M6.143 Recently-Closed-Anomaly Clearance-Evidence Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly clearance-evidence anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.clearanceEvidence` type `object`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `clearanceEvidence` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

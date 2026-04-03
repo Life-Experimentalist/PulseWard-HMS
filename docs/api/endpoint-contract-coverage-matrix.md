@@ -864,6 +864,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.diagnostics` property presence
 - Mutation-based parity regressions now prove strict-check failure when retention-status response `diagnostics` property is removed from OpenAPI baseline.
 
+## M6.84 Retention-Saturation-Trend Response Queried-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response queried-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.queriedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `queriedAt` property type drifts from OpenAPI baseline.
+
+## M6.85 Retention-Saturation-Trend Response Snapshots Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response snapshots anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.snapshots` type `array`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `snapshots` property type drifts from OpenAPI baseline.
+
+## M6.86 Retention-Saturation-Trend Response Diagnostics Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response diagnostics anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.diagnostics` type `object`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `diagnostics` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -1032,6 +1032,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturation` property presence
 - Mutation-based parity regressions now prove strict-check failure when retention-telemetry `saturation` property is removed from OpenAPI baseline.
 
+## M6.108 Retention-Telemetry Saturation-Trend Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry saturation-trend-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturationTrend` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `saturationTrend` property is removed from OpenAPI baseline.
+
+## M6.109 Retention-Telemetry Anomalies Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry anomalies anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.anomalies` type `array`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `anomalies` property type drifts from OpenAPI baseline.
+
+## M6.110 Retention-Telemetry Highest-Anomaly-Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry highest-anomaly-severity anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.highestAnomalySeverity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `highestAnomalySeverity` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

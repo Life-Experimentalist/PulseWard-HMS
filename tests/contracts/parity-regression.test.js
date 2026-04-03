@@ -474,6 +474,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry saturation schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry saturationTrend schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry anomalies schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry highestAnomalySeverity schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3386,6 +3395,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "missing schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturation"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry saturationTrend property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?)\n\s{8}saturationTrend:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptRetentionSaturationTrend"/,
+          "$1",
+          "retention telemetry saturationTrend property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry saturationTrend schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturationTrend"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry anomalies type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?anomalies:[\s\S]*?type:\s*)array/,
+          "$1object",
+          "retention telemetry anomalies type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry anomalies schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.anomalies type expected array got object"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry highestAnomalySeverity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?highestAnomalySeverity:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention telemetry highestAnomalySeverity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry highestAnomalySeverity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.highestAnomalySeverity type expected string got boolean"
         );
       }
     );

@@ -507,6 +507,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaBreachSeconds` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaBreachSeconds` property type drifts from OpenAPI baseline.
 
+## M6.33 Escalation-Export Item Triage-Notes-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item triage note-count anchors for operator context compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.triageNotesCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `triageNotesCount` property type drifts from OpenAPI baseline.
+
+## M6.34 Escalation-Export Item Acknowledgement-Target Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item acknowledgement target anchors for SLA timing compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaTargetSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaTargetSeconds` property type drifts from OpenAPI baseline.
+
+## M6.35 Escalation-Export Filter Breached Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filter breach-state anchors for operator query compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.breached` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filter `breached` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

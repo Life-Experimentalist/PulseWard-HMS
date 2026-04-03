@@ -501,6 +501,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedActionEntries schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary activeCount schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary acknowledgedActiveCount schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary unacknowledgedActiveCount schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3611,6 +3620,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedActionEntries type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary activeCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?activeCount:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "anomaly tracking summary activeCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary activeCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.activeCount type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary acknowledgedActiveCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?acknowledgedActiveCount:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "anomaly tracking summary acknowledgedActiveCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary acknowledgedActiveCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.acknowledgedActiveCount type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary unacknowledgedActiveCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?unacknowledgedActiveCount:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "anomaly tracking summary unacknowledgedActiveCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary unacknowledgedActiveCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.unacknowledgedActiveCount type expected integer got string"
         );
       }
     );

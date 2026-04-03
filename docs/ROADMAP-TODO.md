@@ -629,3 +629,9 @@ Exit criteria:
 304. M6.118 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-tracking-summary `acknowledgedActiveCount` schema-property type drifts from OpenAPI baseline.
 305. M6.119 completed: strict contract checker now enforces anomaly-tracking-summary unacknowledged-active-count anchor for `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.unacknowledgedActiveCount` integer compatibility.
 306. M6.119 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-tracking-summary `unacknowledgedActiveCount` schema-property type drifts from OpenAPI baseline.
+307. M6.120 completed: strict contract checker now enforces anomaly-tracking-summary escalation-property anchor for `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.escalation` presence compatibility.
+308. M6.120 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-tracking-summary `escalation` property is removed from OpenAPI baseline.
+309. M6.121 completed: strict contract checker now enforces anomaly-tracking-summary note-count anchor for `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.noteCount` integer compatibility.
+310. M6.121 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-tracking-summary `noteCount` schema-property type drifts from OpenAPI baseline.
+311. M6.122 completed: strict contract checker now enforces anomaly-tracking-summary retained-recently-closed-entries anchor for `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedRecentlyClosedEntries` integer compatibility.
+312. M6.122 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-tracking-summary `retainedRecentlyClosedEntries` schema-property type drifts from OpenAPI baseline.

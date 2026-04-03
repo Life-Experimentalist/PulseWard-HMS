@@ -510,6 +510,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary unacknowledgedActiveCount schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary escalation schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary noteCount schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedRecentlyClosedEntries schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3686,6 +3695,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.unacknowledgedActiveCount type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary escalation property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?)\n\s{8}escalation:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptEscalationTelemetry"/,
+          "$1",
+          "anomaly tracking summary escalation property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary escalation schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.escalation"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary noteCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?noteCount:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "anomaly tracking summary noteCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary noteCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.noteCount type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary retainedRecentlyClosedEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?retainedRecentlyClosedEntries:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "anomaly tracking summary retainedRecentlyClosedEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedRecentlyClosedEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedRecentlyClosedEntries type expected integer got boolean"
         );
       }
     );

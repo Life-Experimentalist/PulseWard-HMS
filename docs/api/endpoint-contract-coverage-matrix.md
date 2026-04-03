@@ -1116,6 +1116,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.unacknowledgedActiveCount` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `unacknowledgedActiveCount` property type drifts from OpenAPI baseline.
 
+## M6.120 Anomaly-Tracking-Summary Escalation Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary escalation-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.escalation` property presence
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `escalation` property is removed from OpenAPI baseline.
+
+## M6.121 Anomaly-Tracking-Summary Note-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary note-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.noteCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `noteCount` property type drifts from OpenAPI baseline.
+
+## M6.122 Anomaly-Tracking-Summary Retained-Recently-Closed-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary retained-recently-closed-entries anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedRecentlyClosedEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `retainedRecentlyClosedEntries` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

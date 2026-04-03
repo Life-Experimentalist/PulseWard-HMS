@@ -622,6 +622,23 @@ paths:
   /integrations/messaging/fault-injection/manifest/verify/attempts/retention:
     get:
       summary: Get retention policy and telemetry for manifest verification replay-attempt audit history
+      parameters:
+        - name: windowMinutes
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 1440
+            default: 60
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 288
+            default: 24
       responses:
         "200":
           description: Manifest verification replay-attempt retention status
@@ -629,6 +646,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend:
+    get:
+      summary: Get replay-attempt retention saturation trend snapshots for time-windowed operational review
+      parameters:
+        - name: windowMinutes
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 1440
+            default: 60
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 288
+            default: 24
+      responses:
+        "200":
+          description: Replay-attempt retention saturation trend query response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse"
   /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply:
     post:
       summary: Apply retention tuning controls for manifest verification replay-attempt audit history
@@ -1552,6 +1596,12 @@ components:
         retentionSaturationPath:
           type: string
           example: telemetry.saturation
+        retentionSaturationTrendEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+        retentionSaturationTrendPath:
+          type: string
+          example: telemetry.saturationTrend
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1668,6 +1718,12 @@ components:
         retentionSaturationPath:
           type: string
           example: telemetry.saturation
+        retentionSaturationTrendEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+        retentionSaturationTrendPath:
+          type: string
+          example: telemetry.saturationTrend
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1726,6 +1782,12 @@ components:
         retentionSaturationPath:
           type: string
           example: telemetry.saturation
+        retentionSaturationTrendEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+        retentionSaturationTrendPath:
+          type: string
+          example: telemetry.saturationTrend
     MessagingFaultManifestVerifyAttemptExportResponse:
       type: object
       properties:
@@ -1809,6 +1871,139 @@ components:
           nullable: true
         saturation:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturation"
+        saturationTrend:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrend"
+    MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:
+      type: object
+      properties:
+        capturedAt:
+          type: string
+          format: date-time
+        trigger:
+          type: string
+          example: retention-status
+        currentEntries:
+          type: integer
+          example: 118
+        maxEntries:
+          type: integer
+          example: 500
+        utilizationPercent:
+          type: number
+          format: float
+          example: 23.6
+        remainingEntries:
+          type: integer
+          example: 382
+        alertLevel:
+          type: string
+          enum: [normal, warning, critical]
+          example: normal
+    MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:
+      type: object
+      properties:
+        windowMinutes:
+          type: integer
+          example: 60
+        requestedLimit:
+          type: integer
+          example: 24
+        totalInWindow:
+          type: integer
+          example: 7
+        returned:
+          type: integer
+          example: 7
+        hasMore:
+          type: boolean
+          example: false
+        firstCapturedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastCapturedAt:
+          type: string
+          format: date-time
+          nullable: true
+        minUtilizationPercent:
+          type: number
+          format: float
+          nullable: true
+          example: 17.8
+        maxUtilizationPercent:
+          type: number
+          format: float
+          nullable: true
+          example: 23.6
+        avgUtilizationPercent:
+          type: number
+          format: float
+          nullable: true
+          example: 20.9
+        latestUtilizationPercent:
+          type: number
+          format: float
+          nullable: true
+          example: 23.6
+        latestAlertLevel:
+          type: string
+          nullable: true
+          enum: [normal, warning, critical]
+          example: normal
+        trendDirection:
+          type: string
+          enum: [up, down, flat]
+          example: up
+    MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:
+      type: object
+      properties:
+        summary:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary"
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot"
+    MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse:
+      type: object
+      properties:
+        queriedAt:
+          type: string
+          format: date-time
+        query:
+          type: object
+          properties:
+            windowMinutes:
+              type: integer
+              example: 60
+            limit:
+              type: integer
+              example: 24
+        summary:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary"
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot"
+        latestSaturation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturation"
+        diagnostics:
+          type: object
+          properties:
+            retentionEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+            retentionApplyEndpoint:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+            verifyEndpoint:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
+            retentionSaturationPath:
+              type: string
+              example: latestSaturation
+            retentionSaturationTrendPath:
+              type: string
+              example: snapshots
     MessagingFaultManifestVerifyAttemptRetentionSaturation:
       type: object
       properties:
@@ -1859,6 +2054,12 @@ components:
         retentionSaturationPath:
           type: string
           example: telemetry.saturation
+        retentionSaturationTrendEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+        retentionSaturationTrendPath:
+          type: string
+          example: telemetry.saturationTrend
     MessagingFaultManifestVerifyAttemptRetentionStatusResponse:
       type: object
       properties:
@@ -1944,6 +2145,12 @@ components:
             retentionSaturationPath:
               type: string
               example: telemetry.saturation
+            retentionSaturationTrendEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+            retentionSaturationTrendPath:
+              type: string
+              example: telemetry.saturationTrend
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

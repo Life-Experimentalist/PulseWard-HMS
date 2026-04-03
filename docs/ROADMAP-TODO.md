@@ -329,4 +329,6 @@ Exit criteria:
 52. M5.13 evidence checkpoint: regression coverage now validates replay-attempt retention status/apply behavior, diagnostics links, and missing-payload guardrails.
 53. M5.14 completed: replay-attempt retention responses now expose saturation telemetry, alert levels, and operator guidance for proactive near-capacity response.
 54. M5.14 evidence checkpoint: regression coverage now validates saturation diagnostics links plus retention status/apply saturation semantics.
-55. M5.15 active next slice: add replay-attempt saturation trend snapshots for time-windowed operational review.
+55. M5.15 completed: replay-attempt retention telemetry now includes time-windowed saturation trend snapshots for operator review.
+56. M5.15 evidence checkpoint: regression coverage now validates trend window/limit semantics, trend diagnostics links, and trend snapshot payload fields.
+57. M5.16 active next slice: add replay-attempt saturation trend anomaly flags for sustained-risk detection.

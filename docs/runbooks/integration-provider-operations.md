@@ -17,11 +17,13 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts?fingerprint={fingerprint}&duplicateSuppressed=true`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint={fingerprint}&duplicateSuppressed=true&format=csv&limit=50`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=24`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds` and/or `maxEntries`; keep `pruneNow=true` for immediate cleanup)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 - If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
 - If replay-attempt retention `telemetry.saturation.alertLevel=critical`, execute immediate retention apply or prune action, then attach before/after telemetry to incident evidence.
+- If retention trend reports `trendDirection=up` while latest alert level remains `warning` or `critical`, escalate to incident commander for sustained-capacity risk review.
 
 ## Weekly checks
 
@@ -42,6 +44,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&limit=25`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&format=json&limit=100`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window and cache size)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 
@@ -71,6 +74,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?format={json|csv}`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/retention/apply`

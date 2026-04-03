@@ -69,6 +69,18 @@ var faultManifestVerifyRetentionSaturationCriticalPercent = parseRetryInt(
   2,
   100
 );
+var faultManifestVerifyRetentionSaturationTrendMaxSnapshots = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_TREND_MAX_SNAPSHOTS,
+  288,
+  24,
+  2880
+);
+var faultManifestVerifyRetentionSaturationTrendMinCaptureSeconds = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_TREND_MIN_CAPTURE_SECONDS,
+  30,
+  0,
+  3600
+);
 if (
   faultManifestVerifyRetentionSaturationCriticalPercent <=
   faultManifestVerifyRetentionSaturationWarningPercent
@@ -83,6 +95,7 @@ var faultManifestVerifyRetentionSource =
     ? "env"
     : "default";
 var faultManifestVerifyAttemptCache = [];
+var faultManifestVerifyRetentionSaturationTrendSnapshots = [];
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -644,6 +657,143 @@ function buildFaultManifestVerifyAttemptSaturation(totalRecorded) {
   };
 }
 
+function appendFaultManifestVerifySaturationTrendSnapshot(trigger, saturation, capturedAtMs) {
+  var snapshotTimeMs = capturedAtMs || Date.now();
+
+  faultManifestVerifyRetentionSaturationTrendSnapshots.push({
+    capturedAt: new Date(snapshotTimeMs).toISOString(),
+    capturedAtMs: snapshotTimeMs,
+    trigger: trigger,
+    currentEntries: saturation.currentEntries,
+    maxEntries: saturation.maxEntries,
+    utilizationPercent: saturation.utilizationPercent,
+    remainingEntries: saturation.remainingEntries,
+    alertLevel: saturation.alertLevel,
+  });
+
+  while (
+    faultManifestVerifyRetentionSaturationTrendSnapshots.length >
+    faultManifestVerifyRetentionSaturationTrendMaxSnapshots
+  ) {
+    faultManifestVerifyRetentionSaturationTrendSnapshots.shift();
+  }
+}
+
+function maybeCaptureFaultManifestVerifySaturationTrend(trigger, saturation, forceCapture) {
+  var snapshotTimeMs = Date.now();
+  var latestSnapshot =
+    faultManifestVerifyRetentionSaturationTrendSnapshots.length > 0
+      ? faultManifestVerifyRetentionSaturationTrendSnapshots[
+          faultManifestVerifyRetentionSaturationTrendSnapshots.length - 1
+        ]
+      : null;
+
+  if (forceCapture || !latestSnapshot) {
+    appendFaultManifestVerifySaturationTrendSnapshot(trigger, saturation, snapshotTimeMs);
+    return;
+  }
+
+  var elapsedSeconds = (snapshotTimeMs - latestSnapshot.capturedAtMs) / 1000;
+  var utilizationDelta = Math.abs(saturation.utilizationPercent - latestSnapshot.utilizationPercent);
+  var alertLevelChanged = saturation.alertLevel !== latestSnapshot.alertLevel;
+
+  if (
+    alertLevelChanged ||
+    utilizationDelta >= 2 ||
+    elapsedSeconds >= faultManifestVerifyRetentionSaturationTrendMinCaptureSeconds
+  ) {
+    appendFaultManifestVerifySaturationTrendSnapshot(trigger, saturation, snapshotTimeMs);
+  }
+}
+
+function collectFaultManifestVerifyAttemptSaturationTrend(options) {
+  var windowMinutes = parseRetryInt(options.windowMinutes, 60, 5, 1440);
+  var requestedLimit = parseRetryInt(options.limit, 24, 1, 288);
+  var nowMs = Date.now();
+  var windowMs = windowMinutes * 60 * 1000;
+
+  var snapshotsInWindow = faultManifestVerifyRetentionSaturationTrendSnapshots.filter(function (
+    snapshot
+  ) {
+    return nowMs - snapshot.capturedAtMs <= windowMs;
+  });
+
+  var totalInWindow = snapshotsInWindow.length;
+  var snapshots = snapshotsInWindow.slice(Math.max(totalInWindow - requestedLimit, 0));
+  var hasMore = totalInWindow > snapshots.length;
+
+  var summary = {
+    windowMinutes: windowMinutes,
+    requestedLimit: requestedLimit,
+    totalInWindow: totalInWindow,
+    returned: snapshots.length,
+    hasMore: hasMore,
+    firstCapturedAt: null,
+    lastCapturedAt: null,
+    minUtilizationPercent: null,
+    maxUtilizationPercent: null,
+    avgUtilizationPercent: null,
+    latestUtilizationPercent: null,
+    latestAlertLevel: null,
+    trendDirection: "flat",
+  };
+
+  if (totalInWindow > 0) {
+    var firstSnapshot = snapshotsInWindow[0];
+    var lastSnapshot = snapshotsInWindow[totalInWindow - 1];
+    var minUtilizationPercent = firstSnapshot.utilizationPercent;
+    var maxUtilizationPercent = firstSnapshot.utilizationPercent;
+    var totalUtilizationPercent = 0;
+
+    snapshotsInWindow.forEach(function (snapshot) {
+      totalUtilizationPercent += snapshot.utilizationPercent;
+
+      if (snapshot.utilizationPercent < minUtilizationPercent) {
+        minUtilizationPercent = snapshot.utilizationPercent;
+      }
+
+      if (snapshot.utilizationPercent > maxUtilizationPercent) {
+        maxUtilizationPercent = snapshot.utilizationPercent;
+      }
+    });
+
+    var utilizationDelta =
+      lastSnapshot.utilizationPercent - firstSnapshot.utilizationPercent;
+    var trendDirection = "flat";
+    if (utilizationDelta > 0.1) {
+      trendDirection = "up";
+    } else if (utilizationDelta < -0.1) {
+      trendDirection = "down";
+    }
+
+    summary.firstCapturedAt = firstSnapshot.capturedAt;
+    summary.lastCapturedAt = lastSnapshot.capturedAt;
+    summary.minUtilizationPercent = minUtilizationPercent;
+    summary.maxUtilizationPercent = maxUtilizationPercent;
+    summary.avgUtilizationPercent = Number(
+      (totalUtilizationPercent / totalInWindow).toFixed(1)
+    );
+    summary.latestUtilizationPercent = lastSnapshot.utilizationPercent;
+    summary.latestAlertLevel = lastSnapshot.alertLevel;
+    summary.trendDirection = trendDirection;
+  }
+
+  return {
+    summary: summary,
+    snapshots: snapshots.map(function (snapshot) {
+      return {
+        capturedAt: snapshot.capturedAt,
+        trigger: snapshot.trigger,
+        currentEntries: snapshot.currentEntries,
+        maxEntries: snapshot.maxEntries,
+        utilizationPercent: snapshot.utilizationPercent,
+        remainingEntries: snapshot.remainingEntries,
+        alertLevel: snapshot.alertLevel,
+      };
+    }),
+  };
+}
+
 function summarizeFaultManifestVerifyAttemptTelemetry() {
   var totalSuppressedEvents = 0;
   var duplicateSuppressedAttempts = 0;
@@ -753,6 +903,11 @@ function storeFaultManifestVerifyAttempt(fingerprint, responseBody, verifiedAtIs
     existing.attempt.lastSeenAtMs = nowMs;
     existing.attempt.lastVerifiedAt = verifiedAtIso;
     existing.attempt.suppressCount += 1;
+    maybeCaptureFaultManifestVerifySaturationTrend(
+      "verify-duplicate",
+      buildFaultManifestVerifyAttemptSaturation(faultManifestVerifyAttemptCache.length),
+      false
+    );
 
     return {
       duplicateSuppressed: true,
@@ -773,6 +928,11 @@ function storeFaultManifestVerifyAttempt(fingerprint, responseBody, verifiedAtIs
 
   faultManifestVerifyAttemptCache.push(attempt);
   pruneFaultManifestVerifyAttempts(nowMs);
+  maybeCaptureFaultManifestVerifySaturationTrend(
+    "verify-first-seen",
+    buildFaultManifestVerifyAttemptSaturation(faultManifestVerifyAttemptCache.length),
+    false
+  );
 
   return {
     duplicateSuppressed: false,
@@ -1947,6 +2107,9 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       retentionSaturationEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
       retentionSaturationPath: "telemetry.saturation",
+      retentionSaturationTrendEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+      retentionSaturationTrendPath: "telemetry.saturationTrend",
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -2007,6 +2170,9 @@ router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", f
       retentionSaturationEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
       retentionSaturationPath: "telemetry.saturation",
+      retentionSaturationTrendEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+      retentionSaturationTrendPath: "telemetry.saturationTrend",
     },
     attempts: audit.attempts,
   });
@@ -2063,6 +2229,9 @@ router.get(
         retentionSaturationEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
         retentionSaturationPath: "telemetry.saturation",
+        retentionSaturationTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionSaturationTrendPath: "telemetry.saturationTrend",
       },
       attempts: audit.attempts,
     });
@@ -2071,9 +2240,22 @@ router.get(
 
 router.get(
   "/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
-  function (_req, res) {
+  function (req, res) {
     pruneFaultManifestVerifyAttempts(Date.now());
     var telemetry = summarizeFaultManifestVerifyAttemptTelemetry();
+    maybeCaptureFaultManifestVerifySaturationTrend(
+      "retention-status",
+      telemetry.saturation,
+      true
+    );
+    var trend = collectFaultManifestVerifyAttemptSaturationTrend({
+      windowMinutes: req.query.windowMinutes,
+      limit: req.query.limit,
+    });
+    telemetry.saturationTrend = {
+      summary: trend.summary,
+      snapshots: trend.snapshots,
+    };
 
     res.set("Cache-Control", "no-store");
     res.json({
@@ -2099,6 +2281,47 @@ router.get(
         retentionSaturationEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
         retentionSaturationPath: "telemetry.saturation",
+        retentionSaturationTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionSaturationTrendPath: "telemetry.saturationTrend",
+      },
+    });
+  }
+);
+
+router.get(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+  function (req, res) {
+    pruneFaultManifestVerifyAttempts(Date.now());
+    var telemetry = summarizeFaultManifestVerifyAttemptTelemetry();
+    maybeCaptureFaultManifestVerifySaturationTrend(
+      "retention-saturation-trend",
+      telemetry.saturation,
+      false
+    );
+    var trend = collectFaultManifestVerifyAttemptSaturationTrend({
+      windowMinutes: req.query.windowMinutes,
+      limit: req.query.limit,
+    });
+
+    res.set("Cache-Control", "no-store");
+    res.json({
+      queriedAt: new Date().toISOString(),
+      query: {
+        windowMinutes: trend.summary.windowMinutes,
+        limit: trend.summary.requestedLimit,
+      },
+      summary: trend.summary,
+      snapshots: trend.snapshots,
+      latestSaturation: telemetry.saturation,
+      diagnostics: {
+        retentionEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionApplyEndpoint:
+          "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+        verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+        retentionSaturationPath: "latestSaturation",
+        retentionSaturationTrendPath: "snapshots",
       },
     });
   }
@@ -2117,6 +2340,20 @@ router.post(
       });
       return;
     }
+
+    maybeCaptureFaultManifestVerifySaturationTrend(
+      "retention-apply",
+      applied.telemetry.saturation,
+      true
+    );
+    var trend = collectFaultManifestVerifyAttemptSaturationTrend({
+      windowMinutes: req.query.windowMinutes,
+      limit: req.query.limit,
+    });
+    applied.telemetry.saturationTrend = {
+      summary: trend.summary,
+      snapshots: trend.snapshots,
+    };
 
     res.json({
       appliedAt: new Date().toISOString(),
@@ -2144,6 +2381,9 @@ router.post(
         retentionSaturationEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
         retentionSaturationPath: "telemetry.saturation",
+        retentionSaturationTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionSaturationTrendPath: "telemetry.saturationTrend",
       },
     });
   }

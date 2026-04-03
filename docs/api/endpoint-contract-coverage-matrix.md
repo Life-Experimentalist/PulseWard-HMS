@@ -211,6 +211,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verify, attempts query, attempts export, and retention status/apply diagnostics now include saturation discoverability links (`retentionSaturationEndpoint`, `retentionSaturationPath`).
 - Regression tests cover saturation payload shape, utilization bounds, alert-level enum behavior, and retention diagnostics link consistency.
 
+## M5.15 Replay-Attempt Saturation Trend Snapshot Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend` for time-windowed replay-attempt saturation trend review.
+- Retention status/apply telemetry now includes `saturationTrend` summary and snapshot arrays with bounded window/limit controls.
+- Verify, attempts query/export, and retention diagnostics now include trend discoverability links (`retentionSaturationTrendEndpoint`, `retentionSaturationTrendPath`).
+- Regression tests cover trend payload shape, query window/limit behavior, and trend diagnostics link continuity.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

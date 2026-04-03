@@ -386,6 +386,12 @@ describe("notification webhook delivery diagnostics", () => {
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
     );
     expect(verified.body.diagnostics.retentionSaturationPath).toBe("telemetry.saturation");
+    expect(verified.body.diagnostics.retentionSaturationTrendEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(verified.body.diagnostics.retentionSaturationTrendPath).toBe(
+      "telemetry.saturationTrend"
+    );
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -451,6 +457,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(auditByFingerprint.body.diagnostics.retentionSaturationPath).toBe(
       "telemetry.saturation"
     );
+    expect(auditByFingerprint.body.diagnostics.retentionSaturationTrendEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(auditByFingerprint.body.diagnostics.retentionSaturationTrendPath).toBe(
+      "telemetry.saturationTrend"
+    );
 
     const attemptsExportJson = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint=${encodeURIComponent(
@@ -479,6 +491,12 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(attemptsExportJson.body.diagnostics.retentionSaturationPath).toBe(
       "telemetry.saturation"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionSaturationTrendEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionSaturationTrendPath).toBe(
+      "telemetry.saturationTrend"
     );
     expect(Array.isArray(attemptsExportJson.body.attempts)).toBe(true);
 
@@ -608,18 +626,18 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionStatus.body.telemetry.saturation.currentEntries).toBe(
       attemptsRetentionStatus.body.telemetry.totalRecorded
     );
-    expect(attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent).toBeGreaterThanOrEqual(
-      0
-    );
-    expect(attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent).toBeLessThanOrEqual(
-      100
-    );
+    expect(
+      attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      attemptsRetentionStatus.body.telemetry.saturation.utilizationPercent
+    ).toBeLessThanOrEqual(100);
     expect(["normal", "warning", "critical"]).toContain(
       attemptsRetentionStatus.body.telemetry.saturation.alertLevel
     );
-    expect(attemptsRetentionStatus.body.telemetry.saturation.recommendedAction.length).toBeGreaterThan(
-      0
-    );
+    expect(
+      attemptsRetentionStatus.body.telemetry.saturation.recommendedAction.length
+    ).toBeGreaterThan(0);
     expect(attemptsRetentionStatus.body.diagnostics.applyEndpoint).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
     );
@@ -629,6 +647,21 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationPath).toBe(
       "telemetry.saturation"
     );
+    expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationTrendEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationTrendPath).toBe(
+      "telemetry.saturationTrend"
+    );
+    expect(attemptsRetentionStatus.body.telemetry.saturationTrend.summary.windowMinutes).toBe(60);
+    expect(attemptsRetentionStatus.body.telemetry.saturationTrend.summary.requestedLimit).toBe(24);
+    expect(
+      attemptsRetentionStatus.body.telemetry.saturationTrend.summary.totalInWindow
+    ).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(attemptsRetentionStatus.body.telemetry.saturationTrend.snapshots)).toBe(
+      true
+    );
+    expect(attemptsRetentionStatus.body.telemetry.saturationTrend.snapshots.length).toBeGreaterThan(0);
 
     const attemptsRetentionApplied = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
@@ -655,9 +688,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(["normal", "warning", "critical"]).toContain(
       attemptsRetentionApplied.body.telemetry.saturation.alertLevel
     );
-    expect(attemptsRetentionApplied.body.telemetry.saturation.recommendedAction.length).toBeGreaterThan(
-      0
-    );
+    expect(
+      attemptsRetentionApplied.body.telemetry.saturation.recommendedAction.length
+    ).toBeGreaterThan(0);
     expect(attemptsRetentionApplied.body.diagnostics.statusEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
     );
@@ -667,6 +700,49 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationPath).toBe(
       "telemetry.saturation"
     );
+    expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationTrendEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationTrendPath).toBe(
+      "telemetry.saturationTrend"
+    );
+    expect(attemptsRetentionApplied.body.telemetry.saturationTrend.summary.windowMinutes).toBe(60);
+    expect(attemptsRetentionApplied.body.telemetry.saturationTrend.summary.requestedLimit).toBe(24);
+    expect(
+      attemptsRetentionApplied.body.telemetry.saturationTrend.summary.totalInWindow
+    ).toBeGreaterThanOrEqual(1);
+
+    const attemptsRetentionTrend = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=2",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(attemptsRetentionTrend.status).toBe(200);
+    expect(attemptsRetentionTrend.body.query.windowMinutes).toBe(60);
+    expect(attemptsRetentionTrend.body.query.limit).toBe(2);
+    expect(attemptsRetentionTrend.body.summary.windowMinutes).toBe(60);
+    expect(attemptsRetentionTrend.body.summary.requestedLimit).toBe(2);
+    expect(attemptsRetentionTrend.body.summary.returned).toBeLessThanOrEqual(2);
+    expect(attemptsRetentionTrend.body.summary.totalInWindow).toBeGreaterThanOrEqual(
+      attemptsRetentionTrend.body.summary.returned
+    );
+    expect(attemptsRetentionTrend.body.summary.hasMore).toBe(
+      attemptsRetentionTrend.body.summary.totalInWindow > attemptsRetentionTrend.body.summary.returned
+    );
+    expect(Array.isArray(attemptsRetentionTrend.body.snapshots)).toBe(true);
+    if (attemptsRetentionTrend.body.snapshots.length > 0) {
+      expect(Date.parse(attemptsRetentionTrend.body.snapshots[0].capturedAt)).not.toBeNaN();
+      expect(["normal", "warning", "critical"]).toContain(
+        attemptsRetentionTrend.body.snapshots[attemptsRetentionTrend.body.snapshots.length - 1]
+          .alertLevel
+      );
+    }
+    expect(attemptsRetentionTrend.body.diagnostics.retentionSaturationPath).toBe(
+      "latestSaturation"
+    );
+    expect(attemptsRetentionTrend.body.diagnostics.retentionSaturationTrendPath).toBe("snapshots");
 
     const attemptsRetentionMissingPayload = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",

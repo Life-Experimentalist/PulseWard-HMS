@@ -1074,6 +1074,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.recentlyClosedAnomalies` type `array`
 - Mutation-based parity regressions now prove strict-check failure when retention-telemetry `recentlyClosedAnomalies` property type drifts from OpenAPI baseline.
 
+## M6.114 Anomaly-Tracking-Summary State-Persistence Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary state-persistence anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.statePersistence` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `statePersistence` property type drifts from OpenAPI baseline.
+
+## M6.115 Anomaly-Tracking-Summary Retained-Anomaly-Instances Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary retained-anomaly-instances anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedAnomalyInstances` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `retainedAnomalyInstances` property type drifts from OpenAPI baseline.
+
+## M6.116 Anomaly-Tracking-Summary Retained-Action-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-tracking-summary retained-action-entries anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedActionEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `retainedActionEntries` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

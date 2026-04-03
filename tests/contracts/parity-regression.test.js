@@ -492,6 +492,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry recentlyClosedAnomalies schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary statePersistence schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedAnomalyInstances schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedActionEntries schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3536,6 +3545,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.recentlyClosedAnomalies type expected array got object"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary statePersistence type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?statePersistence:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly tracking summary statePersistence type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary statePersistence schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.statePersistence type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary retainedAnomalyInstances type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?retainedAnomalyInstances:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "anomaly tracking summary retainedAnomalyInstances type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedAnomalyInstances schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedAnomalyInstances type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly tracking summary retainedActionEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:[\s\S]*?retainedActionEntries:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "anomaly tracking summary retainedActionEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedActionEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedActionEntries type expected integer got boolean"
         );
       }
     );

@@ -312,6 +312,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem closedReason schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyKey schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalySeverity schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyStatus schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -2036,6 +2045,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.closedReason type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item anomalyKey type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?anomalyKey:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export item anomalyKey type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyKey schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.anomalyKey type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item anomalySeverity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?anomalySeverity:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export item anomalySeverity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalySeverity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.anomalySeverity type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item anomalyStatus type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?anomalyStatus:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export item anomalyStatus type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyStatus schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.anomalyStatus type expected string got boolean"
         );
       }
     );

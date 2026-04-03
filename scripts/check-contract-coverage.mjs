@@ -1328,6 +1328,42 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyKey schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportItem",
+      propertyName: "anomalyKey",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalySeverity schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportItem",
+      propertyName: "anomalySeverity",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem anomalyStatus schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportItem",
+      propertyName: "anomalyStatus",
+      type: "string",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

@@ -836,6 +836,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(anomalyRetentionStatus.body.telemetry.anomalyTracking.statePersistence).toBe(
       "memory-only"
     );
+    expect(typeof anomalyRetentionStatus.body.retention.escalationExportPolicy).toBe("object");
+    expect(
+      anomalyRetentionStatus.body.diagnostics.retentionEscalationExportEndpointTemplate
+    ).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export"
+    );
     expect(anomalyRetentionStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
     );
@@ -873,6 +879,8 @@ describe("notification webhook delivery diagnostics", () => {
       expect(typeof item.triage.acknowledged).toBe("boolean");
       expect(typeof item.escalation).toBe("object");
       expect(typeof item.escalation.state).toBe("string");
+      expect(typeof item.escalation.acknowledgementSla).toBe("object");
+      expect(typeof item.escalation.acknowledgementSla.status).toBe("string");
     });
 
     expect(anomalyTrendStatus.body.summary.anomalyTracking.statePersistence).toBe("memory-only");
@@ -901,15 +909,26 @@ describe("notification webhook delivery diagnostics", () => {
             mitigationNoteTypes: ["mitigation-plan", "status-update"],
             autoDeescalateOnMitigation: true,
           },
+          escalationExportPolicy: {
+            enabled: true,
+            defaultFormat: "json",
+            maxExportRows: 250,
+            includeRecentlyClosedByDefault: false,
+          },
         }),
       }
     );
 
     expect(escalationPolicyApplied.status).toBe(200);
     expect(escalationPolicyApplied.body.retention.escalationPolicyChanged).toBe(true);
+    expect(escalationPolicyApplied.body.retention.escalationExportPolicyChanged).toBe(true);
+    expect(escalationPolicyApplied.body.retention.escalationExportPolicy.maxExportRows).toBe(250);
     expect(
       escalationPolicyApplied.body.telemetry.escalation.activeEscalations
     ).toBeGreaterThanOrEqual(1);
+    expect(typeof escalationPolicyApplied.body.telemetry.escalation.acknowledgementSla).toBe(
+      "object"
+    );
 
     const escalatedTrendStatus = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
@@ -951,6 +970,7 @@ describe("notification webhook delivery diagnostics", () => {
     expect(triageAcknowledge.body.anomaly.triage.acknowledged).toBe(true);
     expect(triageAcknowledge.body.anomaly.triage.acknowledgedBy).toBe("ops-oncall@pulseward");
     expect(triageAcknowledge.body.anomaly.triage.notesCount).toBeGreaterThanOrEqual(1);
+    expect(typeof triageAcknowledge.body.anomaly.escalation.acknowledgementSla).toBe("object");
     expect(triageAcknowledge.body.audit.actionType).toBe("acknowledge-and-note");
     expect(["deescalated", "unchanged"]).toContain(
       triageAcknowledge.body.audit.escalationTransition
@@ -1005,6 +1025,52 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(triagedInTrend).toBeTruthy();
     expect(triagedInTrend.triage.acknowledged).toBe(true);
+
+    const escalationExport = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?state=monitoring,escalated-warning&acknowledgementSlaStatus=within-sla,breached&limit=50",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(escalationExport.status).toBe(200);
+    expect(Array.isArray(escalationExport.body.escalations)).toBe(true);
+    expect(escalationExport.body.diagnostics.retentionEscalationExportEndpointTemplate).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export"
+    );
+    if (escalationExport.body.escalations.length > 0) {
+      const exported = escalationExport.body.escalations[0];
+      expect(typeof exported.acknowledgementSlaStatus).toBe("string");
+      expect(typeof exported.acknowledgementSlaBreached).toBe("boolean");
+      expect(exported.diagnostics.retentionAnomalyTriageEndpointTemplate).toBe(
+        "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
+      );
+    }
+
+    const escalationExportCsv = await requestText(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=csv&limit=10",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(escalationExportCsv.status).toBe(200);
+    expect(escalationExportCsv.headers.get("content-type")).toContain("text/csv");
+    expect(escalationExportCsv.body).toContain(
+      "anomalyInstanceId,anomalyKey,anomalySeverity,anomalyStatus"
+    );
+
+    const escalationExportInvalidState = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?state=not-a-valid-state",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(escalationExportInvalidState.status).toBe(400);
+    expect(escalationExportInvalidState.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_FILTER_INVALID"
+    );
 
     const mitigationWithoutNote = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(

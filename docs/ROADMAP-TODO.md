@@ -337,4 +337,6 @@ Exit criteria:
 60. M5.17 evidence checkpoint: regression coverage now validates anomaly acknowledgement updates, triage-note append flows, and 400/404 validation guardrails.
 61. M5.18 completed: replay-attempt anomaly telemetry now automates lifecycle closure records and escalation policy state transitions.
 62. M5.18 evidence checkpoint: regression coverage now validates escalation transitions, closure feed semantics, and escalation policy validation controls.
-63. M5.19 active next slice: add escalation acknowledgement SLA tracking and incident handoff export automation.
+63. M5.19 completed: replay-attempt anomaly escalation now includes acknowledgement SLA tracking and dedicated escalation export automation for operator handoff.
+64. M5.19 evidence checkpoint: regression coverage now validates acknowledgement SLA fields, escalation export payloads (JSON/CSV), and invalid export-filter guardrails.
+65. Tooling reliability checkpoint completed: root `tsconfig.json` now powers `npm run build:types`, compose warning noise is removed, and demo scripts now fail-fast with Docker engine readiness guidance.

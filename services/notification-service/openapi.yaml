@@ -673,6 +673,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export:
+    get:
+      summary: Export replay-attempt anomaly escalation telemetry with acknowledgement SLA state
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - csv
+            default: json
+        - name: includeRecentlyClosed
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Comma-separated escalation states
+            example: escalated-warning-unacknowledged,escalated-critical-unacknowledged
+        - name: escalationSeverity
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Comma-separated escalation severities
+            example: warning,critical
+        - name: acknowledgementSlaStatus
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Comma-separated acknowledgement SLA statuses
+            example: breached,acknowledged-breached
+        - name: triageAcknowledged
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: actionRequired
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: breached
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 500
+      responses:
+        "200":
+          description: Replay-attempt anomaly escalation export payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportResponse"
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Invalid escalation export filter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
+        "403":
+          description: Escalation export disabled by policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
   /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage:
     post:
       summary: Acknowledge replay-attempt saturation anomaly and append triage note
@@ -1640,6 +1725,9 @@ components:
         retentionAnomalyTriageEndpointTemplate:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+        retentionEscalationExportEndpointTemplate:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1765,6 +1853,9 @@ components:
         retentionAnomalyTriageEndpointTemplate:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+        retentionEscalationExportEndpointTemplate:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1832,6 +1923,9 @@ components:
         retentionAnomalyTriageEndpointTemplate:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+        retentionEscalationExportEndpointTemplate:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultManifestVerifyAttemptExportResponse:
       type: object
       properties:
@@ -1895,6 +1989,8 @@ components:
           example: drop-expired-then-oldest
         escalationPolicy:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
+        escalationExportPolicy:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportPolicy"
         lifecyclePolicy:
           type: object
           properties:
@@ -2132,7 +2228,12 @@ components:
         trigger:
           type: string
           enum:
-            [none, unacknowledged-warning-timeout, unacknowledged-critical-timeout, critical-unmitigated-timeout]
+            [
+              none,
+              unacknowledged-warning-timeout,
+              unacknowledged-critical-timeout,
+              critical-unmitigated-timeout,
+            ]
           example: none
         pendingSince:
           type: string
@@ -2153,6 +2254,8 @@ components:
         actionRequired:
           type: boolean
           example: false
+        acknowledgementSla:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla"
     MessagingFaultManifestVerifyAttemptEscalationPolicy:
       type: object
       properties:
@@ -2182,6 +2285,106 @@ components:
         autoDeescalateOnMitigation:
           type: boolean
           default: true
+    MessagingFaultManifestVerifyAttemptEscalationExportPolicy:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: true
+        defaultFormat:
+          type: string
+          enum: [json, csv]
+          default: json
+        maxExportRows:
+          type: integer
+          minimum: 50
+          maximum: 5000
+          example: 500
+        includeRecentlyClosedByDefault:
+          type: boolean
+          default: false
+    MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            [
+              not-applicable,
+              within-sla,
+              breached,
+              acknowledged-within-sla,
+              acknowledged-breached,
+            ]
+          example: within-sla
+        targetSeconds:
+          type: integer
+          nullable: true
+          example: 600
+        elapsedSeconds:
+          type: integer
+          nullable: true
+          example: 190
+        remainingSeconds:
+          type: integer
+          nullable: true
+          example: 410
+        breached:
+          type: boolean
+          example: false
+        breachSeconds:
+          type: integer
+          example: 0
+        measuredFrom:
+          type: string
+          format: date-time
+          nullable: true
+        measuredUntil:
+          type: string
+          format: date-time
+          nullable: true
+        acknowledged:
+          type: boolean
+          example: false
+        acknowledgedAt:
+          type: string
+          format: date-time
+          nullable: true
+    MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary:
+      type: object
+      properties:
+        trackedCount:
+          type: integer
+          example: 3
+        applicableCount:
+          type: integer
+          example: 3
+        withinSlaCount:
+          type: integer
+          example: 1
+        breachedCount:
+          type: integer
+          example: 2
+        acknowledgedCount:
+          type: integer
+          example: 1
+        acknowledgedWithinSlaCount:
+          type: integer
+          example: 1
+        acknowledgedBreachedCount:
+          type: integer
+          example: 0
+        openBreachCount:
+          type: integer
+          example: 1
+        averageAcknowledgementSeconds:
+          type: integer
+          nullable: true
+          example: 210
+        p95AcknowledgementSeconds:
+          type: integer
+          nullable: true
+          example: 280
     MessagingFaultManifestVerifyAttemptEscalationTelemetry:
       type: object
       properties:
@@ -2200,6 +2403,8 @@ components:
           nullable: true
           enum: [warning, critical]
           example: critical
+        acknowledgementSla:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary"
     MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly:
       type: object
       properties:
@@ -2372,6 +2577,9 @@ components:
             retentionAnomalyTriageEndpointTemplate:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+            retentionEscalationExportEndpointTemplate:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:
       type: object
       properties:
@@ -2428,6 +2636,9 @@ components:
             retentionAnomalyTriageEndpointTemplate:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+            retentionEscalationExportEndpointTemplate:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultManifestVerifyAttemptRetentionSaturation:
       type: object
       properties:
@@ -2490,6 +2701,9 @@ components:
         retentionAnomalyTriageEndpointTemplate:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+        retentionEscalationExportEndpointTemplate:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultManifestVerifyAttemptRetentionStatusResponse:
       type: object
       properties:
@@ -2499,6 +2713,207 @@ components:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionTelemetry"
         diagnostics:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusDiagnostics"
+    MessagingFaultManifestVerifyAttemptEscalationExportFilters:
+      type: object
+      properties:
+        includeRecentlyClosed:
+          type: boolean
+          example: false
+        state:
+          type: array
+          items:
+            type: string
+          example: [escalated-warning-unacknowledged, escalated-critical-unacknowledged]
+        escalationSeverity:
+          type: array
+          items:
+            type: string
+          example: [warning, critical]
+        acknowledgementSlaStatus:
+          type: array
+          items:
+            type: string
+          example: [breached]
+        triageAcknowledged:
+          type: boolean
+          nullable: true
+        actionRequired:
+          type: boolean
+          nullable: true
+        breached:
+          type: boolean
+          nullable: true
+        limit:
+          type: integer
+          example: 500
+    MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics:
+      type: object
+      properties:
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionTrendEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+        retentionAnomalyTriageEndpointTemplate:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+        retentionEscalationExportEndpointTemplate:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
+    MessagingFaultManifestVerifyAttemptEscalationExportItem:
+      type: object
+      properties:
+        anomalyInstanceId:
+          type: string
+          format: uuid
+        anomalyKey:
+          type: string
+          enum: [sustained-warning, sustained-critical, accelerating-utilization]
+          example: sustained-warning
+        anomalySeverity:
+          type: string
+          enum: [warning, critical]
+          example: warning
+        anomalyStatus:
+          type: string
+          enum: [active, cleared]
+          example: active
+        recommendedAction:
+          type: string
+        firstDetectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastDetectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedReason:
+          type: string
+          nullable: true
+          enum: [signal-cleared, retention-prune, manual-reset]
+        triageAcknowledged:
+          type: boolean
+          example: false
+        triageAcknowledgedAt:
+          type: string
+          format: date-time
+          nullable: true
+        triageAcknowledgedBy:
+          type: string
+          nullable: true
+        triageNotesCount:
+          type: integer
+          example: 0
+        escalationState:
+          type: string
+          enum:
+            [
+              monitoring,
+              closed,
+              escalated-warning-unacknowledged,
+              escalated-critical-unacknowledged,
+              escalated-critical-unmitigated,
+            ]
+          example: monitoring
+        escalationSeverity:
+          type: string
+          enum: [none, warning, critical]
+          example: warning
+        escalationTrigger:
+          type: string
+          enum:
+            [
+              none,
+              unacknowledged-warning-timeout,
+              unacknowledged-critical-timeout,
+              critical-unmitigated-timeout,
+            ]
+          example: none
+        escalationPendingSince:
+          type: string
+          format: date-time
+          nullable: true
+        escalationEscalatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        escalationResolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        escalationDueAt:
+          type: string
+          format: date-time
+          nullable: true
+        escalationActionRequired:
+          type: boolean
+          example: false
+        acknowledgementSlaStatus:
+          type: string
+          enum:
+            [
+              not-applicable,
+              within-sla,
+              breached,
+              acknowledged-within-sla,
+              acknowledged-breached,
+            ]
+          example: within-sla
+        acknowledgementSlaTargetSeconds:
+          type: integer
+          nullable: true
+          example: 600
+        acknowledgementSlaElapsedSeconds:
+          type: integer
+          nullable: true
+          example: 200
+        acknowledgementSlaRemainingSeconds:
+          type: integer
+          nullable: true
+          example: 400
+        acknowledgementSlaBreached:
+          type: boolean
+          example: false
+        acknowledgementSlaBreachSeconds:
+          type: integer
+          example: 0
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics"
+    MessagingFaultManifestVerifyAttemptEscalationExportResponse:
+      type: object
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        format:
+          type: string
+          enum: [json]
+          example: json
+        totalTracked:
+          type: integer
+          example: 3
+        totalMatched:
+          type: integer
+          example: 2
+        returned:
+          type: integer
+          example: 2
+        policy:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportPolicy"
+        filters:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportFilters"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics"
+        escalations:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportItem"
     MessagingFaultManifestVerifyAttemptRetentionApplyRequest:
       type: object
       properties:
@@ -2515,6 +2930,8 @@ components:
           default: true
         escalationPolicy:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
+        escalationExportPolicy:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportPolicy"
     MessagingFaultManifestVerifyAttemptRetentionApplyResponse:
       type: object
       properties:
@@ -2541,6 +2958,13 @@ components:
             escalationPolicy:
               $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
             escalationPolicyChanged:
+              type: boolean
+              example: true
+            previousEscalationExportPolicy:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportPolicy"
+            escalationExportPolicy:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationExportPolicy"
+            escalationExportPolicyChanged:
               type: boolean
               example: true
             pruneNow:
@@ -2596,6 +3020,9 @@ components:
             retentionAnomalyTriageEndpointTemplate:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
+            retentionEscalationExportEndpointTemplate:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

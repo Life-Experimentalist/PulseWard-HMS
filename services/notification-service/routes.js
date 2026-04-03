@@ -177,6 +177,31 @@ var faultManifestVerifyRetentionEscalationAutoDeescalateOnMitigation = parseRetr
     .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ESCALATION_AUTO_DEESCALATE_ON_MITIGATION,
   true
 );
+var faultManifestVerifyRetentionEscalationExportEnabled = parseRetryBool(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ESCALATION_EXPORT_ENABLED,
+  true
+);
+var faultManifestVerifyRetentionEscalationExportDefaultFormat =
+  String(
+    process.env
+      .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ESCALATION_EXPORT_DEFAULT_FORMAT ||
+      "json"
+  )
+    .trim()
+    .toLowerCase() === "csv"
+    ? "csv"
+    : "json";
+var faultManifestVerifyRetentionEscalationExportMaxRows = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ESCALATION_EXPORT_MAX_ROWS,
+  1000,
+  50,
+  5000
+);
+var faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault = parseRetryBool(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ESCALATION_EXPORT_INCLUDE_RECENTLY_CLOSED_BY_DEFAULT,
+  false
+);
 var faultManifestVerifyRetentionEscalationMitigationNoteTypes = [
   "mitigation-plan",
   "mitigation-applied",
@@ -219,6 +244,8 @@ var faultManifestVerifyRetentionSource =
     : "default";
 var faultManifestVerifyAnomalyTriageEndpointTemplate =
   "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage";
+var faultManifestVerifyEscalationExportEndpoint =
+  "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export";
 var faultManifestVerifyAttemptCache = [];
 var faultManifestVerifyRetentionSaturationTrendSnapshots = [];
 var faultManifestVerifyAnomalyInstances = [];
@@ -1151,6 +1178,156 @@ function getFaultManifestVerifyEscalationPolicy() {
   };
 }
 
+function getFaultManifestVerifyEscalationExportPolicy() {
+  return {
+    enabled: faultManifestVerifyRetentionEscalationExportEnabled,
+    defaultFormat: faultManifestVerifyRetentionEscalationExportDefaultFormat,
+    maxExportRows: faultManifestVerifyRetentionEscalationExportMaxRows,
+    includeRecentlyClosedByDefault:
+      faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault,
+  };
+}
+
+function applyFaultManifestVerifyEscalationExportPolicy(rawPolicy) {
+  if (rawPolicy === undefined || rawPolicy === null) {
+    return {
+      changed: false,
+      previousPolicy: getFaultManifestVerifyEscalationExportPolicy(),
+      policy: getFaultManifestVerifyEscalationExportPolicy(),
+    };
+  }
+
+  if (typeof rawPolicy !== "object" || Array.isArray(rawPolicy)) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_POLICY_INVALID",
+        message: "escalationExportPolicy must be an object",
+      },
+    };
+  }
+
+  var previousPolicy = getFaultManifestVerifyEscalationExportPolicy();
+  var nextDefaultFormat =
+    rawPolicy.defaultFormat !== undefined
+      ? String(rawPolicy.defaultFormat || "")
+          .trim()
+          .toLowerCase()
+      : previousPolicy.defaultFormat;
+  if (nextDefaultFormat !== "json" && nextDefaultFormat !== "csv") {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_POLICY_INVALID",
+        message: "escalationExportPolicy.defaultFormat must be json or csv",
+      },
+    };
+  }
+
+  var nextPolicy = {
+    enabled:
+      rawPolicy.enabled !== undefined
+        ? parseRetryBool(rawPolicy.enabled, previousPolicy.enabled)
+        : previousPolicy.enabled,
+    defaultFormat: nextDefaultFormat,
+    maxExportRows:
+      rawPolicy.maxExportRows !== undefined
+        ? parseRetryInt(rawPolicy.maxExportRows, previousPolicy.maxExportRows, 50, 5000)
+        : previousPolicy.maxExportRows,
+    includeRecentlyClosedByDefault:
+      rawPolicy.includeRecentlyClosedByDefault !== undefined
+        ? parseRetryBool(
+            rawPolicy.includeRecentlyClosedByDefault,
+            previousPolicy.includeRecentlyClosedByDefault
+          )
+        : previousPolicy.includeRecentlyClosedByDefault,
+  };
+
+  faultManifestVerifyRetentionEscalationExportEnabled = nextPolicy.enabled;
+  faultManifestVerifyRetentionEscalationExportDefaultFormat = nextPolicy.defaultFormat;
+  faultManifestVerifyRetentionEscalationExportMaxRows = nextPolicy.maxExportRows;
+  faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault =
+    nextPolicy.includeRecentlyClosedByDefault;
+
+  return {
+    changed: JSON.stringify(previousPolicy) !== JSON.stringify(nextPolicy),
+    previousPolicy: previousPolicy,
+    policy: nextPolicy,
+  };
+}
+
+function buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(instance, nowMs) {
+  if (!instance || instance.status !== "active") {
+    return {
+      status: "not-applicable",
+      targetSeconds: null,
+      elapsedSeconds: null,
+      remainingSeconds: null,
+      breached: false,
+      breachSeconds: 0,
+      measuredFrom: null,
+      measuredUntil: null,
+      acknowledged: Boolean(instance && instance.triage && instance.triage.acknowledged),
+      acknowledgedAt: instance && instance.triage ? instance.triage.acknowledgedAt : null,
+    };
+  }
+
+  var targetSeconds = null;
+  if (instance.severity === "warning") {
+    targetSeconds = faultManifestVerifyRetentionEscalationWarningUnacknowledgedAfterSeconds;
+  } else if (instance.severity === "critical") {
+    targetSeconds = faultManifestVerifyRetentionEscalationCriticalUnacknowledgedAfterSeconds;
+  }
+
+  if (targetSeconds === null) {
+    return {
+      status: "not-applicable",
+      targetSeconds: null,
+      elapsedSeconds: null,
+      remainingSeconds: null,
+      breached: false,
+      breachSeconds: 0,
+      measuredFrom: null,
+      measuredUntil: null,
+      acknowledged: Boolean(instance.triage && instance.triage.acknowledged),
+      acknowledgedAt: instance.triage ? instance.triage.acknowledgedAt : null,
+    };
+  }
+
+  var measuredFromMs = Date.parse(instance.firstDetectedAt || "") || nowMs;
+  var measuredFrom = new Date(measuredFromMs).toISOString();
+  var acknowledged = Boolean(instance.triage && instance.triage.acknowledged);
+  var acknowledgedAt = instance.triage ? instance.triage.acknowledgedAt : null;
+  var measuredUntilMs = acknowledged
+    ? Date.parse(acknowledgedAt || "") || nowMs
+    : nowMs;
+  var measuredUntil = new Date(measuredUntilMs).toISOString();
+  var elapsedSeconds = Math.max(0, Math.round((measuredUntilMs - measuredFromMs) / 1000));
+  var breached = elapsedSeconds > targetSeconds;
+  var remainingSeconds = Math.max(targetSeconds - elapsedSeconds, 0);
+  var breachSeconds = breached ? elapsedSeconds - targetSeconds : 0;
+
+  var status = "within-sla";
+  if (acknowledged) {
+    status = breached ? "acknowledged-breached" : "acknowledged-within-sla";
+  } else if (breached) {
+    status = "breached";
+  }
+
+  return {
+    status: status,
+    targetSeconds: targetSeconds,
+    elapsedSeconds: elapsedSeconds,
+    remainingSeconds: remainingSeconds,
+    breached: breached,
+    breachSeconds: breachSeconds,
+    measuredFrom: measuredFrom,
+    measuredUntil: measuredUntil,
+    acknowledged: acknowledged,
+    acknowledgedAt: acknowledgedAt,
+  };
+}
+
 function getFaultManifestVerifyAnomalyLifecyclePolicy() {
   return {
     closureHistoryPerInstanceMax: faultManifestVerifyRetentionAnomalyClosureHistoryPerInstanceMax,
@@ -1304,7 +1481,9 @@ function hasFaultManifestVerifyMitigationEvidence(instance) {
   });
 }
 
-function buildFaultManifestVerifyAnomalyEscalationSnapshot(instance) {
+function buildFaultManifestVerifyAnomalyEscalationSnapshot(instance, nowMs) {
+  var measuredNowMs = nowMs || Date.now();
+
   if (!instance || !instance.escalation) {
     return {
       state: "monitoring",
@@ -1315,6 +1494,10 @@ function buildFaultManifestVerifyAnomalyEscalationSnapshot(instance) {
       resolvedAt: null,
       dueAt: null,
       actionRequired: false,
+      acknowledgementSla: buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(
+        instance,
+        measuredNowMs
+      ),
     };
   }
 
@@ -1327,6 +1510,10 @@ function buildFaultManifestVerifyAnomalyEscalationSnapshot(instance) {
     resolvedAt: instance.escalation.resolvedAt,
     dueAt: instance.escalation.dueAt,
     actionRequired: instance.escalation.actionRequired,
+    acknowledgementSla: buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(
+      instance,
+      measuredNowMs
+    ),
   };
 }
 
@@ -1538,7 +1725,7 @@ function buildFaultManifestVerifyAnomalyEscalationSummary() {
       return;
     }
 
-    var escalation = buildFaultManifestVerifyAnomalyEscalationSnapshot(instance);
+    var escalation = buildFaultManifestVerifyAnomalyEscalationSnapshot(instance, nowMs);
     byState[escalation.state] = (byState[escalation.state] || 0) + 1;
 
     if (escalation.state.indexOf("escalated-") === 0) {
@@ -1564,6 +1751,81 @@ function buildFaultManifestVerifyAnomalyEscalationSummary() {
     pendingEscalations: pendingEscalations,
     byState: byState,
     highestEscalationSeverity: highestEscalationSeverity,
+    acknowledgementSla: buildFaultManifestVerifyAnomalyEscalationAcknowledgementSlaSummary(
+      faultManifestVerifyAnomalyInstances,
+      nowMs
+    ),
+  };
+}
+
+function buildFaultManifestVerifyAnomalyEscalationAcknowledgementSlaSummary(instances, nowMs) {
+  var trackedCount = 0;
+  var applicableCount = 0;
+  var withinSlaCount = 0;
+  var breachedCount = 0;
+  var acknowledgedCount = 0;
+  var acknowledgedWithinSlaCount = 0;
+  var acknowledgedBreachedCount = 0;
+  var openBreachCount = 0;
+  var acknowledgedElapsed = [];
+
+  instances.forEach(function (instance) {
+    if (instance.status !== "active") {
+      return;
+    }
+
+    trackedCount += 1;
+    var sla = buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(instance, nowMs);
+    if (sla.status === "not-applicable") {
+      return;
+    }
+
+    applicableCount += 1;
+    if (sla.status === "within-sla") {
+      withinSlaCount += 1;
+    }
+    if (sla.status === "breached") {
+      breachedCount += 1;
+      openBreachCount += 1;
+    }
+    if (sla.status === "acknowledged-within-sla") {
+      acknowledgedCount += 1;
+      acknowledgedWithinSlaCount += 1;
+      acknowledgedElapsed.push(sla.elapsedSeconds);
+    }
+    if (sla.status === "acknowledged-breached") {
+      breachedCount += 1;
+      acknowledgedCount += 1;
+      acknowledgedBreachedCount += 1;
+      acknowledgedElapsed.push(sla.elapsedSeconds);
+    }
+  });
+
+  acknowledgedElapsed.sort(function (left, right) {
+    return left - right;
+  });
+  var averageAcknowledgementSeconds = null;
+  var p95AcknowledgementSeconds = null;
+  if (acknowledgedElapsed.length > 0) {
+    var total = acknowledgedElapsed.reduce(function (running, value) {
+      return running + value;
+    }, 0);
+    averageAcknowledgementSeconds = Math.round(total / acknowledgedElapsed.length);
+    var p95Index = Math.max(Math.ceil(acknowledgedElapsed.length * 0.95) - 1, 0);
+    p95AcknowledgementSeconds = acknowledgedElapsed[p95Index];
+  }
+
+  return {
+    trackedCount: trackedCount,
+    applicableCount: applicableCount,
+    withinSlaCount: withinSlaCount,
+    breachedCount: breachedCount,
+    acknowledgedCount: acknowledgedCount,
+    acknowledgedWithinSlaCount: acknowledgedWithinSlaCount,
+    acknowledgedBreachedCount: acknowledgedBreachedCount,
+    openBreachCount: openBreachCount,
+    averageAcknowledgementSeconds: averageAcknowledgementSeconds,
+    p95AcknowledgementSeconds: p95AcknowledgementSeconds,
   };
 }
 
@@ -1828,12 +2090,15 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
   var previousWindow = faultManifestVerifyDedupeWindowSeconds;
   var previousMaxEntries = faultManifestVerifyDedupeMaxEntries;
   var previousEscalationPolicy = getFaultManifestVerifyEscalationPolicy();
+  var previousEscalationExportPolicy = getFaultManifestVerifyEscalationExportPolicy();
   var hasWindow = payload.dedupeWindowSeconds !== undefined && payload.dedupeWindowSeconds !== null;
   var hasMaxEntries = payload.maxEntries !== undefined && payload.maxEntries !== null;
   var hasEscalationPolicy =
     payload.escalationPolicy !== undefined && payload.escalationPolicy !== null;
+  var hasEscalationExportPolicy =
+    payload.escalationExportPolicy !== undefined && payload.escalationExportPolicy !== null;
 
-  if (!hasWindow && !hasMaxEntries && !hasEscalationPolicy) {
+  if (!hasWindow && !hasMaxEntries && !hasEscalationPolicy && !hasEscalationExportPolicy) {
     return null;
   }
 
@@ -1864,6 +2129,15 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
     };
   }
 
+  var escalationExportPolicyResult = applyFaultManifestVerifyEscalationExportPolicy(
+    payload.escalationExportPolicy
+  );
+  if (escalationExportPolicyResult.error) {
+    return {
+      error: escalationExportPolicyResult.error,
+    };
+  }
+
   faultManifestVerifyRetentionSource = "api";
 
   var pruneResult = {
@@ -1883,6 +2157,9 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
     previousEscalationPolicy: previousEscalationPolicy,
     escalationPolicy: escalationPolicyResult.policy,
     escalationPolicyChanged: escalationPolicyResult.changed,
+    previousEscalationExportPolicy: previousEscalationExportPolicy,
+    escalationExportPolicy: escalationExportPolicyResult.policy,
+    escalationExportPolicyChanged: escalationExportPolicyResult.changed,
     pruneNow: pruneNow,
     prunedByWindow: pruneResult.prunedByWindow,
     prunedByMaxEntries: pruneResult.prunedByMaxEntries,
@@ -2098,6 +2375,290 @@ function buildFaultManifestVerifyAttemptCsv(attempts) {
         escapeCsvValue(replayDefense.nonce),
         escapeCsvValue(replayDefense.expectedNonce),
         escapeCsvValue(replayDefense.nonceMatch),
+      ].join(",")
+    );
+  });
+
+  return lines.join("\n");
+}
+
+function parseFaultManifestVerifyEscalationExportListFilter(rawValue) {
+  if (rawValue === undefined || rawValue === null) {
+    return [];
+  }
+
+  return String(rawValue)
+    .split(",")
+    .map(function (item) {
+      return String(item || "")
+        .trim()
+        .toLowerCase();
+    })
+    .filter(function (item, index, items) {
+      return item && items.indexOf(item) === index;
+    });
+}
+
+function parseFaultManifestVerifyEscalationExportQuery(query, policy) {
+  var formatCandidate = String(query.format || policy.defaultFormat || "json")
+    .trim()
+    .toLowerCase();
+  if (formatCandidate !== "json" && formatCandidate !== "csv") {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_FILTER_INVALID",
+        message: "format must be json or csv",
+      },
+    };
+  }
+
+  var stateFilter = parseFaultManifestVerifyEscalationExportListFilter(query.state);
+  var stateAliases = {
+    "escalated-warning": "escalated-warning-unacknowledged",
+    "escalated-critical": "escalated-critical-unacknowledged",
+  };
+  stateFilter = stateFilter.map(function (state) {
+    return stateAliases[state] || state;
+  });
+  var allowedStates = [
+    "monitoring",
+    "closed",
+    "escalated-warning-unacknowledged",
+    "escalated-critical-unacknowledged",
+    "escalated-critical-unmitigated",
+  ];
+  var invalidState = stateFilter.find(function (item) {
+    return allowedStates.indexOf(item) === -1;
+  });
+  if (invalidState) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_FILTER_INVALID",
+        message:
+          "state filter contains unsupported value: " +
+          invalidState +
+          ". Allowed values: " +
+          allowedStates.join(", "),
+      },
+    };
+  }
+
+  var escalationSeverityFilter = parseFaultManifestVerifyEscalationExportListFilter(
+    query.escalationSeverity
+  );
+  var allowedEscalationSeverity = ["none", "warning", "critical"];
+  var invalidEscalationSeverity = escalationSeverityFilter.find(function (item) {
+    return allowedEscalationSeverity.indexOf(item) === -1;
+  });
+  if (invalidEscalationSeverity) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_FILTER_INVALID",
+        message:
+          "escalationSeverity filter contains unsupported value: " +
+          invalidEscalationSeverity +
+          ". Allowed values: " +
+          allowedEscalationSeverity.join(", "),
+      },
+    };
+  }
+
+  var acknowledgementSlaStatusFilter = parseFaultManifestVerifyEscalationExportListFilter(
+    query.acknowledgementSlaStatus
+  );
+  var allowedAcknowledgementSlaStatuses = [
+    "not-applicable",
+    "within-sla",
+    "breached",
+    "acknowledged-within-sla",
+    "acknowledged-breached",
+  ];
+  var invalidAcknowledgementSlaStatus = acknowledgementSlaStatusFilter.find(function (item) {
+    return allowedAcknowledgementSlaStatuses.indexOf(item) === -1;
+  });
+  if (invalidAcknowledgementSlaStatus) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_FILTER_INVALID",
+        message:
+          "acknowledgementSlaStatus filter contains unsupported value: " +
+          invalidAcknowledgementSlaStatus +
+          ". Allowed values: " +
+          allowedAcknowledgementSlaStatuses.join(", "),
+      },
+    };
+  }
+
+  var includeRecentlyClosed =
+    parseOptionalBoolQuery(query.includeRecentlyClosed) !== null
+      ? parseOptionalBoolQuery(query.includeRecentlyClosed)
+      : policy.includeRecentlyClosedByDefault;
+  var triageAcknowledged = parseOptionalBoolQuery(query.triageAcknowledged);
+  var actionRequired = parseOptionalBoolQuery(query.actionRequired);
+  var breached = parseOptionalBoolQuery(query.breached);
+  var limit = parseRetryInt(query.limit, policy.maxExportRows, 1, policy.maxExportRows);
+
+  return {
+    format: formatCandidate,
+    includeRecentlyClosed: includeRecentlyClosed,
+    stateFilter: stateFilter,
+    escalationSeverityFilter: escalationSeverityFilter,
+    acknowledgementSlaStatusFilter: acknowledgementSlaStatusFilter,
+    triageAcknowledged: triageAcknowledged,
+    actionRequired: actionRequired,
+    breached: breached,
+    limit: limit,
+    maxExportRows: policy.maxExportRows,
+  };
+}
+
+function buildFaultManifestVerifyEscalationExportRows(filters, nowMs) {
+  pruneFaultManifestVerifyAnomalyTracking(nowMs);
+
+  var instances = faultManifestVerifyAnomalyInstances
+    .slice()
+    .filter(function (instance) {
+      if (instance.status === "active") {
+        return true;
+      }
+      return filters.includeRecentlyClosed;
+    })
+    .sort(function (left, right) {
+      var leftDetected = Date.parse(left.lastDetectedAt || left.firstDetectedAt || "") || 0;
+      var rightDetected = Date.parse(right.lastDetectedAt || right.firstDetectedAt || "") || 0;
+      return rightDetected - leftDetected;
+    });
+
+  var filtered = [];
+  for (var index = 0; index < instances.length; index += 1) {
+    var instance = instances[index];
+    var escalation = buildFaultManifestVerifyAnomalyEscalationSnapshot(instance, nowMs);
+    var triage = buildFaultManifestVerifyAnomalyTriageSnapshot(instance);
+    var acknowledgementSla = buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(
+      instance,
+      nowMs
+    );
+
+    if (filters.stateFilter.length > 0 && filters.stateFilter.indexOf(escalation.state) === -1) {
+      continue;
+    }
+    if (
+      filters.escalationSeverityFilter.length > 0 &&
+      filters.escalationSeverityFilter.indexOf(escalation.severity) === -1
+    ) {
+      continue;
+    }
+    if (
+      filters.acknowledgementSlaStatusFilter.length > 0 &&
+      filters.acknowledgementSlaStatusFilter.indexOf(acknowledgementSla.status) === -1
+    ) {
+      continue;
+    }
+    if (
+      filters.triageAcknowledged !== null &&
+      Boolean(triage.acknowledged) !== filters.triageAcknowledged
+    ) {
+      continue;
+    }
+    if (
+      filters.actionRequired !== null &&
+      Boolean(escalation.actionRequired) !== filters.actionRequired
+    ) {
+      continue;
+    }
+    if (filters.breached !== null && Boolean(acknowledgementSla.breached) !== filters.breached) {
+      continue;
+    }
+
+    filtered.push({
+      anomalyInstanceId: instance.anomalyInstanceId,
+      anomalyKey: instance.key,
+      anomalySeverity: instance.severity,
+      anomalyStatus: instance.status,
+      recommendedAction: instance.recommendedAction,
+      firstDetectedAt: instance.firstDetectedAt,
+      lastDetectedAt: instance.lastDetectedAt,
+      closedAt: instance.closedAt || null,
+      closedReason: instance.closedReason || null,
+      triageAcknowledged: Boolean(triage.acknowledged),
+      triageAcknowledgedAt: triage.acknowledgedAt,
+      triageAcknowledgedBy: triage.acknowledgedBy,
+      triageNotesCount: triage.notesCount,
+      escalationState: escalation.state,
+      escalationSeverity: escalation.severity,
+      escalationTrigger: escalation.trigger,
+      escalationPendingSince: escalation.pendingSince,
+      escalationEscalatedAt: escalation.escalatedAt,
+      escalationResolvedAt: escalation.resolvedAt,
+      escalationDueAt: escalation.dueAt,
+      escalationActionRequired: escalation.actionRequired,
+      acknowledgementSlaStatus: acknowledgementSla.status,
+      acknowledgementSlaTargetSeconds: acknowledgementSla.targetSeconds,
+      acknowledgementSlaElapsedSeconds: acknowledgementSla.elapsedSeconds,
+      acknowledgementSlaRemainingSeconds: acknowledgementSla.remainingSeconds,
+      acknowledgementSlaBreached: acknowledgementSla.breached,
+      acknowledgementSlaBreachSeconds: acknowledgementSla.breachSeconds,
+      diagnostics: {
+        retentionEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
+      },
+    });
+
+    if (filtered.length >= filters.limit) {
+      break;
+    }
+  }
+
+  return {
+    totalTracked: instances.length,
+    totalMatched: filtered.length,
+    rows: filtered,
+  };
+}
+
+function buildFaultManifestVerifyEscalationExportCsv(rows) {
+  var lines = [
+    "anomalyInstanceId,anomalyKey,anomalySeverity,anomalyStatus,recommendedAction,firstDetectedAt,lastDetectedAt,closedAt,closedReason,triageAcknowledged,triageAcknowledgedAt,triageAcknowledgedBy,triageNotesCount,escalationState,escalationSeverity,escalationTrigger,escalationPendingSince,escalationEscalatedAt,escalationResolvedAt,escalationDueAt,escalationActionRequired,acknowledgementSlaStatus,acknowledgementSlaTargetSeconds,acknowledgementSlaElapsedSeconds,acknowledgementSlaRemainingSeconds,acknowledgementSlaBreached,acknowledgementSlaBreachSeconds",
+  ];
+
+  rows.forEach(function (row) {
+    lines.push(
+      [
+        escapeCsvValue(row.anomalyInstanceId),
+        escapeCsvValue(row.anomalyKey),
+        escapeCsvValue(row.anomalySeverity),
+        escapeCsvValue(row.anomalyStatus),
+        escapeCsvValue(row.recommendedAction),
+        escapeCsvValue(row.firstDetectedAt),
+        escapeCsvValue(row.lastDetectedAt),
+        escapeCsvValue(row.closedAt),
+        escapeCsvValue(row.closedReason),
+        escapeCsvValue(row.triageAcknowledged),
+        escapeCsvValue(row.triageAcknowledgedAt),
+        escapeCsvValue(row.triageAcknowledgedBy),
+        escapeCsvValue(row.triageNotesCount),
+        escapeCsvValue(row.escalationState),
+        escapeCsvValue(row.escalationSeverity),
+        escapeCsvValue(row.escalationTrigger),
+        escapeCsvValue(row.escalationPendingSince),
+        escapeCsvValue(row.escalationEscalatedAt),
+        escapeCsvValue(row.escalationResolvedAt),
+        escapeCsvValue(row.escalationDueAt),
+        escapeCsvValue(row.escalationActionRequired),
+        escapeCsvValue(row.acknowledgementSlaStatus),
+        escapeCsvValue(row.acknowledgementSlaTargetSeconds),
+        escapeCsvValue(row.acknowledgementSlaElapsedSeconds),
+        escapeCsvValue(row.acknowledgementSlaRemainingSeconds),
+        escapeCsvValue(row.acknowledgementSlaBreached),
+        escapeCsvValue(row.acknowledgementSlaBreachSeconds),
       ].join(",")
     );
   });
@@ -3122,6 +3683,7 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
       retentionSaturationTrendPath: "telemetry.saturationTrend",
       retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+      retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -3186,6 +3748,7 @@ router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", f
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
       retentionSaturationTrendPath: "telemetry.saturationTrend",
       retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+      retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
     },
     attempts: audit.attempts,
   });
@@ -3247,6 +3810,7 @@ router.get(
         retentionSaturationTrendPath: "telemetry.saturationTrend",
         retentionEscalationPath: "telemetry.escalation",
         retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       },
       attempts: audit.attempts,
     });
@@ -3285,6 +3849,7 @@ router.get(
         source: faultManifestVerifyRetentionSource,
         pruneStrategy: "drop-expired-then-oldest",
         escalationPolicy: getFaultManifestVerifyEscalationPolicy(),
+        escalationExportPolicy: getFaultManifestVerifyEscalationExportPolicy(),
         lifecyclePolicy: getFaultManifestVerifyAnomalyLifecyclePolicy(),
       },
       telemetry: telemetry,
@@ -3304,6 +3869,7 @@ router.get(
         retentionSaturationTrendPath: "telemetry.saturationTrend",
         retentionEscalationPath: "telemetry.escalation",
         retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       },
     });
   }
@@ -3344,7 +3910,71 @@ router.get(
         retentionSaturationTrendPath: "snapshots",
         retentionEscalationPath: "summary.escalation",
         retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       },
+    });
+  }
+);
+
+router.get(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+  function (req, res) {
+    var policy = getFaultManifestVerifyEscalationExportPolicy();
+    if (!policy.enabled) {
+      res.status(403).json({
+        message: "escalation export policy is disabled",
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_DISABLED",
+      });
+      return;
+    }
+
+    var parsedFilters = parseFaultManifestVerifyEscalationExportQuery(req.query, policy);
+    if (parsedFilters.error) {
+      res.status(parsedFilters.error.status).json({
+        message: parsedFilters.error.message,
+        code: parsedFilters.error.code,
+      });
+      return;
+    }
+
+    var nowMs = Date.now();
+    var exported = buildFaultManifestVerifyEscalationExportRows(parsedFilters, nowMs);
+    if (parsedFilters.format === "csv") {
+      var csvBody = buildFaultManifestVerifyEscalationExportCsv(exported.rows);
+      res.set("Cache-Control", "no-store");
+      res.attachment("messaging-fault-manifest-verify-escalations-export.csv");
+      res.type("text/csv");
+      res.send(csvBody);
+      return;
+    }
+
+    res.set("Cache-Control", "no-store");
+    res.json({
+      exportedAt: new Date(nowMs).toISOString(),
+      format: "json",
+      totalTracked: exported.totalTracked,
+      totalMatched: exported.totalMatched,
+      returned: exported.rows.length,
+      policy: policy,
+      filters: {
+        includeRecentlyClosed: parsedFilters.includeRecentlyClosed,
+        state: parsedFilters.stateFilter,
+        escalationSeverity: parsedFilters.escalationSeverityFilter,
+        acknowledgementSlaStatus: parsedFilters.acknowledgementSlaStatusFilter,
+        triageAcknowledged: parsedFilters.triageAcknowledged,
+        actionRequired: parsedFilters.actionRequired,
+        breached: parsedFilters.breached,
+        limit: parsedFilters.limit,
+      },
+      diagnostics: {
+        retentionEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
+      },
+      escalations: exported.rows,
     });
   }
 );
@@ -3405,6 +4035,7 @@ router.post(
         retentionTrendEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
         retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       },
     });
   }
@@ -3426,7 +4057,8 @@ router.post(
 
     if (!applied) {
       res.status(400).json({
-        message: "dedupeWindowSeconds or maxEntries or escalationPolicy is required",
+        message:
+          "dedupeWindowSeconds or maxEntries or escalationPolicy or escalationExportPolicy is required",
         code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_REQUIRED",
       });
       return;
@@ -3461,6 +4093,9 @@ router.post(
         previousEscalationPolicy: applied.previousEscalationPolicy,
         escalationPolicy: applied.escalationPolicy,
         escalationPolicyChanged: applied.escalationPolicyChanged,
+        previousEscalationExportPolicy: applied.previousEscalationExportPolicy,
+        escalationExportPolicy: applied.escalationExportPolicy,
+        escalationExportPolicyChanged: applied.escalationExportPolicyChanged,
         pruneNow: applied.pruneNow,
         prunedByWindow: applied.prunedByWindow,
         prunedByMaxEntries: applied.prunedByMaxEntries,
@@ -3485,6 +4120,7 @@ router.post(
         retentionSaturationTrendPath: "telemetry.saturationTrend",
         retentionEscalationPath: "telemetry.escalation",
         retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+        retentionEscalationExportEndpointTemplate: faultManifestVerifyEscalationExportEndpoint,
       },
     });
   }

@@ -38,7 +38,7 @@
     "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); require('./services/ehr-service/routes'); require('./services/lab-service/routes'); require('./services/pharmacy-service/src'); require('./services/billing-service/src'); console.log('Route modules loaded');\"",
     "contracts:check": "node ./scripts/check-contract-coverage.mjs",
     "build": "npm run build:apps",
-    "build:types": "tsc --noEmit",
+    "build:types": "tsc --project tsconfig.json --noEmit",
     "lint": "eslint . --ext .js,.mjs",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write \"**/*.{js,mjs,ts,json,md,yml,yaml,css,html}\"",

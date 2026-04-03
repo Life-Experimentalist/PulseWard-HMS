@@ -18,8 +18,9 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint={fingerprint}&duplicateSuppressed=true&format=csv&limit=50`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=24`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=json&state=escalated-warning-unacknowledged,escalated-critical-unacknowledged&limit=100`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (set `acknowledge=true`, `acknowledgedBy`, and optional mitigation note)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds`/`maxEntries` and optional `escalationPolicy`; keep `pruneNow=true` for immediate cleanup)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds`/`maxEntries` and optional `escalationPolicy`/`escalationExportPolicy`; keep `pruneNow=true` for immediate cleanup)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 - If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
@@ -31,8 +32,15 @@
 - If any active anomaly remains unacknowledged, apply triage acknowledgement using `anomalyInstanceId` and attach mitigation owner in the note before shift handoff.
 - If escalation state enters `escalated-warning-unacknowledged`, treat as same-shift SLA breach and assign owner immediately.
 - If escalation state enters `escalated-critical-unacknowledged` or `escalated-critical-unmitigated`, open incident bridge and attach mitigation evidence reference in triage notes.
+- Use escalation export with `acknowledgementSlaStatus=breached` during shift handoff to capture unresolved SLA breaches in one artifact.
 - Verify `telemetry.recentlyClosedAnomalies` after mitigation to confirm closure record (`closedAt`, `closedReason`) was captured.
 - Keep triage notes operational only; do not include patient identifiers or protected health details.
+
+## Local tooling readiness
+
+- Run `npm run build:types` before milestone handoff; this now uses root `tsconfig.json` for deterministic local/CI behavior.
+- For demo stack commands (`pnpm demo:up`, `pnpm demo:down`), ensure Docker Desktop is running and Linux engine is available before execution.
+- Demo scripts now fail fast with explicit Docker engine guidance; resolve Docker connectivity first, then rerun.
 
 ## Weekly checks
 
@@ -54,8 +62,9 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&format=json&limit=100`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=csv&acknowledgementSlaStatus=breached,acknowledged-breached&limit=200`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (record acknowledgement and weekly drill note with owner)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window/cache size and escalation thresholds)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window/cache size, escalation thresholds, and escalation export limits)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 	- Confirm anomaly key transitions (`sustained-warning`, `sustained-critical`, `accelerating-utilization`) and capture clearance evidence after mitigation.
 	- Confirm escalation policy ordering (`critical` timeout <= `warning` timeout) and verify deescalation on mitigation note types.
@@ -88,6 +97,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?format={json|csv}`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format={json|csv}`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`

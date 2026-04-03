@@ -239,6 +239,14 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Retention apply controls now accept escalation policy updates (`escalationPolicy`) and report policy change metadata in response payloads.
 - Regression tests cover escalation transitions, mitigation-driven deescalation, closure feed semantics, and escalation policy validation guardrails.
 
+## M5.19 Escalation Acknowledgement SLA And Export Coverage
+
+- Retention and trend anomaly escalation payloads now include acknowledgement SLA state (`status`, elapsed/remaining seconds, breach telemetry, acknowledged timestamps).
+- Retention telemetry escalation summary now includes acknowledgement SLA aggregates for open-breach and acknowledgement performance tracking.
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export` for JSON/CSV escalation handoff artifacts with bounded filters.
+- Retention apply controls now accept escalation export policy updates (`escalationExportPolicy`) and report policy-change metadata in response payloads.
+- Regression tests cover SLA field presence, escalation export JSON/CSV behavior, and invalid export-filter guardrails.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

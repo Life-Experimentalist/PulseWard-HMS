@@ -731,3 +731,9 @@ Exit criteria:
 406. M6.169 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `returned` schema-property type drifts from OpenAPI baseline.
 407. M6.170 completed: strict contract checker now enforces retention-saturation-trend-summary has-more anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.hasMore` boolean compatibility.
 408. M6.170 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `hasMore` schema-property type drifts from OpenAPI baseline.
+409. M6.171 completed: strict contract checker now enforces retention-saturation-trend-summary first-captured-at anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.firstCapturedAt` string compatibility.
+410. M6.171 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `firstCapturedAt` schema-property type drifts from OpenAPI baseline.
+411. M6.172 completed: strict contract checker now enforces retention-saturation-trend-summary last-captured-at anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.lastCapturedAt` string compatibility.
+412. M6.172 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `lastCapturedAt` schema-property type drifts from OpenAPI baseline.
+413. M6.173 completed: strict contract checker now enforces retention-saturation-trend-summary min-utilization-percent anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.minUtilizationPercent` number compatibility.
+414. M6.173 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-summary `minUtilizationPercent` schema-property type drifts from OpenAPI baseline.

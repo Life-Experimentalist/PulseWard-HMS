@@ -1473,6 +1473,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.hasMore` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `hasMore` property type drifts from OpenAPI baseline.
 
+## M6.171 Retention-Saturation-Trend-Summary First-Captured-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary first-captured-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.firstCapturedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `firstCapturedAt` property type drifts from OpenAPI baseline.
+
+## M6.172 Retention-Saturation-Trend-Summary Last-Captured-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary last-captured-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.lastCapturedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `lastCapturedAt` property type drifts from OpenAPI baseline.
+
+## M6.173 Retention-Saturation-Trend-Summary Min-Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary min-utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.minUtilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `minUtilizationPercent` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

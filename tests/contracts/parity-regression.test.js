@@ -663,6 +663,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary hasMore schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary firstCapturedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary lastCapturedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary minUtilizationPercent schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4961,6 +4970,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.hasMore type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary firstCapturedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:[\s\S]*?firstCapturedAt:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention saturation trend summary firstCapturedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary firstCapturedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.firstCapturedAt type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary lastCapturedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:[\s\S]*?lastCapturedAt:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention saturation trend summary lastCapturedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary lastCapturedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.lastCapturedAt type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary minUtilizationPercent type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:[\s\S]*?minUtilizationPercent:[\s\S]*?type:\s*)number/,
+          "$1string",
+          "retention saturation trend summary minUtilizationPercent type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary minUtilizationPercent schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.minUtilizationPercent type expected number got string"
         );
       }
     );

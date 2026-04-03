@@ -587,3 +587,9 @@ Exit criteria:
 262. M6.97 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `source` schema-property type drifts from OpenAPI baseline.
 263. M6.98 completed: strict contract checker now enforces retention-policy prune-strategy anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.pruneStrategy` string compatibility.
 264. M6.98 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `pruneStrategy` schema-property type drifts from OpenAPI baseline.
+265. M6.99 completed: strict contract checker now enforces retention-policy escalation-policy-property anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.escalationPolicy` presence compatibility.
+266. M6.99 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `escalationPolicy` property is removed from OpenAPI baseline.
+267. M6.100 completed: strict contract checker now enforces retention-policy escalation-export-policy-property anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.escalationExportPolicy` presence compatibility.
+268. M6.100 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `escalationExportPolicy` property is removed from OpenAPI baseline.
+269. M6.101 completed: strict contract checker now enforces retention-policy lifecycle-policy anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.lifecyclePolicy` object compatibility.
+270. M6.101 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `lifecyclePolicy` schema-property type drifts from OpenAPI baseline.

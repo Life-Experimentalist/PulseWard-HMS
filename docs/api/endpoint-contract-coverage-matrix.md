@@ -465,6 +465,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.triageAcknowledged` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export filter `triageAcknowledged` property type drifts from OpenAPI baseline.
 
+## M6.27 Escalation-Export Response Returned Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response count anchors for handoff payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.returned` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `returned` property type drifts from OpenAPI baseline.
+
+## M6.28 Escalation-Export Item Acknowledgement-SLA Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item acknowledgement-SLA anchors for operator breach-state compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaBreached` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaBreached` property type drifts from OpenAPI baseline.
+
+## M6.29 Escalation-Export Filter Limit Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filter limit anchors for bounded export query compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.limit` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filter `limit` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -395,3 +395,9 @@ Exit criteria:
 118. M6.25 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationActionRequired` schema-property type drifts from OpenAPI baseline.
 119. M6.26 completed: strict contract checker now enforces escalation-export filter anchor for `MessagingFaultManifestVerifyAttemptEscalationExportFilters.triageAcknowledged` boolean compatibility.
 120. M6.26 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export filter `triageAcknowledged` schema-property type drifts from OpenAPI baseline.
+121. M6.27 completed: strict contract checker now enforces escalation-export response count anchor for `MessagingFaultManifestVerifyAttemptEscalationExportResponse.returned` integer compatibility.
+122. M6.27 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export response `returned` schema-property type drifts from OpenAPI baseline.
+123. M6.28 completed: strict contract checker now enforces escalation-export item acknowledgement SLA anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaBreached` boolean compatibility.
+124. M6.28 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `acknowledgementSlaBreached` schema-property type drifts from OpenAPI baseline.
+125. M6.29 completed: strict contract checker now enforces escalation-export filter limit anchor for `MessagingFaultManifestVerifyAttemptEscalationExportFilters.limit` integer compatibility.
+126. M6.29 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export filter `limit` schema-property type drifts from OpenAPI baseline.

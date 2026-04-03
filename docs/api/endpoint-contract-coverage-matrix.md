@@ -276,6 +276,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Dashboard drill checklist now runs endpoint reachability checks across notification reliability and ABHA transactional telemetry surfaces.
 - Notification diagnostics regression coverage now validates command-path export filter semantics and triage/tuning payload invariants consumed by dashboard actions.
 
+## M6.4 Retention Apply Safety Hardening Coverage
+
+- Notification runtime retention apply now supports `dryRun=true` preview execution with zero state mutation and explicit execution metadata (`executionMode`, `persisted`).
+- Retention apply updates are now atomically validated before commit so invalid escalation/export policy payloads do not partially mutate dedupe window or max-entry controls.
+- Retention apply responses now include `retention.changeImpact` to summarize would-change fields and estimated prune impact before live execution.
+- Regression tests now validate dry-run no-mutation behavior and invalid-policy atomic invariants for replay-attempt retention controls.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

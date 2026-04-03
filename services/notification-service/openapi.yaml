@@ -2905,6 +2905,10 @@ components:
     MessagingFaultManifestVerifyAttemptRetentionApplyRequest:
       type: object
       properties:
+        dryRun:
+          type: boolean
+          default: false
+          description: When true, validate and preview retention changes without persisting state.
         dedupeWindowSeconds:
           type: integer
           minimum: 30
@@ -2929,6 +2933,13 @@ components:
         retention:
           type: object
           properties:
+            executionMode:
+              type: string
+              enum: [preview, applied]
+              example: applied
+            persisted:
+              type: boolean
+              example: true
             previousDedupeWindowSeconds:
               type: integer
               example: 600
@@ -2973,6 +2984,33 @@ components:
             pruneStrategy:
               type: string
               example: drop-expired-then-oldest
+            changeImpact:
+              type: object
+              properties:
+                wouldUpdateDedupeWindowSeconds:
+                  type: boolean
+                  example: true
+                wouldUpdateMaxEntries:
+                  type: boolean
+                  example: true
+                wouldUpdateEscalationPolicy:
+                  type: boolean
+                  example: false
+                wouldUpdateEscalationExportPolicy:
+                  type: boolean
+                  example: false
+                wouldPrune:
+                  type: boolean
+                  example: true
+                estimatedPrunedByWindow:
+                  type: integer
+                  example: 2
+                estimatedPrunedByMaxEntries:
+                  type: integer
+                  example: 1
+                estimatedPrunedCount:
+                  type: integer
+                  example: 3
         telemetry:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionTelemetry"
         diagnostics:

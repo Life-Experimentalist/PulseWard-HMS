@@ -349,3 +349,5 @@ Exit criteria:
 72. M6.2 evidence checkpoint: contract and regression coverage now include ABHA transaction evidence schema checks and dashboard-consumed ABHA response invariants.
 73. M6.3 completed: operations-dashboard command panel now executes live incident handoff controls for escalation export, anomaly triage acknowledgement, retention tuning, and drill checklist automation.
 74. M6.3 evidence checkpoint: notification diagnostics regressions now validate command-path filters/payload invariants used by dashboard handoff controls, with runbook mappings updated for operator workflows.
+75. M6.4 completed: notification-service replay-attempt retention apply now supports atomic validation and `dryRun=true` preview execution with no persisted state mutation.
+76. M6.4 evidence checkpoint: regression coverage now validates dry-run no-mutation semantics and invalid-policy atomic invariants, and runbook guidance now enforces preview-before-apply retention operations.

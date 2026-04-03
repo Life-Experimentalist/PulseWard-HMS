@@ -781,6 +781,30 @@ function pruneFaultManifestVerifyAttempts(nowMs) {
   };
 }
 
+function estimateFaultManifestVerifyAttemptPrune(nowMs, dedupeWindowSeconds, maxEntries) {
+  var windowMs = Math.max(dedupeWindowSeconds, 0) * 1000;
+  var retainedEntries = 0;
+  var prunedByWindow = 0;
+
+  faultManifestVerifyAttemptCache.forEach(function (attempt) {
+    var keep = nowMs - attempt.lastSeenAtMs <= windowMs;
+    if (keep) {
+      retainedEntries += 1;
+      return;
+    }
+
+    prunedByWindow += 1;
+  });
+
+  var prunedByMaxEntries = Math.max(retainedEntries - Math.max(maxEntries, 0), 0);
+
+  return {
+    prunedByWindow: prunedByWindow,
+    prunedByMaxEntries: prunedByMaxEntries,
+    prunedCount: prunedByWindow + prunedByMaxEntries,
+  };
+}
+
 function buildFaultManifestVerifyAttemptSaturation(totalRecorded) {
   var maxEntries = Math.max(faultManifestVerifyDedupeMaxEntries, 1);
   var currentEntries = Math.max(totalRecorded, 0);
@@ -1188,7 +1212,9 @@ function getFaultManifestVerifyEscalationExportPolicy() {
   };
 }
 
-function applyFaultManifestVerifyEscalationExportPolicy(rawPolicy) {
+function applyFaultManifestVerifyEscalationExportPolicy(rawPolicy, options) {
+  var shouldCommit = !options || options.commit !== false;
+
   if (rawPolicy === undefined || rawPolicy === null) {
     return {
       changed: false,
@@ -1243,11 +1269,13 @@ function applyFaultManifestVerifyEscalationExportPolicy(rawPolicy) {
         : previousPolicy.includeRecentlyClosedByDefault,
   };
 
-  faultManifestVerifyRetentionEscalationExportEnabled = nextPolicy.enabled;
-  faultManifestVerifyRetentionEscalationExportDefaultFormat = nextPolicy.defaultFormat;
-  faultManifestVerifyRetentionEscalationExportMaxRows = nextPolicy.maxExportRows;
-  faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault =
-    nextPolicy.includeRecentlyClosedByDefault;
+  if (shouldCommit) {
+    faultManifestVerifyRetentionEscalationExportEnabled = nextPolicy.enabled;
+    faultManifestVerifyRetentionEscalationExportDefaultFormat = nextPolicy.defaultFormat;
+    faultManifestVerifyRetentionEscalationExportMaxRows = nextPolicy.maxExportRows;
+    faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault =
+      nextPolicy.includeRecentlyClosedByDefault;
+  }
 
   return {
     changed: JSON.stringify(previousPolicy) !== JSON.stringify(nextPolicy),
@@ -1362,7 +1390,9 @@ function normalizeFaultManifestVerifyMitigationNoteTypes(input, fallback) {
   return normalized.slice(0, 12);
 }
 
-function applyFaultManifestVerifyEscalationPolicy(rawPolicy) {
+function applyFaultManifestVerifyEscalationPolicy(rawPolicy, options) {
+  var shouldCommit = !options || options.commit !== false;
+
   if (rawPolicy === undefined || rawPolicy === null) {
     return {
       changed: false,
@@ -1444,17 +1474,19 @@ function applyFaultManifestVerifyEscalationPolicy(rawPolicy) {
     };
   }
 
-  faultManifestVerifyRetentionEscalationEnabled = nextPolicy.enabled;
-  faultManifestVerifyRetentionEscalationWarningUnacknowledgedAfterSeconds =
-    nextPolicy.warningUnacknowledgedEscalateAfterSeconds;
-  faultManifestVerifyRetentionEscalationCriticalUnacknowledgedAfterSeconds =
-    nextPolicy.criticalUnacknowledgedEscalateAfterSeconds;
-  faultManifestVerifyRetentionEscalationCriticalUnmitigatedAfterSeconds =
-    nextPolicy.criticalUnmitigatedEscalateAfterSeconds;
-  faultManifestVerifyRetentionEscalationMitigationNoteTypes =
-    nextPolicy.mitigationNoteTypes.slice();
-  faultManifestVerifyRetentionEscalationAutoDeescalateOnMitigation =
-    nextPolicy.autoDeescalateOnMitigation;
+  if (shouldCommit) {
+    faultManifestVerifyRetentionEscalationEnabled = nextPolicy.enabled;
+    faultManifestVerifyRetentionEscalationWarningUnacknowledgedAfterSeconds =
+      nextPolicy.warningUnacknowledgedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationCriticalUnacknowledgedAfterSeconds =
+      nextPolicy.criticalUnacknowledgedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationCriticalUnmitigatedAfterSeconds =
+      nextPolicy.criticalUnmitigatedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationMitigationNoteTypes =
+      nextPolicy.mitigationNoteTypes.slice();
+    faultManifestVerifyRetentionEscalationAutoDeescalateOnMitigation =
+      nextPolicy.autoDeescalateOnMitigation;
+  }
 
   return {
     changed: JSON.stringify(previousPolicy) !== JSON.stringify(nextPolicy),
@@ -2087,6 +2119,7 @@ function summarizeFaultManifestVerifyAttemptTelemetry() {
 function applyFaultManifestVerifyAttemptRetention(payload) {
   var previousWindow = faultManifestVerifyDedupeWindowSeconds;
   var previousMaxEntries = faultManifestVerifyDedupeMaxEntries;
+  var previousSource = faultManifestVerifyRetentionSource;
   var previousEscalationPolicy = getFaultManifestVerifyEscalationPolicy();
   var previousEscalationExportPolicy = getFaultManifestVerifyEscalationExportPolicy();
   var hasWindow = payload.dedupeWindowSeconds !== undefined && payload.dedupeWindowSeconds !== null;
@@ -2100,27 +2133,27 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
     return null;
   }
 
+  var dryRun = parseRetryBool(payload.dryRun, false);
   var pruneNow = parseRetryBool(payload.pruneNow, true);
+  var nextWindow = hasWindow
+    ? parseRetryInt(payload.dedupeWindowSeconds, previousWindow, 30, 86400)
+    : previousWindow;
+  var nextMaxEntries = hasMaxEntries
+    ? parseRetryInt(payload.maxEntries, previousMaxEntries, 50, 5000)
+    : previousMaxEntries;
 
-  if (hasWindow) {
-    faultManifestVerifyDedupeWindowSeconds = parseRetryInt(
-      payload.dedupeWindowSeconds,
-      faultManifestVerifyDedupeWindowSeconds,
-      30,
-      86400
-    );
-  }
+  var nowMs = Date.now();
+  var pruneEstimate = pruneNow
+    ? estimateFaultManifestVerifyAttemptPrune(nowMs, nextWindow, nextMaxEntries)
+    : {
+        prunedByWindow: 0,
+        prunedByMaxEntries: 0,
+        prunedCount: 0,
+      };
 
-  if (hasMaxEntries) {
-    faultManifestVerifyDedupeMaxEntries = parseRetryInt(
-      payload.maxEntries,
-      faultManifestVerifyDedupeMaxEntries,
-      50,
-      5000
-    );
-  }
-
-  var escalationPolicyResult = applyFaultManifestVerifyEscalationPolicy(payload.escalationPolicy);
+  var escalationPolicyResult = applyFaultManifestVerifyEscalationPolicy(payload.escalationPolicy, {
+    commit: false,
+  });
   if (escalationPolicyResult.error) {
     return {
       error: escalationPolicyResult.error,
@@ -2128,7 +2161,10 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
   }
 
   var escalationExportPolicyResult = applyFaultManifestVerifyEscalationExportPolicy(
-    payload.escalationExportPolicy
+    payload.escalationExportPolicy,
+    {
+      commit: false,
+    }
   );
   if (escalationExportPolicyResult.error) {
     return {
@@ -2136,22 +2172,48 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
     };
   }
 
-  faultManifestVerifyRetentionSource = "api";
+  if (!dryRun) {
+    faultManifestVerifyDedupeWindowSeconds = nextWindow;
+    faultManifestVerifyDedupeMaxEntries = nextMaxEntries;
+    faultManifestVerifyRetentionEscalationEnabled = escalationPolicyResult.policy.enabled;
+    faultManifestVerifyRetentionEscalationWarningUnacknowledgedAfterSeconds =
+      escalationPolicyResult.policy.warningUnacknowledgedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationCriticalUnacknowledgedAfterSeconds =
+      escalationPolicyResult.policy.criticalUnacknowledgedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationCriticalUnmitigatedAfterSeconds =
+      escalationPolicyResult.policy.criticalUnmitigatedEscalateAfterSeconds;
+    faultManifestVerifyRetentionEscalationMitigationNoteTypes =
+      escalationPolicyResult.policy.mitigationNoteTypes.slice();
+    faultManifestVerifyRetentionEscalationAutoDeescalateOnMitigation =
+      escalationPolicyResult.policy.autoDeescalateOnMitigation;
+    faultManifestVerifyRetentionEscalationExportEnabled = escalationExportPolicyResult.policy.enabled;
+    faultManifestVerifyRetentionEscalationExportDefaultFormat =
+      escalationExportPolicyResult.policy.defaultFormat;
+    faultManifestVerifyRetentionEscalationExportMaxRows =
+      escalationExportPolicyResult.policy.maxExportRows;
+    faultManifestVerifyRetentionEscalationExportIncludeRecentlyClosedByDefault =
+      escalationExportPolicyResult.policy.includeRecentlyClosedByDefault;
+    faultManifestVerifyRetentionSource = "api";
+  }
 
   var pruneResult = {
     prunedByWindow: 0,
     prunedByMaxEntries: 0,
     prunedCount: 0,
   };
-  if (pruneNow) {
-    pruneResult = pruneFaultManifestVerifyAttempts(Date.now());
+  if (!dryRun && pruneNow) {
+    pruneResult = pruneFaultManifestVerifyAttempts(nowMs);
   }
 
+  var resolvedSource = dryRun ? previousSource : faultManifestVerifyRetentionSource;
+
   return {
+    executionMode: dryRun ? "preview" : "applied",
+    persisted: !dryRun,
     previousDedupeWindowSeconds: previousWindow,
-    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+    dedupeWindowSeconds: nextWindow,
     previousMaxEntries: previousMaxEntries,
-    maxEntries: faultManifestVerifyDedupeMaxEntries,
+    maxEntries: nextMaxEntries,
     previousEscalationPolicy: previousEscalationPolicy,
     escalationPolicy: escalationPolicyResult.policy,
     escalationPolicyChanged: escalationPolicyResult.changed,
@@ -2162,8 +2224,18 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
     prunedByWindow: pruneResult.prunedByWindow,
     prunedByMaxEntries: pruneResult.prunedByMaxEntries,
     prunedCount: pruneResult.prunedCount,
-    source: faultManifestVerifyRetentionSource,
+    source: resolvedSource,
     pruneStrategy: "drop-expired-then-oldest",
+    changeImpact: {
+      wouldUpdateDedupeWindowSeconds: nextWindow !== previousWindow,
+      wouldUpdateMaxEntries: nextMaxEntries !== previousMaxEntries,
+      wouldUpdateEscalationPolicy: escalationPolicyResult.changed,
+      wouldUpdateEscalationExportPolicy: escalationExportPolicyResult.changed,
+      wouldPrune: pruneNow && pruneEstimate.prunedCount > 0,
+      estimatedPrunedByWindow: pruneEstimate.prunedByWindow,
+      estimatedPrunedByMaxEntries: pruneEstimate.prunedByMaxEntries,
+      estimatedPrunedCount: pruneEstimate.prunedCount,
+    },
     telemetry: summarizeFaultManifestVerifyAttemptTelemetry(),
   };
 }
@@ -4060,11 +4132,9 @@ router.post(
       return;
     }
 
-    maybeCaptureFaultManifestVerifySaturationTrend(
-      "retention-apply",
-      applied.telemetry.saturation,
-      true
-    );
+    if (applied.persisted) {
+      maybeCaptureFaultManifestVerifySaturationTrend("retention-apply", applied.telemetry.saturation, true);
+    }
     var trend = collectFaultManifestVerifyAttemptSaturationTrend({
       windowMinutes: req.query.windowMinutes,
       limit: req.query.limit,
@@ -4082,6 +4152,8 @@ router.post(
     res.json({
       appliedAt: new Date().toISOString(),
       retention: {
+        executionMode: applied.executionMode,
+        persisted: applied.persisted,
         previousDedupeWindowSeconds: applied.previousDedupeWindowSeconds,
         dedupeWindowSeconds: applied.dedupeWindowSeconds,
         previousMaxEntries: applied.previousMaxEntries,
@@ -4098,6 +4170,7 @@ router.post(
         prunedCount: applied.prunedCount,
         source: applied.source,
         pruneStrategy: applied.pruneStrategy,
+        changeImpact: applied.changeImpact,
       },
       telemetry: applied.telemetry,
       diagnostics: {

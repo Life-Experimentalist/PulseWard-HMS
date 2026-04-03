@@ -20,7 +20,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=24`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=json&state=escalated-warning-unacknowledged,escalated-critical-unacknowledged&limit=100`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (set `acknowledge=true`, `acknowledgedBy`, and optional mitigation note)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds`/`maxEntries` and optional `escalationPolicy`/`escalationExportPolicy`; keep `pruneNow=true` for immediate cleanup)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (run `dryRun=true` preview first, review `retention.changeImpact`, then execute live apply with bounded `dedupeWindowSeconds`/`maxEntries` and optional `escalationPolicy`/`escalationExportPolicy`)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 - If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
@@ -61,6 +61,7 @@
 	- `Apply retention and escalation policy tune` -> `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
 	- `Run ABHA and connector drill checklist` -> bounded GET reachability checks across notification and ABHA telemetry endpoints
 - Command panel safeguards:
+	- Execute retention tuning as a two-step flow: preview (`dryRun=true`) then persisted apply (`dryRun=false`) only after operator confirmation.
 	- Keep retention apply bounded and avoid immediate prune by default (`pruneNow=false`) during shift handoff.
 	- Keep anomaly notes operational only and exclude patient-identifiable details.
 
@@ -89,7 +90,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=csv&acknowledgementSlaStatus=breached,acknowledged-breached&limit=200`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (record acknowledgement and weekly drill note with owner)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window/cache size, escalation thresholds, and escalation export limits)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds with `dryRun=true`, then run persisted apply and confirm `retention.persisted=true`)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 	- Confirm anomaly key transitions (`sustained-warning`, `sustained-critical`, `accelerating-utilization`) and capture clearance evidence after mitigation.
 	- Confirm escalation policy ordering (`critical` timeout <= `warning` timeout) and verify deescalation on mitigation note types.

@@ -1156,6 +1156,86 @@ describe("notification webhook delivery diagnostics", () => {
     ).toBe(true);
     expect(typeof closureStatus.body.telemetry.recentlyClosedAnomalies[0].closedAt).toBe("string");
 
+    const dryRunPreview = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply?windowMinutes=60&limit=200",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dryRun: true,
+          dedupeWindowSeconds: 900,
+          maxEntries: 250,
+          pruneNow: true,
+        }),
+      }
+    );
+
+    expect(dryRunPreview.status).toBe(200);
+    expect(dryRunPreview.body.retention.executionMode).toBe("preview");
+    expect(dryRunPreview.body.retention.persisted).toBe(false);
+    expect(dryRunPreview.body.retention.prunedCount).toBe(0);
+    expect(dryRunPreview.body.retention.source).toBe(closureStatus.body.retention.source);
+    expect(dryRunPreview.body.retention.changeImpact.wouldUpdateDedupeWindowSeconds).toBe(true);
+    expect(dryRunPreview.body.retention.changeImpact.wouldUpdateMaxEntries).toBe(true);
+
+    const retentionAfterDryRun = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(retentionAfterDryRun.status).toBe(200);
+    expect(retentionAfterDryRun.body.retention.dedupeWindowSeconds).toBe(
+      closureStatus.body.retention.dedupeWindowSeconds
+    );
+    expect(retentionAfterDryRun.body.retention.maxEntries).toBe(
+      closureStatus.body.retention.maxEntries
+    );
+    expect(retentionAfterDryRun.body.retention.source).toBe(closureStatus.body.retention.source);
+
+    const invalidEscalationExportPolicyApply = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dedupeWindowSeconds: 1200,
+          maxEntries: 125,
+          escalationExportPolicy: {
+            defaultFormat: "xml",
+          },
+        }),
+      }
+    );
+
+    expect(invalidEscalationExportPolicyApply.status).toBe(400);
+    expect(invalidEscalationExportPolicyApply.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_EXPORT_POLICY_INVALID"
+    );
+
+    const retentionAfterInvalidApply = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(retentionAfterInvalidApply.status).toBe(200);
+    expect(retentionAfterInvalidApply.body.retention.dedupeWindowSeconds).toBe(
+      retentionAfterDryRun.body.retention.dedupeWindowSeconds
+    );
+    expect(retentionAfterInvalidApply.body.retention.maxEntries).toBe(
+      retentionAfterDryRun.body.retention.maxEntries
+    );
+    expect(retentionAfterInvalidApply.body.retention.source).toBe(
+      retentionAfterDryRun.body.retention.source
+    );
+
     const escalationPolicyInvalid = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
       {

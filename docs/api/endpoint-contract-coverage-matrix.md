@@ -612,6 +612,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationResolvedAt` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationResolvedAt` property type drifts from OpenAPI baseline.
 
+## M6.48 Escalation-Export Item Escalation-Due-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation due-at anchors for handoff timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationDueAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationDueAt` property type drifts from OpenAPI baseline.
+
+## M6.49 Escalation-Export Item First-Detected-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item first-detected-at anchors for anomaly timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.firstDetectedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `firstDetectedAt` property type drifts from OpenAPI baseline.
+
+## M6.50 Escalation-Export Item Last-Detected-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item last-detected-at anchors for anomaly timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.lastDetectedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `lastDetectedAt` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

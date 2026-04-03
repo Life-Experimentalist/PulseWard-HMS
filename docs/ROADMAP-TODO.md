@@ -533,3 +533,9 @@ Exit criteria:
 208. M6.70 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export policy `maxExportRows` schema-property type drifts from OpenAPI baseline.
 209. M6.71 completed: strict contract checker now enforces escalation-export policy include-recently-closed-by-default anchor for `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault` boolean compatibility.
 210. M6.71 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export policy `includeRecentlyClosedByDefault` schema-property type drifts from OpenAPI baseline.
+211. M6.72 completed: strict contract checker now enforces escalation-export response policy-property anchor for `MessagingFaultManifestVerifyAttemptEscalationExportResponse.policy` presence compatibility.
+212. M6.72 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export response `policy` property is removed from OpenAPI baseline.
+213. M6.73 completed: strict contract checker now enforces escalation-export response filters-property anchor for `MessagingFaultManifestVerifyAttemptEscalationExportResponse.filters` presence compatibility.
+214. M6.73 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export response `filters` property is removed from OpenAPI baseline.
+215. M6.74 completed: strict contract checker now enforces escalation-export response diagnostics-property anchor for `MessagingFaultManifestVerifyAttemptEscalationExportResponse.diagnostics` presence compatibility.
+216. M6.74 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export response `diagnostics` property is removed from OpenAPI baseline.

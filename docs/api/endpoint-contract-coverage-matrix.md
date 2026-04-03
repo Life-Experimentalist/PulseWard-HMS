@@ -780,6 +780,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export policy `includeRecentlyClosedByDefault` property type drifts from OpenAPI baseline.
 
+## M6.72 Escalation-Export Response Policy Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response policy-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.policy` property presence
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `policy` property is removed from OpenAPI baseline.
+
+## M6.73 Escalation-Export Response Filters Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response filters-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.filters` property presence
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `filters` property is removed from OpenAPI baseline.
+
+## M6.74 Escalation-Export Response Diagnostics Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response diagnostics-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.diagnostics` property presence
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `diagnostics` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -348,6 +348,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionTrendEndpoint schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionAnomalyTriageEndpointTemplate schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionEscalationExportEndpointTemplate schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy enabled schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -2336,6 +2345,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionTrendEndpoint type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export diagnostics retentionAnomalyTriageEndpointTemplate type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics:[\s\S]*?retentionAnomalyTriageEndpointTemplate:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export diagnostics retentionAnomalyTriageEndpointTemplate type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionAnomalyTriageEndpointTemplate schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionAnomalyTriageEndpointTemplate type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export diagnostics retentionEscalationExportEndpointTemplate type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics:[\s\S]*?retentionEscalationExportEndpointTemplate:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export diagnostics retentionEscalationExportEndpointTemplate type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics retentionEscalationExportEndpointTemplate schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionEscalationExportEndpointTemplate type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy enabled type drifts via policy schema contract", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?enabled:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export policy schema enabled type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy enabled schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled type expected boolean got string"
         );
       }
     );

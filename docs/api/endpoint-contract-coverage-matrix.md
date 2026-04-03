@@ -738,6 +738,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionTrendEndpoint` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export diagnostics `retentionTrendEndpoint` property type drifts from OpenAPI baseline.
 
+## M6.66 Escalation-Export Diagnostics Anomaly-Triage-Template Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export diagnostics anomaly-triage-template anchors for operator handoff metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionAnomalyTriageEndpointTemplate` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export diagnostics `retentionAnomalyTriageEndpointTemplate` property type drifts from OpenAPI baseline.
+
+## M6.67 Escalation-Export Diagnostics Escalation-Export-Template Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export diagnostics escalation-export-template anchors for operator handoff metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportDiagnostics.retentionEscalationExportEndpointTemplate` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export diagnostics `retentionEscalationExportEndpointTemplate` property type drifts from OpenAPI baseline.
+
+## M6.68 Escalation-Export Policy Enabled Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export policy enabled anchors for export policy compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export policy `enabled` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

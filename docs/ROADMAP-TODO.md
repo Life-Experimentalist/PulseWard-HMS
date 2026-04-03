@@ -807,3 +807,13 @@ Exit criteria:
 482. M6.207 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `dueAt` schema-property type drifts from OpenAPI baseline.
 483. M6.208 completed: strict contract checker now enforces anomaly-escalation-state action-required anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.actionRequired` boolean compatibility.
 484. M6.208 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `actionRequired` schema-property type drifts from OpenAPI baseline.
+485. M6.209 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla target-seconds anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.targetSeconds` integer compatibility.
+486. M6.209 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `targetSeconds` schema-property type drifts from OpenAPI baseline.
+487. M6.210 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla elapsed-seconds anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.elapsedSeconds` integer compatibility.
+488. M6.210 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `elapsedSeconds` schema-property type drifts from OpenAPI baseline.
+489. M6.211 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla remaining-seconds anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.remainingSeconds` integer compatibility.
+490. M6.211 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `remainingSeconds` schema-property type drifts from OpenAPI baseline.
+491. M6.212 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla breach-seconds anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.breachSeconds` integer compatibility.
+492. M6.212 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `breachSeconds` schema-property type drifts from OpenAPI baseline.
+493. M6.213 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla measured-from anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredFrom` string compatibility.
+494. M6.213 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredFrom` schema-property type drifts from OpenAPI baseline.

@@ -1756,6 +1756,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.actionRequired` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `actionRequired` property type drifts from OpenAPI baseline.
 
+## M6.209 Anomaly-Escalation-Acknowledgement-Sla Target-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla target-seconds anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.targetSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `targetSeconds` property type drifts from OpenAPI baseline.
+
+## M6.210 Anomaly-Escalation-Acknowledgement-Sla Elapsed-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla elapsed-seconds anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.elapsedSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `elapsedSeconds` property type drifts from OpenAPI baseline.
+
+## M6.211 Anomaly-Escalation-Acknowledgement-Sla Remaining-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla remaining-seconds anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.remainingSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `remainingSeconds` property type drifts from OpenAPI baseline.
+
+## M6.212 Anomaly-Escalation-Acknowledgement-Sla Breach-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla breach-seconds anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.breachSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `breachSeconds` property type drifts from OpenAPI baseline.
+
+## M6.213 Anomaly-Escalation-Acknowledgement-Sla Measured-From Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla measured-from anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredFrom` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredFrom` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

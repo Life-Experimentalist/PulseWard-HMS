@@ -645,6 +645,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrend summary schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrend snapshots schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary windowMinutes schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary requestedLimit schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4811,6 +4820,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "missing schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrend.summary"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshots type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:[\s\S]*?snapshots:[\s\S]*?type:\s*)array/,
+          "$1boolean",
+          "retention saturation trend snapshots type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrend snapshots schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrend.snapshots type expected array got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary windowMinutes type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:[\s\S]*?windowMinutes:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention saturation trend summary windowMinutes type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary windowMinutes schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.windowMinutes type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary requestedLimit type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary:[\s\S]*?requestedLimit:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "retention saturation trend summary requestedLimit type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary requestedLimit schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.requestedLimit type expected integer got boolean"
         );
       }
     );

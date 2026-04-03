@@ -906,6 +906,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.latestSaturation` property presence
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `latestSaturation` property is removed from OpenAPI baseline.
 
+## M6.90 Retention-Apply Response Retention Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply response retention anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.retention` type `object`
+- Mutation-based parity regressions now prove strict-check failure when retention-apply response `retention` property type drifts from OpenAPI baseline.
+
+## M6.91 Retention-Policy Dedupe-Window-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-policy dedupe-window-seconds anchors for policy payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.dedupeWindowSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-policy `dedupeWindowSeconds` property type drifts from OpenAPI baseline.
+
+## M6.92 Retention-Policy Max-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-policy max-entries anchors for policy payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.maxEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-policy `maxEntries` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

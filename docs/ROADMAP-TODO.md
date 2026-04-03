@@ -569,3 +569,9 @@ Exit criteria:
 244. M6.88 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend response `summary` property is removed from OpenAPI baseline.
 245. M6.89 completed: strict contract checker now enforces retention-saturation-trend response latest-saturation-property anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.latestSaturation` presence compatibility.
 246. M6.89 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend response `latestSaturation` property is removed from OpenAPI baseline.
+247. M6.90 completed: strict contract checker now enforces retention-apply response retention anchor for `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.retention` object compatibility.
+248. M6.90 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply response `retention` schema-property type drifts from OpenAPI baseline.
+249. M6.91 completed: strict contract checker now enforces retention-policy dedupe-window-seconds anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.dedupeWindowSeconds` integer compatibility.
+250. M6.91 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `dedupeWindowSeconds` schema-property type drifts from OpenAPI baseline.
+251. M6.92 completed: strict contract checker now enforces retention-policy max-entries anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.maxEntries` integer compatibility.
+252. M6.92 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `maxEntries` schema-property type drifts from OpenAPI baseline.

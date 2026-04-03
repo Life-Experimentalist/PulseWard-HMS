@@ -57,17 +57,17 @@ This section formalizes slice sizing so milestone progress stays meaningful and 
 
 ### Module Slice Budget (Grouped Planning View)
 
-| Milestone | Atomic History (Observed) | Grouped Execution Waves (Target/Used) | Status |
-| --- | --- | --- | --- |
-| M1 | 6 slices | 2-3 grouped waves (used: 3) | Completed |
-| M2 | 5 slices | 2-3 grouped waves (used: 3) | Completed |
-| M3 | 6 slices | 3-4 grouped waves (used: 4) | Completed |
-| M4 | 4 slices | 2-3 grouped waves (used: 3) | Completed |
-| M5 | 20 slices | 4 grouped waves (`M5-A` to `M5-D`) | Completed |
-| M6 | 41 slices so far | 8-10 grouped waves (used so far: 9) | In progress |  
-| M7 | planned | 8 grouped waves | Pending |
-| M8 | planned | 6 grouped waves | Pending |
-| M9 | planned | 5 grouped waves | Pending |
+| Milestone | Atomic History (Observed) | Grouped Execution Waves (Target/Used) | Status      |
+| --------- | ------------------------- | ------------------------------------- | ----------- |
+| M1        | 6 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
+| M2        | 5 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
+| M3        | 6 slices                  | 3-4 grouped waves (used: 4)           | Completed   |
+| M4        | 4 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
+| M5        | 20 slices                 | 4 grouped waves (`M5-A` to `M5-D`)    | Completed   |
+| M6        | 41 slices so far          | 8-10 grouped waves (used so far: 9)   | In progress |
+| M7        | planned                   | 8 grouped waves                       | Pending     |
+| M8        | planned                   | 6 grouped waves                       | Pending     |
+| M9        | planned                   | 5 grouped waves                       | Pending     |
 
 ### Remaining Effort Estimate (From Current State)
 
@@ -479,3 +479,9 @@ Exit criteria:
 154. M6.43 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationSeverity` schema-property type drifts from OpenAPI baseline.
 155. M6.44 completed: strict contract checker now enforces escalation-export item escalation-trigger anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationTrigger` string compatibility.
 156. M6.44 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationTrigger` schema-property type drifts from OpenAPI baseline.
+157. M6.45 completed: strict contract checker now enforces escalation-export item escalation pending-since anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationPendingSince` string compatibility.
+158. M6.45 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationPendingSince` schema-property type drifts from OpenAPI baseline.
+159. M6.46 completed: strict contract checker now enforces escalation-export item escalation escalated-at anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationEscalatedAt` string compatibility.
+160. M6.46 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationEscalatedAt` schema-property type drifts from OpenAPI baseline.
+161. M6.47 completed: strict contract checker now enforces escalation-export item escalation resolved-at anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationResolvedAt` string compatibility.
+162. M6.47 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationResolvedAt` schema-property type drifts from OpenAPI baseline.

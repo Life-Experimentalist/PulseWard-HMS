@@ -591,6 +591,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationTrigger` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationTrigger` property type drifts from OpenAPI baseline.
 
+## M6.45 Escalation-Export Item Escalation-Pending-Since Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation pending-since anchors for handoff timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationPendingSince` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationPendingSince` property type drifts from OpenAPI baseline.
+
+## M6.46 Escalation-Export Item Escalation-Escalated-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation escalated-at anchors for handoff timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationEscalatedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationEscalatedAt` property type drifts from OpenAPI baseline.
+
+## M6.47 Escalation-Export Item Escalation-Resolved-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation resolved-at anchors for handoff timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationResolvedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationResolvedAt` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

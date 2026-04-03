@@ -609,6 +609,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageNote mitigationEvidenceRef schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledged schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledgedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledgedBy schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4511,6 +4520,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageNote.mitigationEvidenceRef type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage state acknowledged type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageState:[\s\S]*?acknowledged:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "anomaly triage state acknowledged type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledged schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageState.acknowledged type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage state acknowledgedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageState:[\s\S]*?acknowledgedAt:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly triage state acknowledgedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledgedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageState.acknowledgedAt type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage state acknowledgedBy type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageState:[\s\S]*?acknowledgedBy:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly triage state acknowledgedBy type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState acknowledgedBy schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageState.acknowledgedBy type expected string got boolean"
         );
       }
     );

@@ -673,6 +673,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage:
+    post:
+      summary: Acknowledge replay-attempt saturation anomaly and append triage note
+      parameters:
+        - name: anomalyInstanceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest"
+      responses:
+        "200":
+          description: Updated anomaly triage state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageResponse"
+        "400":
+          description: Invalid anomaly triage payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
+        "404":
+          description: Anomaly instance not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
   /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply:
     post:
       summary: Apply retention tuning controls for manifest verification replay-attempt audit history
@@ -1602,6 +1637,9 @@ components:
         retentionSaturationTrendPath:
           type: string
           example: telemetry.saturationTrend
+        retentionAnomalyTriageEndpointTemplate:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1724,6 +1762,9 @@ components:
         retentionSaturationTrendPath:
           type: string
           example: telemetry.saturationTrend
+        retentionAnomalyTriageEndpointTemplate:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1788,6 +1829,9 @@ components:
         retentionSaturationTrendPath:
           type: string
           example: telemetry.saturationTrend
+        retentionAnomalyTriageEndpointTemplate:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultManifestVerifyAttemptExportResponse:
       type: object
       properties:
@@ -1882,6 +1926,8 @@ components:
           nullable: true
           enum: [warning, critical]
           example: warning
+        anomalyTracking:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary"
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:
       type: object
       properties:
@@ -1972,6 +2018,8 @@ components:
           nullable: true
           enum: [warning, critical]
           example: warning
+        anomalyTracking:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary"
     MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:
       type: object
       properties:
@@ -1989,6 +2037,140 @@ components:
         evidence:
           type: object
           additionalProperties: true
+        anomalyInstanceId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, cleared]
+          example: active
+        firstDetectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastDetectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        triage:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageState"
+    MessagingFaultManifestVerifyAttemptAnomalyTriageNote:
+      type: object
+      properties:
+        noteId:
+          type: string
+          format: uuid
+        noteType:
+          type: string
+          example: mitigation-plan
+        content:
+          type: string
+          example: Capacity tuning planned in this shift. Applying maxEntries increase after drill.
+        createdAt:
+          type: string
+          format: date-time
+        author:
+          type: string
+          example: ops-oncall@pulseward
+    MessagingFaultManifestVerifyAttemptAnomalyTriageState:
+      type: object
+      properties:
+        acknowledged:
+          type: boolean
+          example: false
+        acknowledgedAt:
+          type: string
+          format: date-time
+          nullable: true
+        acknowledgedBy:
+          type: string
+          nullable: true
+          example: ops-oncall@pulseward
+        notesCount:
+          type: integer
+          example: 1
+        latestNote:
+          allOf:
+            - $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageNote"
+          nullable: true
+    MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary:
+      type: object
+      properties:
+        statePersistence:
+          type: string
+          enum: [memory-only]
+          example: memory-only
+        retainedAnomalyInstances:
+          type: integer
+          example: 3
+        retainedActionEntries:
+          type: integer
+          example: 5
+        activeCount:
+          type: integer
+          example: 2
+        acknowledgedActiveCount:
+          type: integer
+          example: 1
+        unacknowledgedActiveCount:
+          type: integer
+          example: 1
+        noteCount:
+          type: integer
+          example: 4
+    MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:
+      type: object
+      properties:
+        acknowledge:
+          type: boolean
+          default: false
+        acknowledgedBy:
+          type: string
+          nullable: true
+          example: ops-oncall@pulseward
+        note:
+          type: string
+          nullable: true
+          maxLength: 4000
+          example: Capacity tuning planned in this shift. Applying maxEntries increase after drill.
+        noteType:
+          type: string
+          nullable: true
+          example: mitigation-plan
+        noteAuthor:
+          type: string
+          nullable: true
+          example: ops-oncall@pulseward
+    MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:
+      type: object
+      properties:
+        updatedAt:
+          type: string
+          format: date-time
+        anomaly:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly"
+        audit:
+          type: object
+          properties:
+            actionId:
+              type: string
+              format: uuid
+            actionType:
+              type: string
+              enum: [acknowledge, note-only, acknowledge-and-note]
+              example: acknowledge-and-note
+        diagnostics:
+          type: object
+          properties:
+            retentionEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+            retentionTrendEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend
+            retentionAnomalyTriageEndpointTemplate:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:
       type: object
       properties:
@@ -2039,6 +2221,9 @@ components:
             retentionSaturationTrendPath:
               type: string
               example: snapshots
+            retentionAnomalyTriageEndpointTemplate:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultManifestVerifyAttemptRetentionSaturation:
       type: object
       properties:
@@ -2095,6 +2280,9 @@ components:
         retentionSaturationTrendPath:
           type: string
           example: telemetry.saturationTrend
+        retentionAnomalyTriageEndpointTemplate:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultManifestVerifyAttemptRetentionStatusResponse:
       type: object
       properties:
@@ -2186,6 +2374,9 @@ components:
             retentionSaturationTrendPath:
               type: string
               example: telemetry.saturationTrend
+            retentionAnomalyTriageEndpointTemplate:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

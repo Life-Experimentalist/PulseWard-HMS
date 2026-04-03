@@ -18,6 +18,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint={fingerprint}&duplicateSuppressed=true&format=csv&limit=50`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=24`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (set `acknowledge=true`, `acknowledgedBy`, and optional mitigation note)
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds` and/or `maxEntries`; keep `pruneNow=true` for immediate cleanup)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
@@ -27,6 +28,8 @@
 - If anomaly key `sustained-warning` is present, schedule same-shift retention tuning and verify anomaly clearance in the next trend sample.
 - If anomaly key `sustained-critical` is present, execute immediate retention correction, open incident bridge, and archive anomaly evidence payloads.
 - If anomaly key `accelerating-utilization` is present, apply preemptive capacity tuning before crossing sustained-critical thresholds.
+- If any active anomaly remains unacknowledged, apply triage acknowledgement using `anomalyInstanceId` and attach mitigation owner in the note before shift handoff.
+- Keep triage notes operational only; do not include patient identifiers or protected health details.
 
 ## Weekly checks
 
@@ -48,9 +51,11 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&format=json&limit=100`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (record acknowledgement and weekly drill note with owner)
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window and cache size)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 	- Confirm anomaly key transitions (`sustained-warning`, `sustained-critical`, `accelerating-utilization`) and capture clearance evidence after mitigation.
+	- Confirm triage note hygiene (`acknowledgedBy`, mitigation summary, timestamp) and no PHI content.
 
 ## Incident handling
 
@@ -79,6 +84,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?format={json|csv}`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/retention/apply`

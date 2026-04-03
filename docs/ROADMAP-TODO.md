@@ -333,4 +333,6 @@ Exit criteria:
 56. M5.15 evidence checkpoint: regression coverage now validates trend window/limit semantics, trend diagnostics links, and trend snapshot payload fields.
 57. M5.16 completed: replay-attempt saturation trend summaries now expose anomaly flags for sustained warning/critical and accelerating-utilization risk.
 58. M5.16 evidence checkpoint: regression coverage now validates anomaly keys, severity levels, and operator guidance across retention telemetry and trend summaries.
-59. M5.17 active next slice: add replay-attempt anomaly acknowledgement and triage-note tracking controls.
+59. M5.17 completed: replay-attempt anomaly outputs now include machine-readable anomaly instance identifiers with acknowledgement and triage-note tracking controls.
+60. M5.17 evidence checkpoint: regression coverage now validates anomaly acknowledgement updates, triage-note append flows, and 400/404 validation guardrails.
+61. M5.18 active next slice: add replay-attempt anomaly lifecycle closure and escalation policy automation controls.

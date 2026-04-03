@@ -103,6 +103,38 @@ var faultManifestVerifyRetentionAnomalyAccelerationDeltaPercent = parseRetryInt(
   1,
   25
 );
+var faultManifestVerifyRetentionAnomalyInstanceMaxEntries = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_INSTANCE_MAX,
+  500,
+  50,
+  5000
+);
+var faultManifestVerifyRetentionAnomalyActionMaxEntries = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_ACTION_MAX,
+  1000,
+  100,
+  10000
+);
+var faultManifestVerifyRetentionAnomalyRetentionWindowSeconds = parseRetryInt(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_RETENTION_WINDOW_SECONDS,
+  86400,
+  300,
+  604800
+);
+var faultManifestVerifyRetentionAnomalyNoteMaxLength = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_NOTE_MAX_LENGTH,
+  1000,
+  64,
+  4000
+);
+var faultManifestVerifyRetentionAnomalyNotesPerInstanceMax = parseRetryInt(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_NOTES_PER_INSTANCE_MAX,
+  20,
+  1,
+  100
+);
 if (
   faultManifestVerifyRetentionSaturationCriticalPercent <=
   faultManifestVerifyRetentionSaturationWarningPercent
@@ -116,8 +148,12 @@ var faultManifestVerifyRetentionSource =
   faultManifestVerifyRetentionWindowEnvValue || faultManifestVerifyRetentionMaxEntriesEnvValue
     ? "env"
     : "default";
+var faultManifestVerifyAnomalyTriageEndpointTemplate =
+  "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage";
 var faultManifestVerifyAttemptCache = [];
 var faultManifestVerifyRetentionSaturationTrendSnapshots = [];
+var faultManifestVerifyAnomalyInstances = [];
+var faultManifestVerifyAnomalyActions = [];
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -762,6 +798,7 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
     trendDirection: "flat",
     anomalies: [],
     highestAnomalySeverity: null,
+    anomalyTracking: null,
   };
 
   if (totalInWindow > 0) {
@@ -802,8 +839,9 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
   }
 
   var anomalies = evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshotsInWindow);
-  summary.anomalies = anomalies;
-  summary.highestAnomalySeverity = getHighestFaultManifestVerifyAnomalySeverity(anomalies);
+  summary.anomalies = attachFaultManifestVerifyAnomalyTracking(summary, anomalies);
+  summary.highestAnomalySeverity = getHighestFaultManifestVerifyAnomalySeverity(summary.anomalies);
+  summary.anomalyTracking = buildFaultManifestVerifyAnomalyTrackingSummary();
 
   return {
     summary: summary,
@@ -845,7 +883,9 @@ function evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshots)
     summary.latestAlertLevel === "warning" &&
     totalSnapshots >= faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots
   ) {
-    var warningTail = snapshots.slice(-faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots);
+    var warningTail = snapshots.slice(
+      -faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots
+    );
     var sustainedWarning = warningTail.every(function (snapshot) {
       return snapshot.alertLevel === "warning";
     });
@@ -868,7 +908,9 @@ function evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshots)
     summary.latestAlertLevel === "critical" &&
     totalSnapshots >= faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots
   ) {
-    var criticalTail = snapshots.slice(-faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots);
+    var criticalTail = snapshots.slice(
+      -faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots
+    );
     var sustainedCritical = criticalTail.every(function (snapshot) {
       return snapshot.alertLevel === "critical";
     });
@@ -916,6 +958,283 @@ function evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshots)
   }
 
   return anomalies;
+}
+
+function pruneFaultManifestVerifyAnomalyTracking(nowMs) {
+  var retentionWindowMs = faultManifestVerifyRetentionAnomalyRetentionWindowSeconds * 1000;
+
+  faultManifestVerifyAnomalyInstances = faultManifestVerifyAnomalyInstances.filter(function (item) {
+    return nowMs - item.lastUpdatedAtMs <= retentionWindowMs;
+  });
+
+  faultManifestVerifyAnomalyInstances.sort(function (left, right) {
+    return left.lastUpdatedAtMs - right.lastUpdatedAtMs;
+  });
+
+  while (
+    faultManifestVerifyAnomalyInstances.length > faultManifestVerifyRetentionAnomalyInstanceMaxEntries
+  ) {
+    faultManifestVerifyAnomalyInstances.shift();
+  }
+
+  faultManifestVerifyAnomalyActions = faultManifestVerifyAnomalyActions.filter(function (item) {
+    return nowMs - item.createdAtMs <= retentionWindowMs;
+  });
+
+  while (
+    faultManifestVerifyAnomalyActions.length > faultManifestVerifyRetentionAnomalyActionMaxEntries
+  ) {
+    faultManifestVerifyAnomalyActions.shift();
+  }
+}
+
+function buildFaultManifestVerifyAnomalyTrackingSummary() {
+  var activeCount = 0;
+  var acknowledgedActiveCount = 0;
+  var noteCount = 0;
+
+  faultManifestVerifyAnomalyInstances.forEach(function (item) {
+    noteCount += Array.isArray(item.notes) ? item.notes.length : 0;
+    if (item.status !== "active") {
+      return;
+    }
+
+    activeCount += 1;
+    if (item.triage && item.triage.acknowledged) {
+      acknowledgedActiveCount += 1;
+    }
+  });
+
+  return {
+    statePersistence: "memory-only",
+    retainedAnomalyInstances: faultManifestVerifyAnomalyInstances.length,
+    retainedActionEntries: faultManifestVerifyAnomalyActions.length,
+    activeCount: activeCount,
+    acknowledgedActiveCount: acknowledgedActiveCount,
+    unacknowledgedActiveCount: Math.max(activeCount - acknowledgedActiveCount, 0),
+    noteCount: noteCount,
+  };
+}
+
+function findFaultManifestVerifyAnomalyInstanceByKey(key) {
+  for (var index = 0; index < faultManifestVerifyAnomalyInstances.length; index += 1) {
+    if (faultManifestVerifyAnomalyInstances[index].key === key) {
+      return faultManifestVerifyAnomalyInstances[index];
+    }
+  }
+
+  return null;
+}
+
+function findFaultManifestVerifyAnomalyInstanceById(anomalyInstanceId) {
+  for (var index = 0; index < faultManifestVerifyAnomalyInstances.length; index += 1) {
+    if (faultManifestVerifyAnomalyInstances[index].anomalyInstanceId === anomalyInstanceId) {
+      return faultManifestVerifyAnomalyInstances[index];
+    }
+  }
+
+  return null;
+}
+
+function buildFaultManifestVerifyAnomalyTriageSnapshot(instance) {
+  return {
+    acknowledged: Boolean(instance.triage && instance.triage.acknowledged),
+    acknowledgedAt: instance.triage ? instance.triage.acknowledgedAt : null,
+    acknowledgedBy: instance.triage ? instance.triage.acknowledgedBy : null,
+    notesCount: Array.isArray(instance.notes) ? instance.notes.length : 0,
+    latestNote:
+      Array.isArray(instance.notes) && instance.notes.length > 0
+        ? instance.notes[instance.notes.length - 1]
+        : null,
+  };
+}
+
+function buildFaultManifestVerifyTrackedAnomaly(anomaly, instance) {
+  return {
+    key: anomaly.key,
+    severity: anomaly.severity,
+    recommendedAction: anomaly.recommendedAction,
+    evidence: anomaly.evidence,
+    anomalyInstanceId: instance.anomalyInstanceId,
+    status: instance.status,
+    firstDetectedAt: instance.firstDetectedAt,
+    lastDetectedAt: instance.lastDetectedAt,
+    triage: buildFaultManifestVerifyAnomalyTriageSnapshot(instance),
+  };
+}
+
+function attachFaultManifestVerifyAnomalyTracking(summary, anomalies) {
+  var nowMs = Date.now();
+  var nowIso = new Date(nowMs).toISOString();
+  pruneFaultManifestVerifyAnomalyTracking(nowMs);
+
+  var activeKeys = {};
+  var trackedAnomalies = anomalies.map(function (anomaly) {
+    activeKeys[anomaly.key] = true;
+    var existing = findFaultManifestVerifyAnomalyInstanceByKey(anomaly.key);
+
+    if (!existing) {
+      existing = {
+        anomalyInstanceId: randomUUID(),
+        key: anomaly.key,
+        status: "active",
+        firstDetectedAt: nowIso,
+        lastDetectedAt: nowIso,
+        lastUpdatedAtMs: nowMs,
+        triage: {
+          acknowledged: false,
+          acknowledgedAt: null,
+          acknowledgedBy: null,
+        },
+        notes: [],
+      };
+      faultManifestVerifyAnomalyInstances.push(existing);
+    } else if (existing.status === "cleared") {
+      existing.status = "active";
+      existing.firstDetectedAt = nowIso;
+      existing.triage.acknowledged = false;
+      existing.triage.acknowledgedAt = null;
+      existing.triage.acknowledgedBy = null;
+      existing.notes = [];
+    }
+
+    existing.severity = anomaly.severity;
+    existing.recommendedAction = anomaly.recommendedAction;
+    existing.evidence = anomaly.evidence;
+    existing.latestAlertLevel = summary.latestAlertLevel;
+    existing.trendDirection = summary.trendDirection;
+    existing.windowMinutes = summary.windowMinutes;
+    existing.lastDetectedAt = nowIso;
+    existing.lastUpdatedAtMs = nowMs;
+
+    return buildFaultManifestVerifyTrackedAnomaly(anomaly, existing);
+  });
+
+  faultManifestVerifyAnomalyInstances.forEach(function (instance) {
+    if (instance.status === "active" && !activeKeys[instance.key]) {
+      instance.status = "cleared";
+      instance.lastUpdatedAtMs = nowMs;
+    }
+  });
+
+  pruneFaultManifestVerifyAnomalyTracking(nowMs);
+  return trackedAnomalies;
+}
+
+function recordFaultManifestVerifyAnomalyAction(actionType, anomalyInstanceId, actor, note) {
+  var nowMs = Date.now();
+  var entry = {
+    actionId: randomUUID(),
+    actionType: actionType,
+    anomalyInstanceId: anomalyInstanceId,
+    actor: actor || null,
+    noteId: note ? note.noteId : null,
+    createdAt: new Date(nowMs).toISOString(),
+    createdAtMs: nowMs,
+  };
+
+  faultManifestVerifyAnomalyActions.push(entry);
+  pruneFaultManifestVerifyAnomalyTracking(nowMs);
+  return entry;
+}
+
+function applyFaultManifestVerifyAnomalyTriage(anomalyInstance, payload) {
+  var acknowledge = parseRetryBool(payload.acknowledge, false);
+  var acknowledgedBy = String(payload.acknowledgedBy || "").trim();
+  var noteContent = String(payload.note || "").trim();
+  var hasNote = noteContent.length > 0;
+
+  if (!acknowledge && !hasNote) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_TRIAGE_REQUIRED",
+        message: "acknowledge=true or note is required",
+      },
+    };
+  }
+
+  if (acknowledge && !acknowledgedBy) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_ACKNOWLEDGED_BY_REQUIRED",
+        message: "acknowledgedBy is required when acknowledge=true",
+      },
+    };
+  }
+
+  if (hasNote && noteContent.length > faultManifestVerifyRetentionAnomalyNoteMaxLength) {
+    return {
+      error: {
+        status: 400,
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_NOTE_TOO_LONG",
+        message: "note exceeds maximum allowed length",
+      },
+    };
+  }
+
+  var nowMs = Date.now();
+  var nowIso = new Date(nowMs).toISOString();
+  var noteType = String(payload.noteType || "operator-note")
+    .trim()
+    .toLowerCase();
+
+  if (!anomalyInstance.triage) {
+    anomalyInstance.triage = {
+      acknowledged: false,
+      acknowledgedAt: null,
+      acknowledgedBy: null,
+    };
+  }
+  if (!Array.isArray(anomalyInstance.notes)) {
+    anomalyInstance.notes = [];
+  }
+
+  var note = null;
+  if (hasNote) {
+    note = {
+      noteId: randomUUID(),
+      noteType: noteType || "operator-note",
+      content: noteContent,
+      createdAt: nowIso,
+      author:
+        acknowledgedBy ||
+        String(payload.noteAuthor || "").trim() ||
+        "unknown-operator",
+    };
+    anomalyInstance.notes.push(note);
+    while (anomalyInstance.notes.length > faultManifestVerifyRetentionAnomalyNotesPerInstanceMax) {
+      anomalyInstance.notes.shift();
+    }
+  }
+
+  if (acknowledge) {
+    anomalyInstance.triage.acknowledged = true;
+    anomalyInstance.triage.acknowledgedAt = nowIso;
+    anomalyInstance.triage.acknowledgedBy = acknowledgedBy;
+  }
+
+  anomalyInstance.lastUpdatedAtMs = nowMs;
+  pruneFaultManifestVerifyAnomalyTracking(nowMs);
+
+  var actionType = "note-only";
+  if (acknowledge && hasNote) {
+    actionType = "acknowledge-and-note";
+  } else if (acknowledge) {
+    actionType = "acknowledge";
+  }
+  var action = recordFaultManifestVerifyAnomalyAction(
+    actionType,
+    anomalyInstance.anomalyInstanceId,
+    acknowledgedBy || (note ? note.author : null),
+    note
+  );
+
+  return {
+    updatedAt: nowIso,
+    action: action,
+  };
 }
 
 function summarizeFaultManifestVerifyAttemptTelemetry() {
@@ -2234,6 +2553,7 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       retentionSaturationTrendEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
       retentionSaturationTrendPath: "telemetry.saturationTrend",
+      retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -2297,6 +2617,7 @@ router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", f
       retentionSaturationTrendEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
       retentionSaturationTrendPath: "telemetry.saturationTrend",
+      retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
     },
     attempts: audit.attempts,
   });
@@ -2356,6 +2677,7 @@ router.get(
         retentionSaturationTrendEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
         retentionSaturationTrendPath: "telemetry.saturationTrend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
       },
       attempts: audit.attempts,
     });
@@ -2378,6 +2700,7 @@ router.get(
     };
     telemetry.anomalies = trend.summary.anomalies;
     telemetry.highestAnomalySeverity = trend.summary.highestAnomalySeverity;
+    telemetry.anomalyTracking = trend.summary.anomalyTracking;
 
     res.set("Cache-Control", "no-store");
     res.json({
@@ -2406,6 +2729,7 @@ router.get(
         retentionSaturationTrendEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
         retentionSaturationTrendPath: "telemetry.saturationTrend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
       },
     });
   }
@@ -2444,6 +2768,60 @@ router.get(
         verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
         retentionSaturationPath: "latestSaturation",
         retentionSaturationTrendPath: "snapshots",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
+      },
+    });
+  }
+);
+
+router.post(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/:anomalyInstanceId/triage",
+  function (req, res) {
+    pruneFaultManifestVerifyAnomalyTracking(Date.now());
+    var anomalyInstanceId = String(req.params.anomalyInstanceId || "").trim();
+    var anomalyInstance = findFaultManifestVerifyAnomalyInstanceById(anomalyInstanceId);
+
+    if (!anomalyInstance) {
+      res.status(404).json({
+        message: "anomaly instance not found",
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_NOT_FOUND",
+      });
+      return;
+    }
+
+    var triageResult = applyFaultManifestVerifyAnomalyTriage(anomalyInstance, req.body || {});
+    if (triageResult.error) {
+      res.status(triageResult.error.status).json({
+        message: triageResult.error.message,
+        code: triageResult.error.code,
+      });
+      return;
+    }
+
+    res.set("Cache-Control", "no-store");
+    res.json({
+      updatedAt: triageResult.updatedAt,
+      anomaly: {
+        key: anomalyInstance.key,
+        severity: anomalyInstance.severity,
+        recommendedAction: anomalyInstance.recommendedAction,
+        evidence: anomalyInstance.evidence,
+        anomalyInstanceId: anomalyInstance.anomalyInstanceId,
+        status: anomalyInstance.status,
+        firstDetectedAt: anomalyInstance.firstDetectedAt,
+        lastDetectedAt: anomalyInstance.lastDetectedAt,
+        triage: buildFaultManifestVerifyAnomalyTriageSnapshot(anomalyInstance),
+      },
+      audit: {
+        actionId: triageResult.action.actionId,
+        actionType: triageResult.action.actionType,
+      },
+      diagnostics: {
+        retentionEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionTrendEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
       },
     });
   }
@@ -2478,6 +2856,7 @@ router.post(
     };
     applied.telemetry.anomalies = trend.summary.anomalies;
     applied.telemetry.highestAnomalySeverity = trend.summary.highestAnomalySeverity;
+    applied.telemetry.anomalyTracking = trend.summary.anomalyTracking;
 
     res.json({
       appliedAt: new Date().toISOString(),
@@ -2508,6 +2887,7 @@ router.post(
         retentionSaturationTrendEndpoint:
           "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
         retentionSaturationTrendPath: "telemetry.saturationTrend",
+        retentionAnomalyTriageEndpointTemplate: faultManifestVerifyAnomalyTriageEndpointTemplate,
       },
     });
   }

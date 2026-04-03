@@ -225,6 +225,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Trend anomaly evaluation uses bounded in-memory snapshots and lightweight rule checks to preserve low-cost runtime behavior.
 - Regression tests cover anomaly payload shape, supported key/severity enums, sustained-risk anomaly detection, and highest-severity reporting.
 
+## M5.17 Replay-Attempt Anomaly Acknowledgement And Triage-Note Coverage
+
+- Notification runtime now exposes `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` for anomaly acknowledgement and triage-note append workflows.
+- Retention and saturation-trend anomaly payloads now include machine-readable `anomalyInstanceId`, anomaly `status`, and `triage` state snapshots for operator handoff continuity.
+- Verify, attempts query/export, retention status/apply, and trend diagnostics now include anomaly triage endpoint template discoverability.
+- Regression tests cover acknowledgement-plus-note updates, note-only append behavior, persistence across retention/trend reads, and 400/404 triage guardrails.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

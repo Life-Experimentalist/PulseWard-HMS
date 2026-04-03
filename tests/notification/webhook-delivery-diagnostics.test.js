@@ -824,6 +824,12 @@ describe("notification webhook delivery diagnostics", () => {
 
     expect(anomalyRetentionStatus.status).toBe(200);
     expect(Array.isArray(anomalyRetentionStatus.body.telemetry.anomalies)).toBe(true);
+    expect(anomalyRetentionStatus.body.telemetry.anomalyTracking.statePersistence).toBe(
+      "memory-only"
+    );
+    expect(anomalyRetentionStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
+    );
 
     const anomalyTrendStatus = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
@@ -835,7 +841,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(anomalyTrendStatus.status).toBe(200);
     expect(Array.isArray(anomalyTrendStatus.body.summary.anomalies)).toBe(true);
     expect(anomalyTrendStatus.body.summary.anomalies.length).toBeGreaterThan(0);
-    expect(["warning", "critical"]).toContain(anomalyTrendStatus.body.summary.highestAnomalySeverity);
+    expect(["warning", "critical"]).toContain(
+      anomalyTrendStatus.body.summary.highestAnomalySeverity
+    );
 
     const anomalyKeys = anomalyTrendStatus.body.summary.anomalies.map((item) => item.key);
     expect(
@@ -848,7 +856,169 @@ describe("notification webhook delivery diagnostics", () => {
       );
       expect(["warning", "critical"]).toContain(item.severity);
       expect(item.recommendedAction.length).toBeGreaterThan(0);
+      expect(typeof item.anomalyInstanceId).toBe("string");
+      expect(item.anomalyInstanceId.length).toBeGreaterThan(10);
+      expect(["active", "cleared"]).toContain(item.status);
+      expect(typeof item.triage).toBe("object");
+      expect(typeof item.triage.notesCount).toBe("number");
+      expect(typeof item.triage.acknowledged).toBe("boolean");
     });
+
+    expect(anomalyTrendStatus.body.summary.anomalyTracking.statePersistence).toBe("memory-only");
+    expect(
+      anomalyTrendStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate
+    ).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
+    );
+
+    const triageTarget = anomalyTrendStatus.body.summary.anomalies[0];
+    const triageAcknowledge = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          acknowledge: true,
+          acknowledgedBy: "ops-oncall@pulseward",
+          note: "Capacity tuning planned for this shift.",
+          noteType: "mitigation-plan",
+        }),
+      }
+    );
+
+    expect(triageAcknowledge.status).toBe(200);
+    expect(triageAcknowledge.body.anomaly.anomalyInstanceId).toBe(triageTarget.anomalyInstanceId);
+    expect(triageAcknowledge.body.anomaly.triage.acknowledged).toBe(true);
+    expect(triageAcknowledge.body.anomaly.triage.acknowledgedBy).toBe("ops-oncall@pulseward");
+    expect(triageAcknowledge.body.anomaly.triage.notesCount).toBeGreaterThanOrEqual(1);
+    expect(triageAcknowledge.body.audit.actionType).toBe("acknowledge-and-note");
+
+    const triageNoteOnly = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: "Incident bridge informed and mitigation owner assigned.",
+          noteType: "status-update",
+          noteAuthor: "ops-shift-b",
+        }),
+      }
+    );
+
+    expect(triageNoteOnly.status).toBe(200);
+    expect(triageNoteOnly.body.audit.actionType).toBe("note-only");
+
+    const retentionAfterTriage = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(retentionAfterTriage.status).toBe(200);
+    const triagedInRetention = retentionAfterTriage.body.telemetry.anomalies.find(
+      (item) => item.anomalyInstanceId === triageTarget.anomalyInstanceId
+    );
+    expect(triagedInRetention).toBeTruthy();
+    expect(triagedInRetention.triage.acknowledged).toBe(true);
+    expect(triagedInRetention.triage.notesCount).toBeGreaterThanOrEqual(2);
+
+    const trendAfterTriage = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(trendAfterTriage.status).toBe(200);
+    const triagedInTrend = trendAfterTriage.body.summary.anomalies.find(
+      (item) => item.anomalyInstanceId === triageTarget.anomalyInstanceId
+    );
+    expect(triagedInTrend).toBeTruthy();
+    expect(triagedInTrend.triage.acknowledged).toBe(true);
+
+    const triageMissingPayload = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      }
+    );
+
+    expect(triageMissingPayload.status).toBe(400);
+    expect(triageMissingPayload.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_TRIAGE_REQUIRED"
+    );
+
+    const triageMissingActor = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          acknowledge: true,
+        }),
+      }
+    );
+
+    expect(triageMissingActor.status).toBe(400);
+    expect(triageMissingActor.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_ACKNOWLEDGED_BY_REQUIRED"
+    );
+
+    const triageLongNote = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: "x".repeat(5000),
+        }),
+      }
+    );
+
+    expect(triageLongNote.status).toBe(400);
+    expect(triageLongNote.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_NOTE_TOO_LONG"
+    );
+
+    const triageNotFound = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/00000000-0000-4000-8000-000000000000/triage",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: "missing anomaly instance check",
+        }),
+      }
+    );
+
+    expect(triageNotFound.status).toBe(404);
+    expect(triageNotFound.body.code).toBe("NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_NOT_FOUND");
 
     const attemptsRetentionMissingPayload = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",

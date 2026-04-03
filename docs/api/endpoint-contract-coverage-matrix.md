@@ -570,6 +570,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaStatus` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaStatus` property type drifts from OpenAPI baseline.
 
+## M6.42 Escalation-Export Item Escalation-State Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation-state anchors for handoff-state compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationState` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationState` property type drifts from OpenAPI baseline.
+
+## M6.43 Escalation-Export Item Escalation-Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation-severity anchors for handoff-state compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationSeverity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationSeverity` property type drifts from OpenAPI baseline.
+
+## M6.44 Escalation-Export Item Escalation-Trigger Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item escalation-trigger anchors for handoff-state compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationTrigger` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationTrigger` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

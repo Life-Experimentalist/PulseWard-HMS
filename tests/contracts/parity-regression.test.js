@@ -276,6 +276,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaStatus schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationState schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationSeverity schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationTrigger schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -1736,6 +1745,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaStatus type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item escalationState type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?escalationState:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export item escalationState type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationState schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationState type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item escalationSeverity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?escalationSeverity:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export item escalationSeverity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationSeverity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationSeverity type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item escalationTrigger type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?escalationTrigger:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export item escalationTrigger type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationTrigger schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationTrigger type expected string got integer"
         );
       }
     );

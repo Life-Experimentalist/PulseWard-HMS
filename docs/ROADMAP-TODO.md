@@ -64,7 +64,7 @@ This section formalizes slice sizing so milestone progress stays meaningful and 
 | M3 | 6 slices | 3-4 grouped waves (used: 4) | Completed |
 | M4 | 4 slices | 2-3 grouped waves (used: 3) | Completed |
 | M5 | 20 slices | 4 grouped waves (`M5-A` to `M5-D`) | Completed |
-| M6 | 41 slices so far | 8-10 grouped waves (used so far: 9) | In progress |
+| M6 | 41 slices so far | 8-10 grouped waves (used so far: 9) | In progress |  
 | M7 | planned | 8 grouped waves | Pending |
 | M8 | planned | 6 grouped waves | Pending |
 | M9 | planned | 5 grouped waves | Pending |
@@ -473,3 +473,9 @@ Exit criteria:
 148. M6.40 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `triageAcknowledgedBy` schema-property type drifts from OpenAPI baseline.
 149. M6.41 completed: strict contract checker now enforces escalation-export item acknowledgement SLA status anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaStatus` string compatibility.
 150. M6.41 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `acknowledgementSlaStatus` schema-property type drifts from OpenAPI baseline.
+151. M6.42 completed: strict contract checker now enforces escalation-export item escalation-state anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationState` string compatibility.
+152. M6.42 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationState` schema-property type drifts from OpenAPI baseline.
+153. M6.43 completed: strict contract checker now enforces escalation-export item escalation-severity anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationSeverity` string compatibility.
+154. M6.43 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationSeverity` schema-property type drifts from OpenAPI baseline.
+155. M6.44 completed: strict contract checker now enforces escalation-export item escalation-trigger anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationTrigger` string compatibility.
+156. M6.44 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `escalationTrigger` schema-property type drifts from OpenAPI baseline.

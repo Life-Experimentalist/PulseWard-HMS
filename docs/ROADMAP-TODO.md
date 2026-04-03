@@ -353,3 +353,5 @@ Exit criteria:
 76. M6.4 evidence checkpoint: regression coverage now validates dry-run no-mutation semantics and invalid-policy atomic invariants, and runbook guidance now enforces preview-before-apply retention operations.
 77. M6.5 completed: calendar and messaging adapter regression suites now cover additional live failure-path and credential guardrail branches without runtime adapter rewrites.
 78. M6.5 evidence checkpoint: targeted adapter tests now validate Apple/Outlook/ICS bridge edge paths, SMS non-OK/incomplete-credential handling, generic-webhook signed header emission, and bounded webhook failure payload behavior.
+79. M6.6 completed: strict contract checker now includes operations command-surface schema gates for retention status, saturation trend, escalation export, anomaly triage, and retention apply endpoints.
+80. M6.6 evidence checkpoint: parity regression assertions now verify PASS coverage for notification operations command endpoints, preventing silent OpenAPI schema drift for dashboard handoff controls.

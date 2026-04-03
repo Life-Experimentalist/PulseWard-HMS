@@ -69,6 +69,21 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain("PASS: appointment-service POST /opd/entries");
     expect(output).toContain("PASS: notification-service POST /integrations/messaging/test");
     expect(output).toContain("PASS: notification-service POST /integrations/appointments/events");
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
     expect(output).toContain("PASS: pharmacy-service POST /prescriptions/handoff");
     expect(output).toContain("PASS: pharmacy-service PUT /prescriptions/{id}/status");
     expect(output).toContain("PASS: lab-service POST /lab-tests/orders");

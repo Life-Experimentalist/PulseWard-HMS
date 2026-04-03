@@ -283,6 +283,17 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Retention apply responses now include `retention.changeImpact` to summarize would-change fields and estimated prune impact before live execution.
 - Regression tests now validate dry-run no-mutation behavior and invalid-policy atomic invariants for replay-attempt retention controls.
 
+## M6.6 Operations Command-Surface Schema Gate Coverage
+
+- Contract checker critical schema assertions now include notification operations command endpoints consumed by handoff workflows.
+- Added schema-gate coverage for:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention`
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`
+	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`
+	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
+- Parity regression tests now assert PASS output for each of these schema checks so command-surface contract drift fails fast in CI.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -240,6 +240,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters limit schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse totalTracked schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters actionRequired schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaBreachSeconds schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -1436,6 +1445,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportFilters.limit type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export response totalTracked type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportResponse:[\s\S]*?totalTracked:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export response totalTracked type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse totalTracked schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportResponse.totalTracked type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export filters actionRequired type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportFilters:[\s\S]*?actionRequired:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export filters actionRequired type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters actionRequired schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportFilters.actionRequired type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item acknowledgementSlaBreachSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?acknowledgementSlaBreachSeconds:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export item acknowledgementSlaBreachSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaBreachSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaBreachSeconds type expected integer got string"
         );
       }
     );

@@ -347,3 +347,5 @@ Exit criteria:
 70. M5.20 evidence checkpoint: regression and contract coverage now validate ABHA transaction consent blocking, fallback-path execution, simulated read/write behavior, and transactional evidence telemetry exports.
 71. M6.2 completed: operations-dashboard now surfaces ABHA readiness, fallback telemetry, transaction evidence summaries, and dry-run read/write reliability actions for operators.
 72. M6.2 evidence checkpoint: contract and regression coverage now include ABHA transaction evidence schema checks and dashboard-consumed ABHA response invariants.
+73. M6.3 completed: operations-dashboard command panel now executes live incident handoff controls for escalation export, anomaly triage acknowledgement, retention tuning, and drill checklist automation.
+74. M6.3 evidence checkpoint: notification diagnostics regressions now validate command-path filters/payload invariants used by dashboard handoff controls, with runbook mappings updated for operator workflows.

@@ -55,6 +55,14 @@
 - Default dev proxy routes:
 	- `/api/v1` telemetry calls to notification-service on `http://127.0.0.1:8088`
 	- `/api/auth-v1` telemetry calls to auth-service on `http://127.0.0.1:5101` (rewritten to `/api/v1`)
+- Command panel mappings:
+	- `Export escalation SLA breaches` -> `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export` with bounded breach filters
+	- `Open anomaly triage endpoint template` -> `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`
+	- `Apply retention and escalation policy tune` -> `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
+	- `Run ABHA and connector drill checklist` -> bounded GET reachability checks across notification and ABHA telemetry endpoints
+- Command panel safeguards:
+	- Keep retention apply bounded and avoid immediate prune by default (`pruneNow=false`) during shift handoff.
+	- Keep anomaly notes operational only and exclude patient-identifiable details.
 
 ## Weekly checks
 

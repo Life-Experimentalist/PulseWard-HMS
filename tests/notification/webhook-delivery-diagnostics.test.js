@@ -1065,6 +1065,18 @@ describe("notification webhook delivery diagnostics", () => {
       );
     }
 
+    const escalationExportActionRequired = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?state=escalated-warning-unacknowledged,escalated-critical-unacknowledged,escalated-critical-unmitigated&acknowledgementSlaStatus=breached&actionRequired=true&limit=25",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(escalationExportActionRequired.status).toBe(200);
+    expect(escalationExportActionRequired.body.filters.actionRequired).toBe(true);
+    expect(escalationExportActionRequired.body.filters.limit).toBe(25);
+    expect(Array.isArray(escalationExportActionRequired.body.escalations)).toBe(true);
+
     const escalationExportCsv = await requestText(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?format=csv&limit=10",
       {

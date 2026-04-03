@@ -268,6 +268,14 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Contract checker critical schema coverage now includes `GET /platform/abha/transactions/evidence` alongside ABHA transaction read/write paths.
 - Regression tests continue to enforce ABHA transaction response semantics consumed by dashboard telemetry and operator action UI states.
 
+## M6.3 Operations Dashboard Actionable Incident Handoff Coverage
+
+- Operations dashboard command panel now executes bounded escalation export actions against notification-service retention escalation endpoints.
+- Dashboard command panel now executes anomaly triage acknowledgement updates using active anomaly instance identifiers from saturation trend summaries.
+- Dashboard command panel now executes bounded retention/apply tuning actions and refreshes live telemetry with post-action state snapshots.
+- Dashboard drill checklist now runs endpoint reachability checks across notification reliability and ABHA transactional telemetry surfaces.
+- Notification diagnostics regression coverage now validates command-path export filter semantics and triage/tuning payload invariants consumed by dashboard actions.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

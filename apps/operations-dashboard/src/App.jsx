@@ -33,6 +33,15 @@ function buildAbhaReadinessClass(status) {
   return "status-pill normal";
 }
 
+function clampInt(value, minValue, maxValue, fallback) {
+  var numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.max(minValue, Math.min(maxValue, Math.trunc(numeric)));
+}
+
 function formatLastUpdated(timestamp) {
   if (!timestamp) {
     return "Not refreshed yet";
@@ -92,6 +101,22 @@ async function postJson(url, payload) {
   }
 
   return body;
+}
+
+async function checkEndpoint(url, expectedStatuses) {
+  var response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  var ok = expectedStatuses.indexOf(response.status) >= 0;
+  return {
+    ok: ok,
+    status: response.status,
+    url: url,
+  };
 }
 
 async function fetchConnectorReliability() {
@@ -233,6 +258,12 @@ function App() {
       message: "",
       error: "",
     },
+    operatorAction: {
+      loading: false,
+      name: "",
+      message: "",
+      error: "",
+    },
   });
 
   async function refreshReliability() {
@@ -242,24 +273,36 @@ function App() {
         error: "",
         data: current.data,
         abhaAction: current.abhaAction,
+        operatorAction: current.operatorAction,
       };
     });
 
     try {
-      var results = await Promise.all([fetchConnectorReliability(), fetchAbhaReliability(tenantKey)]);
-      setState({
-        loading: false,
-        error: "",
-        data: {
-          connector: results[0],
-          abha: results[1],
-          fetchedAt: new Date().toISOString(),
-        },
-        abhaAction: {
+      var results = await Promise.all([
+        fetchConnectorReliability(),
+        fetchAbhaReliability(tenantKey),
+      ]);
+      setState(function (current) {
+        return {
           loading: false,
-          message: "",
           error: "",
-        },
+          data: {
+            connector: results[0],
+            abha: results[1],
+            fetchedAt: new Date().toISOString(),
+          },
+          abhaAction: {
+            loading: false,
+            message: current.abhaAction.message,
+            error: current.abhaAction.error,
+          },
+          operatorAction: {
+            loading: false,
+            name: current.operatorAction.name,
+            message: current.operatorAction.message,
+            error: current.operatorAction.error,
+          },
+        };
       });
     } catch (error) {
       setState(function (current) {
@@ -268,6 +311,58 @@ function App() {
           error: error instanceof Error ? error.message : "Unknown telemetry error",
           data: current.data,
           abhaAction: current.abhaAction,
+          operatorAction: current.operatorAction,
+        };
+      });
+    }
+  }
+
+  async function runOperatorAction(actionName, executor) {
+    setState(function (current) {
+      return {
+        loading: current.loading,
+        error: current.error,
+        data: current.data,
+        abhaAction: current.abhaAction,
+        operatorAction: {
+          loading: true,
+          name: actionName,
+          message: "",
+          error: "",
+        },
+      };
+    });
+
+    try {
+      var message = await executor();
+      setState(function (current) {
+        return {
+          loading: current.loading,
+          error: current.error,
+          data: current.data,
+          abhaAction: current.abhaAction,
+          operatorAction: {
+            loading: false,
+            name: actionName,
+            message: message,
+            error: "",
+          },
+        };
+      });
+      await refreshReliability();
+    } catch (error) {
+      setState(function (current) {
+        return {
+          loading: current.loading,
+          error: current.error,
+          data: current.data,
+          abhaAction: current.abhaAction,
+          operatorAction: {
+            loading: false,
+            name: actionName,
+            message: "",
+            error: error instanceof Error ? error.message : "Command execution failed",
+          },
         };
       });
     }
@@ -348,6 +443,11 @@ function App() {
   var abhaFallback = abhaData && abhaData.fallback ? abhaData.fallback : null;
   var abhaEvidence = abhaData && abhaData.evidence ? abhaData.evidence : null;
   var abhaSummary = abhaEvidence ? abhaEvidence.summary : null;
+
+  var trendAnomalies =
+    connectorData && connectorData.trend && connectorData.trend.summary
+      ? connectorData.trend.summary.anomalies || []
+      : [];
 
   var incidentQueue = useMemo(
     function () {
@@ -455,13 +555,184 @@ function App() {
 
         <article className="panel">
           <h2>Operator Handoff Commands</h2>
-          <button type="button">Export escalation SLA breaches</button>
-          <button type="button">Open anomaly triage endpoint template</button>
-          <button type="button">Apply retention and escalation policy tune</button>
-          <button type="button">Run ABHA and connector drill checklist</button>
+          <button
+            type="button"
+            disabled={state.operatorAction.loading}
+            onClick={function () {
+              runOperatorAction("export-escalation-breaches", async function () {
+                var exportPayload = await readJson(
+                  NOTIFICATION_API_BASE_URL +
+                    "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export?state=escalated-warning-unacknowledged,escalated-critical-unacknowledged,escalated-critical-unmitigated&acknowledgementSlaStatus=breached&actionRequired=true&limit=25"
+                );
+                return (
+                  "Export snapshot ready: returned " +
+                  String(exportPayload.returned || 0) +
+                  " rows, matched " +
+                  String(exportPayload.totalMatched || 0)
+                );
+              });
+            }}
+          >
+            {state.operatorAction.loading && state.operatorAction.name === "export-escalation-breaches"
+              ? "Running..."
+              : "Export escalation SLA breaches"}
+          </button>
+          <button
+            type="button"
+            disabled={state.operatorAction.loading}
+            onClick={function () {
+              runOperatorAction("triage-anomaly", async function () {
+                if (!Array.isArray(trendAnomalies) || trendAnomalies.length === 0) {
+                  throw new Error("No active anomalies found in trend telemetry");
+                }
+
+                var activeAnomaly = trendAnomalies.find(function (item) {
+                  return item && item.status === "active" && item.anomalyInstanceId;
+                });
+
+                if (!activeAnomaly) {
+                  throw new Error("No triage-ready anomaly instance found");
+                }
+
+                var triageResponse = await postJson(
+                  NOTIFICATION_API_BASE_URL +
+                    "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/" +
+                    encodeURIComponent(activeAnomaly.anomalyInstanceId) +
+                    "/triage",
+                  {
+                    acknowledge: true,
+                    acknowledgedBy: "ops-dashboard@pulseward",
+                    note: "Dashboard handoff acknowledgement captured for active anomaly.",
+                    noteType: "status-update",
+                    noteAuthor: "ops-dashboard",
+                  }
+                );
+
+                return (
+                  "Triage updated for " +
+                  String(activeAnomaly.key || "anomaly") +
+                  " (" +
+                  String(triageResponse.audit ? triageResponse.audit.actionType : "updated") +
+                  ")"
+                );
+              });
+            }}
+          >
+            {state.operatorAction.loading && state.operatorAction.name === "triage-anomaly"
+              ? "Running..."
+              : "Open anomaly triage endpoint template"}
+          </button>
+          <button
+            type="button"
+            disabled={state.operatorAction.loading}
+            onClick={function () {
+              runOperatorAction("apply-retention-tune", async function () {
+                var retentionState =
+                  connectorData && connectorData.retention && connectorData.retention.retention
+                    ? connectorData.retention.retention
+                    : {};
+
+                var tunedWindow = clampInt(retentionState.dedupeWindowSeconds, 300, 900, 600);
+                var tunedMaxEntries = clampInt(retentionState.maxEntries, 300, 1500, 600);
+
+                var applied = await postJson(
+                  NOTIFICATION_API_BASE_URL +
+                    "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply?windowMinutes=60&limit=48",
+                  {
+                    dedupeWindowSeconds: tunedWindow,
+                    maxEntries: tunedMaxEntries,
+                    pruneNow: false,
+                    escalationExportPolicy: {
+                      enabled: true,
+                      defaultFormat: "json",
+                      maxExportRows: 250,
+                      includeRecentlyClosedByDefault: false,
+                    },
+                  }
+                );
+
+                return (
+                  "Retention tuned: window=" +
+                  String(applied.retention.dedupeWindowSeconds) +
+                  "s, maxEntries=" +
+                  String(applied.retention.maxEntries)
+                );
+              });
+            }}
+          >
+            {state.operatorAction.loading && state.operatorAction.name === "apply-retention-tune"
+              ? "Running..."
+              : "Apply retention and escalation policy tune"}
+          </button>
+          <button
+            type="button"
+            disabled={state.operatorAction.loading}
+            onClick={function () {
+              runOperatorAction("run-drill-checklist", async function () {
+                var checks = await Promise.all([
+                  checkEndpoint(
+                    NOTIFICATION_API_BASE_URL +
+                      "/integrations/messaging/webhook/diagnostics?tenantKey=default",
+                    [200]
+                  ),
+                  checkEndpoint(
+                    NOTIFICATION_API_BASE_URL +
+                      "/integrations/messaging/retry-policy?tenantKey=default&providerKey=generic-webhook",
+                    [200]
+                  ),
+                  checkEndpoint(
+                    NOTIFICATION_API_BASE_URL +
+                      "/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=network-timeout",
+                    [200]
+                  ),
+                  checkEndpoint(AUTH_API_BASE_URL + "/platform/abha/operational-readiness", [200]),
+                  checkEndpoint(
+                    AUTH_API_BASE_URL + "/platform/abha/transactions/evidence?tenantKey=default&limit=5",
+                    [200]
+                  ),
+                ]);
+
+                var passed = checks.filter(function (item) {
+                  return item.ok;
+                }).length;
+                var total = checks.length;
+
+                if (passed < total) {
+                  var failed = checks
+                    .filter(function (item) {
+                      return !item.ok;
+                    })
+                    .map(function (item) {
+                      return String(item.status);
+                    })
+                    .join(",");
+                  throw new Error(
+                    "Checklist completed with failures: " +
+                      String(passed) +
+                      "/" +
+                      String(total) +
+                      " passed, statuses=" +
+                      failed
+                  );
+                }
+
+                return "Checklist completed: " + String(passed) + "/" + String(total) + " checks passed";
+              });
+            }}
+          >
+            {state.operatorAction.loading && state.operatorAction.name === "run-drill-checklist"
+              ? "Running..."
+              : "Run ABHA and connector drill checklist"}
+          </button>
           <p className="command-hint">
             Use integration runbook diagnostics and escalation export artifacts for shift handoff.
           </p>
+          {state.operatorAction.message ? (
+            <p className="ops-success">{state.operatorAction.message}</p>
+          ) : null}
+          {state.operatorAction.error ? (
+            <p className="ops-error inline">{state.operatorAction.error}</p>
+          ) : null}
         </article>
 
         <article className="panel">
@@ -469,7 +740,9 @@ function App() {
           <div className="abha-meta-grid">
             <p>
               <span>Fallback decisions</span>
-              <strong>{abhaFallback && abhaFallback.summary ? abhaFallback.summary.totalCount : "--"}</strong>
+              <strong>
+                {abhaFallback && abhaFallback.summary ? abhaFallback.summary.totalCount : "--"}
+              </strong>
             </p>
             <p>
               <span>Simulated</span>
@@ -510,8 +783,12 @@ function App() {
           >
             {state.abhaAction.loading ? "Running..." : "Run ABHA write dry-run"}
           </button>
-          {state.abhaAction.message ? <p className="ops-success">{state.abhaAction.message}</p> : null}
-          {state.abhaAction.error ? <p className="ops-error inline">{state.abhaAction.error}</p> : null}
+          {state.abhaAction.message ? (
+            <p className="ops-success">{state.abhaAction.message}</p>
+          ) : null}
+          {state.abhaAction.error ? (
+            <p className="ops-error inline">{state.abhaAction.error}</p>
+          ) : null}
         </article>
       </section>
     </div>

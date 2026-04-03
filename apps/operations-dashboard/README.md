@@ -51,6 +51,27 @@ Required backend endpoints for live telemetry:
 - `POST /api/v1/platform/abha/transactions/read`
 - `POST /api/v1/platform/abha/transactions/write`
 
+### Actionable Operator Commands
+
+The command panel now triggers live incident handoff actions (safe defaults):
+
+- `Export escalation SLA breaches`
+	- Calls `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`
+	- Uses bounded filters for unacknowledged warning/critical escalation states and breached SLA rows
+- `Open anomaly triage endpoint template`
+	- Calls `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`
+	- Selects the first active anomaly from current trend telemetry and records acknowledgement + operator note
+- `Apply retention and escalation policy tune`
+	- Calls `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
+	- Applies bounded dedupe window/max entry values with conservative export policy defaults
+- `Run ABHA and connector drill checklist`
+	- Runs a lightweight endpoint reachability checklist across notification and ABHA telemetry routes
+
+Safety notes:
+
+- Retention tuning action uses bounded values and no immediate prune (`pruneNow=false`).
+- ABHA actions in this dashboard remain dry-run for transaction probes.
+
 ## Production-Fast Start
 
 From repository root:

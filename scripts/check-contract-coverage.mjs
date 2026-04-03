@@ -802,6 +802,51 @@ const criticalParameterContractChecks = [
     expectedResponseBodySchemaRef: "#/components/schemas/NotificationErrorResponse",
   },
   {
+    label: "notification-service NotificationErrorResponse message schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "NotificationErrorResponse",
+      propertyName: "message",
+      type: "string",
+    },
+  },
+  {
+    label: "notification-service NotificationErrorResponse code schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "NotificationErrorResponse",
+      propertyName: "code",
+      type: "string",
+    },
+  },
+  {
+    label: "notification-service NotificationErrorResponse details schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "NotificationErrorResponse",
+      propertyName: "details",
+      type: "object",
+    },
+  },
+  {
+    label:
+      "notification-service NotificationErrorResponse details additionalProperties contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "NotificationErrorResponse",
+      propertyName: "details",
+      additionalProperties: true,
+    },
+  },
+  {
     label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract",
     service: "notification-service",
@@ -1282,7 +1327,7 @@ function findSchemaPropertyContract(lines, schemaName, propertyName) {
   const propertyBlock = propertiesSection.slice(propertyStart, propertyEnd);
   const contract = {};
   propertyBlock.forEach((line) => {
-    const match = line.match(/^\s{10}(type|default|format):\s*(.+)\s*$/);
+    const match = line.match(/^\s{10}(type|default|format|additionalProperties):\s*(.+)\s*$/);
     if (match) {
       contract[match[1]] = parseYamlScalar(match[2]);
     }
@@ -1368,11 +1413,14 @@ function evaluateCriticalParameterContractChecks() {
     }
 
     const lines = getSpecLines(check.specSource);
-    const operationLines = findOperationBlock(lines, check.path, check.method);
+    let operationLines = null;
+    if (check.type !== "schema-property-contract") {
+      operationLines = findOperationBlock(lines, check.path, check.method);
 
-    if (!operationLines) {
-      failures.push(`missing operation in spec: ${check.method.toUpperCase()} ${check.path}`);
-      return { ...check, pass: false, failures };
+      if (!operationLines) {
+        failures.push(`missing operation in spec: ${check.method.toUpperCase()} ${check.path}`);
+        return { ...check, pass: false, failures };
+      }
     }
 
     if (check.type === "parameters") {
@@ -1526,6 +1574,47 @@ function evaluateCriticalParameterContractChecks() {
               } default expected ${String(expectedProperty.default)} got ${String(
                 propertyContract.default
               )}`
+            );
+          }
+        }
+      }
+    } else if (check.type === "schema-property-contract") {
+      const expectedProperty = check.expectedSchemaProperty;
+      if (!expectedProperty) {
+        failures.push("missing expectedSchemaProperty configuration");
+      } else {
+        const propertyContract = findSchemaPropertyContract(
+          lines,
+          expectedProperty.schemaName,
+          expectedProperty.propertyName
+        );
+
+        if (!propertyContract) {
+          failures.push(
+            `missing schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName}`
+          );
+        } else {
+          if (
+            expectedProperty.type !== undefined &&
+            propertyContract.type !== expectedProperty.type
+          ) {
+            failures.push(
+              `schema property ${expectedProperty.schemaName}.${
+                expectedProperty.propertyName
+              } type expected ${expectedProperty.type} got ${String(propertyContract.type || "")}`
+            );
+          }
+
+          if (
+            expectedProperty.additionalProperties !== undefined &&
+            propertyContract.additionalProperties !== expectedProperty.additionalProperties
+          ) {
+            failures.push(
+              `schema property ${expectedProperty.schemaName}.${
+                expectedProperty.propertyName
+              } additionalProperties expected ${String(
+                expectedProperty.additionalProperties
+              )} got ${String(propertyContract.additionalProperties)}`
             );
           }
         }

@@ -198,6 +198,18 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply 400 error response schema ref contract"
     );
     expect(output).toContain(
+      "PASS: notification-service NotificationErrorResponse message schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service NotificationErrorResponse code schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service NotificationErrorResponse details schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service NotificationErrorResponse details additionalProperties contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
     );
   });
@@ -695,6 +707,94 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "responseBody schema ref expected #/components/schemas/NotificationErrorResponse got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when NotificationErrorResponse message type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(NotificationErrorResponse:[\s\S]*?message:[\s\S]*?type:\s*)string/,
+          "$1object",
+          "NotificationErrorResponse message type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service NotificationErrorResponse message schema property contract"
+        );
+        expect(output).toContain(
+          "schema property NotificationErrorResponse.message type expected string got object"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when NotificationErrorResponse code type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(NotificationErrorResponse:[\s\S]*?code:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "NotificationErrorResponse code type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service NotificationErrorResponse code schema property contract"
+        );
+        expect(output).toContain(
+          "schema property NotificationErrorResponse.code type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when NotificationErrorResponse details type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(NotificationErrorResponse:[\s\S]*?details:[\s\S]*?type:\s*)object/,
+          "$1array",
+          "NotificationErrorResponse details type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service NotificationErrorResponse details schema property contract"
+        );
+        expect(output).toContain(
+          "schema property NotificationErrorResponse.details type expected object got array"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when NotificationErrorResponse details additionalProperties drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(NotificationErrorResponse:[\s\S]*?details:[\s\S]*?additionalProperties:\s*)true/,
+          "$1false",
+          "NotificationErrorResponse details additionalProperties"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service NotificationErrorResponse details additionalProperties contract"
+        );
+        expect(output).toContain(
+          "schema property NotificationErrorResponse.details additionalProperties expected true got false"
         );
       }
     );

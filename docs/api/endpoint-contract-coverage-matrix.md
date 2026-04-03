@@ -354,6 +354,16 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- retention apply (`400`)
 - Mutation-based parity regressions now prove strict checker failure on error response-schema ref drift, preventing silent dashboard command error-handling incompatibility.
 
+## M6.14 Notification Error-Schema Structural Anchor Guardrail Coverage
+
+- Contract checker critical parameter assertions now include shared `NotificationErrorResponse` component schema-property guardrails.
+- Schema property contract checks now enforce:
+	- `NotificationErrorResponse.message` type `string`
+	- `NotificationErrorResponse.code` type `string`
+	- `NotificationErrorResponse.details` type `object`
+	- `NotificationErrorResponse.details` `additionalProperties: true`
+- Mutation-based parity regressions now prove strict-check failure on shared error-schema structural drift, preventing silent dashboard command error-handling incompatibility.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

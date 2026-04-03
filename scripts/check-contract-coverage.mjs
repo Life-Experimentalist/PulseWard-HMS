@@ -968,6 +968,42 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse totalMatched schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportResponse",
+      propertyName: "totalMatched",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem escalationActionRequired schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportItem",
+      propertyName: "escalationActionRequired",
+      type: "boolean",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters triageAcknowledged schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportFilters",
+      propertyName: "triageAcknowledged",
+      type: "boolean",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

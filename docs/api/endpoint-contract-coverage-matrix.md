@@ -444,6 +444,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.escalations` type `array`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export response `escalations` property type drifts from OpenAPI baseline.
 
+## M6.24 Escalation-Export Response Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response count anchors for dashboard handoff summary compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.totalMatched` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `totalMatched` property type drifts from OpenAPI baseline.
+
+## M6.25 Escalation-Export Item Action-Required Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item action-required anchors for operator follow-up compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.escalationActionRequired` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `escalationActionRequired` property type drifts from OpenAPI baseline.
+
+## M6.26 Escalation-Export Filter Triage-Acknowledged Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filter component anchors for triage-query compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.triageAcknowledged` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filter `triageAcknowledged` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

@@ -474,6 +474,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: nonce
+          in: query
+          required: false
+          description: Optional incident correlation nonce included in manifest replay-defense digest/signature material.
+          schema:
+            type: string
       responses:
         "200":
           description: Signed fault-injection evidence manifest
@@ -483,7 +489,7 @@ paths:
                 $ref: "#/components/schemas/MessagingFaultInjectionManifestResponse"
   /integrations/messaging/fault-injection/manifest/verify:
     post:
-      summary: Verify signed fault-injection manifest for zero-trust incident evidence validation
+      summary: Verify signed fault-injection manifest for zero-trust incident evidence validation with duplicate replay-attempt suppression
       requestBody:
         required: true
         content:
@@ -1270,6 +1276,30 @@ components:
         freshnessMatch:
           type: boolean
           example: true
+    MessagingFaultManifestReplayAttempt:
+      type: object
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+          example: 9ba67989bf98d93f59e8ef6ef4d9f8cb96eb96f4cb6c6ad22cb96fbe95ee7f0d
+        duplicateSuppressed:
+          type: boolean
+          example: false
+        firstVerifiedAt:
+          type: string
+          format: date-time
+        lastVerifiedAt:
+          type: string
+          format: date-time
+        suppressCount:
+          type: integer
+          example: 0
+        dedupeWindowSeconds:
+          type: integer
+          example: 600
     MessagingFaultManifestVerificationChecks:
       type: object
       properties:
@@ -1422,10 +1452,10 @@ components:
           example: true
         expectedManifestVersion:
           type: string
-          example: m5.7.v1
+          example: m5.9.v1
         providedManifestVersion:
           type: string
-          example: m5.7.v1
+          example: m5.9.v1
         checks:
           $ref: "#/components/schemas/MessagingFaultManifestVerificationChecks"
         provided:
@@ -1434,6 +1464,8 @@ components:
           $ref: "#/components/schemas/MessagingFaultManifestVerificationComputed"
         replayDefense:
           $ref: "#/components/schemas/MessagingFaultManifestReplayDefense"
+        replayAttempt:
+          $ref: "#/components/schemas/MessagingFaultManifestReplayAttempt"
         evidence:
           $ref: "#/components/schemas/MessagingFaultManifestEvidence"
         diagnostics:

@@ -176,6 +176,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verification responses now include replay-defense diagnostics (`ageSeconds`, `maxAgeSeconds`, `freshnessMatch`, `nonceMatch`) for incident triage.
 - Regression tests cover stale issued-at rejection, nonce mismatch rejection, and missing-issuedAt guardrail behavior.
 
+## M5.10 Manifest Verification Duplicate Suppression Coverage
+
+- Manifest verification now computes a stable replay-attempt fingerprint from request verification fields and suppresses duplicate submissions within a bounded dedupe window.
+- Verification responses now include replay-attempt metadata (`attemptId`, `fingerprint`, `duplicateSuppressed`, `suppressCount`, `dedupeWindowSeconds`) for operator traceability.
+- Duplicate suppression cache is bounded by time window and max-entry controls to limit operational footprint.
+- Regression tests cover first-attempt pass-through, duplicate suppression hits, suppression counter increments, and fingerprint consistency.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

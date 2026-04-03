@@ -319,4 +319,6 @@ Exit criteria:
 42. M5.8 evidence checkpoint: regression coverage now validates manifest verification success, tampered-digest rejection, and required-digest guardrails.
 43. M5.9 completed: signed handoff replay-defense controls now enforce issued-at freshness windows and optional nonce correlation checks.
 44. M5.9 evidence checkpoint: regression coverage now validates nonce-match rejection, stale-manifest freshness failure, and issuedAt guardrails for manifest verification.
-45. M5.10 active next slice: add replay-attempt duplicate suppression controls for repeated manifest verification submissions.
+45. M5.10 completed: manifest verification now suppresses duplicate replay-attempt submissions and returns replay-attempt metadata for operator traceability.
+46. M5.10 evidence checkpoint: regression coverage now validates duplicate suppression hit behavior, suppression counter increments, and stable attempt fingerprint linkage.
+47. M5.11 active next slice: add replay-attempt audit query endpoint for incident forensics and postmortem evidence export.

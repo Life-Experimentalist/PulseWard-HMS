@@ -35,6 +35,19 @@ var faultManifestAllowedClockSkewSeconds = parseRetryInt(
   0,
   300
 );
+var faultManifestVerifyDedupeWindowSeconds = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_WINDOW_SECONDS,
+  600,
+  30,
+  86400
+);
+var faultManifestVerifyDedupeMaxEntries = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_MAX_ENTRIES,
+  500,
+  50,
+  5000
+);
+var faultManifestVerifyAttemptCache = [];
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -487,6 +500,101 @@ function buildFaultManifestPayload(filters, events, totalMatched) {
   };
 }
 
+function getFaultManifestVerifyFingerprint(payload) {
+  return crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        tenantKey: payload.tenantKey || null,
+        providerKey: payload.providerKey || null,
+        scenario: payload.scenario || null,
+        limit: payload.limit,
+        manifestVersion: payload.manifestVersion || null,
+        issuedAt: payload.issuedAt || null,
+        nonce: payload.nonce || null,
+        expectedNonce: payload.expectedNonce || null,
+        maxAgeSeconds: payload.maxAgeSeconds,
+        digest: payload.digest || null,
+        signature: payload.signature || null,
+      }),
+      "utf8"
+    )
+    .digest("hex");
+}
+
+function findFaultManifestVerifyAttempt(fingerprint) {
+  for (var index = 0; index < faultManifestVerifyAttemptCache.length; index += 1) {
+    if (faultManifestVerifyAttemptCache[index].fingerprint === fingerprint) {
+      return {
+        index: index,
+        attempt: faultManifestVerifyAttemptCache[index],
+      };
+    }
+  }
+
+  return null;
+}
+
+function pruneFaultManifestVerifyAttempts(nowMs) {
+  var windowMs = faultManifestVerifyDedupeWindowSeconds * 1000;
+
+  faultManifestVerifyAttemptCache = faultManifestVerifyAttemptCache.filter(function (attempt) {
+    return nowMs - attempt.lastSeenAtMs <= windowMs;
+  });
+
+  while (faultManifestVerifyAttemptCache.length > faultManifestVerifyDedupeMaxEntries) {
+    faultManifestVerifyAttemptCache.shift();
+  }
+}
+
+function buildFaultManifestReplayAttemptMeta(attempt, duplicateSuppressed) {
+  return {
+    attemptId: attempt.attemptId,
+    fingerprint: attempt.fingerprint,
+    duplicateSuppressed: duplicateSuppressed,
+    firstVerifiedAt: attempt.firstVerifiedAt,
+    lastVerifiedAt: attempt.lastVerifiedAt,
+    suppressCount: attempt.suppressCount,
+    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+  };
+}
+
+function storeFaultManifestVerifyAttempt(fingerprint, responseBody, verifiedAtIso) {
+  var nowMs = Date.now();
+  pruneFaultManifestVerifyAttempts(nowMs);
+
+  var existing = findFaultManifestVerifyAttempt(fingerprint);
+  if (existing) {
+    existing.attempt.lastSeenAtMs = nowMs;
+    existing.attempt.lastVerifiedAt = verifiedAtIso;
+    existing.attempt.suppressCount += 1;
+
+    return {
+      duplicateSuppressed: true,
+      attempt: existing.attempt,
+    };
+  }
+
+  var attempt = {
+    attemptId: randomUUID(),
+    fingerprint: fingerprint,
+    firstSeenAtMs: nowMs,
+    lastSeenAtMs: nowMs,
+    firstVerifiedAt: verifiedAtIso,
+    lastVerifiedAt: verifiedAtIso,
+    suppressCount: 0,
+    responseBody: responseBody,
+  };
+
+  faultManifestVerifyAttemptCache.push(attempt);
+  pruneFaultManifestVerifyAttempts(nowMs);
+
+  return {
+    duplicateSuppressed: false,
+    attempt: attempt,
+  };
+}
+
 function normalizeFaultManifestNonce(value) {
   return String(value || "").trim();
 }
@@ -554,7 +662,8 @@ function areOpaqueTokensEqual(actualToken, expectedToken) {
 
 function buildFaultManifestDigestPayload(manifestPayload, replayDefense) {
   var issuedAt = replayDefense && replayDefense.issuedAt ? String(replayDefense.issuedAt) : null;
-  var nonce = replayDefense && replayDefense.nonce ? normalizeFaultManifestNonce(replayDefense.nonce) : null;
+  var nonce =
+    replayDefense && replayDefense.nonce ? normalizeFaultManifestNonce(replayDefense.nonce) : null;
 
   return {
     filters: manifestPayload.filters,
@@ -1344,9 +1453,27 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
   var issuedAt = String(payload.issuedAt || "").trim();
   var nonce = normalizeFaultManifestNonce(payload.nonce);
   var expectedNonce = normalizeFaultManifestNonce(payload.expectedNonce);
-  var maxAgeSeconds = parseRetryInt(payload.maxAgeSeconds, defaultFaultManifestMaxAgeSeconds, 30, 86400);
+  var maxAgeSeconds = parseRetryInt(
+    payload.maxAgeSeconds,
+    defaultFaultManifestMaxAgeSeconds,
+    30,
+    86400
+  );
   var providedDigest = normalizeManifestDigestInput(payload.digest);
   var providedSignature = String(payload.signature || "").trim();
+  var verificationFingerprint = getFaultManifestVerifyFingerprint({
+    tenantKey: tenantKey,
+    providerKey: providerKey,
+    scenario: scenario,
+    limit: limit,
+    manifestVersion: manifestVersion,
+    issuedAt: issuedAt,
+    nonce: nonce,
+    expectedNonce: expectedNonce,
+    maxAgeSeconds: maxAgeSeconds,
+    digest: providedDigest,
+    signature: providedSignature,
+  });
 
   if (!issuedAt) {
     res.status(400).json({
@@ -1408,8 +1535,9 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
     freshness.freshnessMatch &&
     nonceMatch;
 
-  res.json({
-    verifiedAt: new Date().toISOString(),
+  var verificationTime = new Date().toISOString();
+  var responseBody = {
+    verifiedAt: verificationTime,
     valid: valid,
     expectedManifestVersion: expectedManifestVersion,
     providedManifestVersion: manifestVersion,
@@ -1472,7 +1600,25 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
-  });
+  };
+
+  var replayAttempt = storeFaultManifestVerifyAttempt(
+    verificationFingerprint,
+    responseBody,
+    verificationTime
+  );
+
+  if (replayAttempt.duplicateSuppressed) {
+    var cachedResponse = Object.assign({}, replayAttempt.attempt.responseBody);
+    cachedResponse.replayAttempt = buildFaultManifestReplayAttemptMeta(replayAttempt.attempt, true);
+    res.json(cachedResponse);
+    return;
+  }
+
+  responseBody.replayAttempt = buildFaultManifestReplayAttemptMeta(replayAttempt.attempt, false);
+  replayAttempt.attempt.responseBody = responseBody;
+
+  res.json(responseBody);
 });
 
 router.get("/integrations/messaging/fault-injection/retention", function (_req, res) {

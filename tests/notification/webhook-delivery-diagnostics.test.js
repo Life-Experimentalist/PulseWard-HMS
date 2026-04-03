@@ -368,8 +368,40 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.checks.signingConfigured).toBe(true);
     expect(verified.body.checks.freshnessMatch).toBe(true);
     expect(verified.body.checks.nonceMatch).toBe(true);
+    expect(verified.body.replayAttempt.duplicateSuppressed).toBe(false);
+    expect(verified.body.replayAttempt.suppressCount).toBe(0);
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
+    );
+
+    const duplicate = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          issuedAt: manifest.body.replayDefense.issuedAt,
+          nonce: manifest.body.replayDefense.nonce,
+          expectedNonce: manifestNonce,
+          digest: manifest.body.digest.value,
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(duplicate.status).toBe(200);
+    expect(duplicate.body.valid).toBe(true);
+    expect(duplicate.body.replayAttempt.duplicateSuppressed).toBe(true);
+    expect(duplicate.body.replayAttempt.suppressCount).toBe(1);
+    expect(duplicate.body.replayAttempt.attemptId).toBe(verified.body.replayAttempt.attemptId);
+    expect(duplicate.body.replayAttempt.fingerprint).toBe(
+      verified.body.replayAttempt.fingerprint
     );
 
     const tampered = await requestJson(

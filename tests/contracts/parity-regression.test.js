@@ -438,6 +438,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy minMaxEntries schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy maxMaxEntries schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy source schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy pruneStrategy schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3086,6 +3095,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.minMaxEntries type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy maxMaxEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?maxMaxEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention policy maxMaxEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy maxMaxEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.maxMaxEntries type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy source type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?source:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention policy source type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy source schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.source type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy pruneStrategy type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?pruneStrategy:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention policy pruneStrategy type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy pruneStrategy schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.pruneStrategy type expected string got integer"
         );
       }
     );

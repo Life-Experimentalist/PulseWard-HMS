@@ -7,6 +7,7 @@ Framework-based operations control surface built with React + Vite.
 - Service-health and throughput KPI presentation
 - Incident queue and command panel experience
 - Live connector reliability telemetry for replay-attempt saturation, anomaly escalation, and acknowledgement-SLA breach tracking
+- ABHA transactional reliability telemetry for readiness, fallback decisions, and transaction evidence
 - Compile-first static deployment for faster startup
 
 ## Development
@@ -23,22 +24,32 @@ Default Vite dev host runs with automatic port selection near `4312`.
 ### Local Telemetry Configuration
 
 The dashboard reads notification reliability telemetry from existing notification-service APIs.
+The dashboard also reads ABHA readiness and transaction telemetry from auth-service APIs.
 
 By default in dev:
 
 - Frontend requests use `/api/v1/*`
 - Vite proxies `/api/v1` to `http://127.0.0.1:8088`
+- Frontend requests use `/api/auth-v1/*` for ABHA telemetry
+- Vite proxies `/api/auth-v1` to `http://127.0.0.1:5101` and rewrites to auth-service `/api/v1/*`
 
 Optional overrides:
 
 - `VITE_NOTIFICATION_API_BASE_URL` controls the browser base URL used by the app (default `/api/v1`)
 - `VITE_NOTIFICATION_PROXY_TARGET` controls the Vite dev proxy target (default `http://127.0.0.1:8088`)
+- `VITE_AUTH_API_BASE_URL` controls auth telemetry base URL used by the app (default `/api/auth-v1`)
+- `VITE_AUTH_PROXY_TARGET` controls auth-service Vite proxy target (default `http://127.0.0.1:5101`)
 
 Required backend endpoints for live telemetry:
 
 - `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 - `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
 - `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`
+- `GET /api/v1/platform/abha/operational-readiness`
+- `GET /api/v1/platform/abha/fallback-decision/telemetry`
+- `GET /api/v1/platform/abha/transactions/evidence`
+- `POST /api/v1/platform/abha/transactions/read`
+- `POST /api/v1/platform/abha/transactions/write`
 
 ## Production-Fast Start
 

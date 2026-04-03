@@ -216,6 +216,7 @@ describe("auth-service route surface coverage", () => {
     );
     expect(fallbackTelemetry.body.latestDecision.shouldFallback).toBe(true);
     expect(fallbackTelemetry.body.summary.totalCount).toBeGreaterThan(0);
+    expect(fallbackTelemetry.body.summary.fallbackCount).toBeGreaterThan(0);
     expect(Array.isArray(fallbackTelemetry.body.events)).toBe(true);
     expect(fallbackTelemetry.body.diagnostics.consentSimulationEndpoint).toBe(
       "GET /api/v1/platform/abha/consent-flow/simulation"
@@ -332,6 +333,8 @@ describe("auth-service route surface coverage", () => {
     expect(transactionEvidence.body.statusFilter).toBe("simulated");
     expect(Array.isArray(transactionEvidence.body.events)).toBe(true);
     expect(transactionEvidence.body.summary.simulatedCount).toBeGreaterThan(0);
+    expect(transactionEvidence.body.summary.readCount).toBeGreaterThan(0);
+    expect(transactionEvidence.body.summary.totalCount).toBeGreaterThan(0);
     expect(transactionEvidence.body.automation.relatedEndpoints.read).toBe(
       "POST /api/v1/platform/abha/transactions/read"
     );

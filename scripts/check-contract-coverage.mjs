@@ -195,6 +195,14 @@ const criticalSchemaChecks = [
   {
     service: "auth-service",
     specSource: "services/auth-service/openapi.yaml",
+    method: "GET",
+    path: "/platform/abha/transactions/evidence",
+    requireRequestBody: false,
+    requiredResponseCodes: ["200"],
+  },
+  {
+    service: "auth-service",
+    specSource: "services/auth-service/openapi.yaml",
     method: "POST",
     path: "/platform/domain-config/validate",
     requireRequestBody: true,

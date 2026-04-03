@@ -55,6 +55,9 @@ Under `/api/v1`:
 | GET    | `/platform/abha/consent-flow/simulation`     | ABHA consent workflow simulation checkpoints for operational drill scenarios.                                               |
 | GET    | `/platform/abha/fallback-decision/telemetry` | ABHA fallback decision telemetry for config, gateway, and consent drill scenarios.                                          |
 | GET    | `/platform/abha/operational-readiness`       | ABHA operational readiness summary with runbook-linked setup and rollback checklists.                                       |
+| POST   | `/platform/abha/transactions/read`           | Consent-aware ABHA transactional read with dry-run default, fallback safety, and optional live gateway execution.          |
+| POST   | `/platform/abha/transactions/write`          | Consent-aware ABHA transactional write with dry-run default, fallback safety, and optional live gateway execution.         |
+| GET    | `/platform/abha/transactions/evidence`       | ABHA transactional evidence feed with operation/status filters and outcome summaries for audit and drill handoff.          |
 | GET    | `/admin/settings/storage`                    | Admin settings store metadata.                                                                                              |
 | GET    | `/admin/settings`                            | Read tenant admin settings.                                                                                                 |
 | PUT    | `/admin/settings`                            | Persist tenant admin settings.                                                                                              |

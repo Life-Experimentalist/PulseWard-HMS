@@ -50,7 +50,11 @@
 	- retention status telemetry
 	- saturation trend summaries
 	- escalation export breach feed
-- Default dev proxy routes `/api/v1` telemetry calls to notification-service on `http://127.0.0.1:8088`.
+	- ABHA operational readiness, fallback telemetry, and transaction evidence summaries
+	- ABHA read/write dry-run trigger actions for operator shift validation
+- Default dev proxy routes:
+	- `/api/v1` telemetry calls to notification-service on `http://127.0.0.1:8088`
+	- `/api/auth-v1` telemetry calls to auth-service on `http://127.0.0.1:5101` (rewritten to `/api/v1`)
 
 ## Weekly checks
 

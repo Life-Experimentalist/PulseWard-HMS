@@ -260,6 +260,14 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Frontend telemetry dependencies are protected by backend invariants in `tests/notification/webhook-delivery-diagnostics.test.js` to reduce UI contract drift risk.
 - Local developer flow now includes Vite proxy guidance and environment override documentation for live telemetry bootstrap.
 
+## M6.2 Operations Dashboard ABHA Transactional Reliability Surface Coverage
+
+- Operations dashboard now consumes ABHA readiness, fallback telemetry, and transaction-evidence endpoints from auth-service.
+- Dashboard operator actions now execute ABHA transaction dry-run probes (`read` and `write`) for shift-level reliability validation without live data mutation.
+- Local developer flow now supports dual telemetry proxies for notification-service and auth-service (`/api/v1` and `/api/auth-v1`).
+- Contract checker critical schema coverage now includes `GET /platform/abha/transactions/evidence` alongside ABHA transaction read/write paths.
+- Regression tests continue to enforce ABHA transaction response semantics consumed by dashboard telemetry and operator action UI states.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

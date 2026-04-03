@@ -345,3 +345,5 @@ Exit criteria:
 68. Module-5 review checkpoint: M5 scope is broad and valid, but reporting should be grouped as `M5-A` adapters, `M5-B` evidence trust chain, `M5-C` replay forensics telemetry, and `M5-D` anomaly/escalation/SLA handoff to avoid unnecessary micro-slice fragmentation.
 69. M5.20 completed: auth-service now provides consent-aware ABHA transactional read/write connector routes with dry-run defaults, optional live gateway mode, and deterministic fallback routing.
 70. M5.20 evidence checkpoint: regression and contract coverage now validate ABHA transaction consent blocking, fallback-path execution, simulated read/write behavior, and transactional evidence telemetry exports.
+71. M6.2 completed: operations-dashboard now surfaces ABHA readiness, fallback telemetry, transaction evidence summaries, and dry-run read/write reliability actions for operators.
+72. M6.2 evidence checkpoint: contract and regression coverage now include ABHA transaction evidence schema checks and dashboard-consumed ABHA response invariants.

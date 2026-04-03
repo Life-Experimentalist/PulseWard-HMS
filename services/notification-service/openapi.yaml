@@ -619,6 +619,38 @@ paths:
             text/csv:
               schema:
                 type: string
+  /integrations/messaging/fault-injection/manifest/verify/attempts/retention:
+    get:
+      summary: Get retention policy and telemetry for manifest verification replay-attempt audit history
+      responses:
+        "200":
+          description: Manifest verification replay-attempt retention status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply:
+    post:
+      summary: Apply retention tuning controls for manifest verification replay-attempt audit history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest"
+      responses:
+        "200":
+          description: Applied replay-attempt retention tuning controls
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyResponse"
+        "400":
+          description: Missing retention tuning payload values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
   /integrations/messaging/fault-injection/retention:
     get:
       summary: Get connector fault-injection retention policy and telemetry window status
@@ -1508,6 +1540,12 @@ components:
         replayAttemptsExportEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
+        replayAttemptsRetentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        replayAttemptsRetentionApplyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1612,6 +1650,12 @@ components:
         attemptsExportEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionApplyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1658,6 +1702,12 @@ components:
         faultInjectionExportEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/export
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+        retentionApplyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
     MessagingFaultManifestVerifyAttemptExportResponse:
       type: object
       properties:
@@ -1692,6 +1742,147 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAuditItem"
+    MessagingFaultManifestVerifyAttemptRetentionPolicy:
+      type: object
+      properties:
+        dedupeWindowSeconds:
+          type: integer
+          example: 600
+        maxEntries:
+          type: integer
+          example: 500
+        minDedupeWindowSeconds:
+          type: integer
+          example: 30
+        maxDedupeWindowSeconds:
+          type: integer
+          example: 86400
+        minMaxEntries:
+          type: integer
+          example: 50
+        maxMaxEntries:
+          type: integer
+          example: 5000
+        source:
+          type: string
+          example: api
+        pruneStrategy:
+          type: string
+          example: drop-expired-then-oldest
+    MessagingFaultManifestVerifyAttemptRetentionTelemetry:
+      type: object
+      properties:
+        totalRecorded:
+          type: integer
+          example: 8
+        duplicateSuppressedAttempts:
+          type: integer
+          example: 3
+        totalSuppressedEvents:
+          type: integer
+          example: 5
+        oldestFirstVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        latestLastVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+    MessagingFaultManifestVerifyAttemptRetentionStatusDiagnostics:
+      type: object
+      properties:
+        attemptsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts
+        attemptsExportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
+        verifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
+        applyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply
+    MessagingFaultManifestVerifyAttemptRetentionStatusResponse:
+      type: object
+      properties:
+        retention:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionPolicy"
+        telemetry:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionTelemetry"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionStatusDiagnostics"
+    MessagingFaultManifestVerifyAttemptRetentionApplyRequest:
+      type: object
+      properties:
+        dedupeWindowSeconds:
+          type: integer
+          minimum: 30
+          maximum: 86400
+        maxEntries:
+          type: integer
+          minimum: 50
+          maximum: 5000
+        pruneNow:
+          type: boolean
+          default: true
+    MessagingFaultManifestVerifyAttemptRetentionApplyResponse:
+      type: object
+      properties:
+        appliedAt:
+          type: string
+          format: date-time
+        retention:
+          type: object
+          properties:
+            previousDedupeWindowSeconds:
+              type: integer
+              example: 600
+            dedupeWindowSeconds:
+              type: integer
+              example: 900
+            previousMaxEntries:
+              type: integer
+              example: 500
+            maxEntries:
+              type: integer
+              example: 750
+            pruneNow:
+              type: boolean
+              example: true
+            prunedByWindow:
+              type: integer
+              example: 1
+            prunedByMaxEntries:
+              type: integer
+              example: 0
+            prunedCount:
+              type: integer
+              example: 1
+            source:
+              type: string
+              example: api
+            pruneStrategy:
+              type: string
+              example: drop-expired-then-oldest
+        telemetry:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionTelemetry"
+        diagnostics:
+          type: object
+          properties:
+            statusEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention
+            attemptsEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts
+            attemptsExportEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
+            verifyEndpoint:
+              type: string
+              example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

@@ -376,6 +376,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.diagnostics.replayAttemptsExportEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export"
     );
+    expect(verified.body.diagnostics.replayAttemptsRetentionEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(verified.body.diagnostics.replayAttemptsRetentionApplyEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -429,6 +435,12 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(auditByFingerprint.body.attempts[0].duplicateSuppressed).toBe(true);
     expect(auditByFingerprint.body.attempts[0].suppressCount).toBeGreaterThanOrEqual(1);
+    expect(auditByFingerprint.body.diagnostics.retentionEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(auditByFingerprint.body.diagnostics.retentionApplyEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
 
     const attemptsExportJson = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint=${encodeURIComponent(
@@ -445,6 +457,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsExportJson.body.summary.totalSuppressedEvents).toBeGreaterThanOrEqual(1);
     expect(attemptsExportJson.body.diagnostics.attemptsEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+    expect(attemptsExportJson.body.diagnostics.retentionApplyEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
     );
     expect(Array.isArray(attemptsExportJson.body.attempts)).toBe(true);
 
@@ -559,6 +577,62 @@ describe("notification webhook delivery diagnostics", () => {
     expect(stale.body.checks.digestMatch).toBe(true);
     expect(stale.body.checks.signatureMatch).toBe(true);
     expect(stale.body.checks.freshnessMatch).toBe(false);
+
+    const attemptsRetentionStatus = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(attemptsRetentionStatus.status).toBe(200);
+    expect(attemptsRetentionStatus.body.retention.dedupeWindowSeconds).toBeGreaterThanOrEqual(30);
+    expect(attemptsRetentionStatus.body.retention.maxEntries).toBeGreaterThanOrEqual(50);
+    expect(attemptsRetentionStatus.body.telemetry.totalRecorded).toBeGreaterThanOrEqual(1);
+    expect(attemptsRetentionStatus.body.diagnostics.applyEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply"
+    );
+
+    const attemptsRetentionApplied = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dedupeWindowSeconds: 300,
+          maxEntries: 300,
+          pruneNow: true,
+        }),
+      }
+    );
+
+    expect(attemptsRetentionApplied.status).toBe(200);
+    expect(attemptsRetentionApplied.body.retention.dedupeWindowSeconds).toBe(300);
+    expect(attemptsRetentionApplied.body.retention.maxEntries).toBe(300);
+    expect(attemptsRetentionApplied.body.retention.source).toBe("api");
+    expect(attemptsRetentionApplied.body.diagnostics.statusEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention"
+    );
+
+    const attemptsRetentionMissingPayload = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pruneNow: true,
+        }),
+      }
+    );
+
+    expect(attemptsRetentionMissingPayload.status).toBe(400);
+    expect(attemptsRetentionMissingPayload.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_REQUIRED"
+    );
 
     const missingIssuedAt = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify",

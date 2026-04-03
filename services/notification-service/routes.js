@@ -35,18 +35,32 @@ var faultManifestAllowedClockSkewSeconds = parseRetryInt(
   0,
   300
 );
+var faultManifestVerifyRetentionWindowEnvValue = String(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_WINDOW_SECONDS ||
+    process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_WINDOW_SECONDS ||
+    ""
+).trim();
+var faultManifestVerifyRetentionMaxEntriesEnvValue = String(
+  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_MAX_ENTRIES ||
+    process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_MAX_ENTRIES ||
+    ""
+).trim();
 var faultManifestVerifyDedupeWindowSeconds = parseRetryInt(
-  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_WINDOW_SECONDS,
+  faultManifestVerifyRetentionWindowEnvValue,
   600,
   30,
   86400
 );
 var faultManifestVerifyDedupeMaxEntries = parseRetryInt(
-  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_DEDUPE_MAX_ENTRIES,
+  faultManifestVerifyRetentionMaxEntriesEnvValue,
   500,
   50,
   5000
 );
+var faultManifestVerifyRetentionSource =
+  faultManifestVerifyRetentionWindowEnvValue || faultManifestVerifyRetentionMaxEntriesEnvValue
+    ? "env"
+    : "default";
 var faultManifestVerifyAttemptCache = [];
 
 var supportedAppointmentEventTypes = [
@@ -554,14 +568,115 @@ function findFaultManifestVerifyAttempt(fingerprint) {
 
 function pruneFaultManifestVerifyAttempts(nowMs) {
   var windowMs = faultManifestVerifyDedupeWindowSeconds * 1000;
+  var prunedByWindow = 0;
 
   faultManifestVerifyAttemptCache = faultManifestVerifyAttemptCache.filter(function (attempt) {
-    return nowMs - attempt.lastSeenAtMs <= windowMs;
+    var keep = nowMs - attempt.lastSeenAtMs <= windowMs;
+    if (!keep) {
+      prunedByWindow += 1;
+    }
+
+    return keep;
   });
 
+  var prunedByMaxEntries = 0;
   while (faultManifestVerifyAttemptCache.length > faultManifestVerifyDedupeMaxEntries) {
     faultManifestVerifyAttemptCache.shift();
+    prunedByMaxEntries += 1;
   }
+
+  return {
+    prunedByWindow: prunedByWindow,
+    prunedByMaxEntries: prunedByMaxEntries,
+    prunedCount: prunedByWindow + prunedByMaxEntries,
+  };
+}
+
+function summarizeFaultManifestVerifyAttemptTelemetry() {
+  var totalSuppressedEvents = 0;
+  var duplicateSuppressedAttempts = 0;
+  var latestLastVerifiedAt = null;
+  var latestLastSeenAtMs = null;
+
+  faultManifestVerifyAttemptCache.forEach(function (attempt) {
+    totalSuppressedEvents += attempt.suppressCount;
+
+    if (attempt.suppressCount > 0) {
+      duplicateSuppressedAttempts += 1;
+    }
+
+    if (latestLastSeenAtMs === null || attempt.lastSeenAtMs > latestLastSeenAtMs) {
+      latestLastSeenAtMs = attempt.lastSeenAtMs;
+      latestLastVerifiedAt = attempt.lastVerifiedAt;
+    }
+  });
+
+  return {
+    totalRecorded: faultManifestVerifyAttemptCache.length,
+    duplicateSuppressedAttempts: duplicateSuppressedAttempts,
+    totalSuppressedEvents: totalSuppressedEvents,
+    oldestFirstVerifiedAt:
+      faultManifestVerifyAttemptCache.length > 0
+        ? faultManifestVerifyAttemptCache[0].firstVerifiedAt
+        : null,
+    latestLastVerifiedAt: latestLastVerifiedAt,
+  };
+}
+
+function applyFaultManifestVerifyAttemptRetention(payload) {
+  var previousWindow = faultManifestVerifyDedupeWindowSeconds;
+  var previousMaxEntries = faultManifestVerifyDedupeMaxEntries;
+  var hasWindow = payload.dedupeWindowSeconds !== undefined && payload.dedupeWindowSeconds !== null;
+  var hasMaxEntries = payload.maxEntries !== undefined && payload.maxEntries !== null;
+
+  if (!hasWindow && !hasMaxEntries) {
+    return null;
+  }
+
+  var pruneNow = parseRetryBool(payload.pruneNow, true);
+
+  if (hasWindow) {
+    faultManifestVerifyDedupeWindowSeconds = parseRetryInt(
+      payload.dedupeWindowSeconds,
+      faultManifestVerifyDedupeWindowSeconds,
+      30,
+      86400
+    );
+  }
+
+  if (hasMaxEntries) {
+    faultManifestVerifyDedupeMaxEntries = parseRetryInt(
+      payload.maxEntries,
+      faultManifestVerifyDedupeMaxEntries,
+      50,
+      5000
+    );
+  }
+
+  faultManifestVerifyRetentionSource = "api";
+
+  var pruneResult = {
+    prunedByWindow: 0,
+    prunedByMaxEntries: 0,
+    prunedCount: 0,
+  };
+  if (pruneNow) {
+    pruneResult = pruneFaultManifestVerifyAttempts(Date.now());
+  }
+
+  return {
+    previousDedupeWindowSeconds: previousWindow,
+    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+    previousMaxEntries: previousMaxEntries,
+    maxEntries: faultManifestVerifyDedupeMaxEntries,
+    pruneNow: pruneNow,
+    prunedByWindow: pruneResult.prunedByWindow,
+    prunedByMaxEntries: pruneResult.prunedByMaxEntries,
+    prunedCount: pruneResult.prunedCount,
+    source: faultManifestVerifyRetentionSource,
+    pruneStrategy: "drop-expired-then-oldest",
+    telemetry: summarizeFaultManifestVerifyAttemptTelemetry(),
+  };
 }
 
 function buildFaultManifestReplayAttemptMeta(attempt, duplicateSuppressed) {
@@ -1772,6 +1887,10 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
       replayAttemptsExportEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+      replayAttemptsRetentionEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+      replayAttemptsRetentionApplyEndpoint:
+        "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -1825,56 +1944,142 @@ router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", f
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       attemptsExportEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+      retentionEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+      retentionApplyEndpoint:
+        "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
     },
     attempts: audit.attempts,
   });
 });
 
-router.get("/integrations/messaging/fault-injection/manifest/verify/attempts/export", function (req, res) {
-  var format = String(req.query.format || "json")
-    .trim()
-    .toLowerCase();
-  var audit = collectFaultManifestVerifyAttemptAudit({
-    tenantKey: req.query.tenantKey,
-    providerKey: req.query.providerKey,
-    scenario: req.query.scenario,
-    fingerprint: req.query.fingerprint,
-    validFilter: parseOptionalBoolQuery(req.query.valid),
-    duplicateSuppressedFilter: parseOptionalBoolQuery(req.query.duplicateSuppressed),
-    limit: req.query.limit,
-    limitFallback: 250,
-    limitMax: 2000,
-  });
+router.get(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+  function (req, res) {
+    var format = String(req.query.format || "json")
+      .trim()
+      .toLowerCase();
+    var audit = collectFaultManifestVerifyAttemptAudit({
+      tenantKey: req.query.tenantKey,
+      providerKey: req.query.providerKey,
+      scenario: req.query.scenario,
+      fingerprint: req.query.fingerprint,
+      validFilter: parseOptionalBoolQuery(req.query.valid),
+      duplicateSuppressedFilter: parseOptionalBoolQuery(req.query.duplicateSuppressed),
+      limit: req.query.limit,
+      limitFallback: 250,
+      limitMax: 2000,
+    });
 
-  if (format === "csv") {
-    var csvBody = buildFaultManifestVerifyAttemptCsv(audit.attempts);
+    if (format === "csv") {
+      var csvBody = buildFaultManifestVerifyAttemptCsv(audit.attempts);
+      res.set("Cache-Control", "no-store");
+      res.attachment("messaging-fault-manifest-verify-attempts-export.csv");
+      res.type("text/csv");
+      res.send(csvBody);
+      return;
+    }
+
     res.set("Cache-Control", "no-store");
-    res.attachment("messaging-fault-manifest-verify-attempts-export.csv");
-    res.type("text/csv");
-    res.send(csvBody);
-    return;
+    res.json({
+      exportedAt: new Date().toISOString(),
+      format: "json",
+      totalRecorded: audit.totalRecorded,
+      totalMatched: audit.totalMatched,
+      returned: audit.returned,
+      dedupeWindowSeconds: audit.dedupeWindowSeconds,
+      dedupeMaxEntries: audit.dedupeMaxEntries,
+      summary: audit.summary,
+      filters: audit.filters,
+      diagnostics: {
+        attemptsEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
+        verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+        manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+        faultInjectionExportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+        retentionEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        retentionApplyEndpoint:
+          "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      },
+      attempts: audit.attempts,
+    });
   }
+);
 
-  res.set("Cache-Control", "no-store");
-  res.json({
-    exportedAt: new Date().toISOString(),
-    format: "json",
-    totalRecorded: audit.totalRecorded,
-    totalMatched: audit.totalMatched,
-    returned: audit.returned,
-    dedupeWindowSeconds: audit.dedupeWindowSeconds,
-    dedupeMaxEntries: audit.dedupeMaxEntries,
-    summary: audit.summary,
-    filters: audit.filters,
-    diagnostics: {
-      attemptsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
-      verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
-      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
-      faultInjectionExportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
-    },
-    attempts: audit.attempts,
-  });
-});
+router.get(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+  function (_req, res) {
+    pruneFaultManifestVerifyAttempts(Date.now());
+    var telemetry = summarizeFaultManifestVerifyAttemptTelemetry();
+
+    res.set("Cache-Control", "no-store");
+    res.json({
+      retention: {
+        dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+        maxEntries: faultManifestVerifyDedupeMaxEntries,
+        minDedupeWindowSeconds: 30,
+        maxDedupeWindowSeconds: 86400,
+        minMaxEntries: 50,
+        maxMaxEntries: 5000,
+        source: faultManifestVerifyRetentionSource,
+        pruneStrategy: "drop-expired-then-oldest",
+      },
+      telemetry: telemetry,
+      diagnostics: {
+        attemptsEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
+        attemptsExportEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+        verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+        applyEndpoint:
+          "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      },
+    });
+  }
+);
+
+router.post(
+  "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+  function (req, res) {
+    var payload = req.body || {};
+    var applied = applyFaultManifestVerifyAttemptRetention(payload);
+
+    if (!applied) {
+      res.status(400).json({
+        message: "dedupeWindowSeconds or maxEntries is required",
+        code: "NOTIFICATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_REQUIRED",
+      });
+      return;
+    }
+
+    res.json({
+      appliedAt: new Date().toISOString(),
+      retention: {
+        previousDedupeWindowSeconds: applied.previousDedupeWindowSeconds,
+        dedupeWindowSeconds: applied.dedupeWindowSeconds,
+        previousMaxEntries: applied.previousMaxEntries,
+        maxEntries: applied.maxEntries,
+        pruneNow: applied.pruneNow,
+        prunedByWindow: applied.prunedByWindow,
+        prunedByMaxEntries: applied.prunedByMaxEntries,
+        prunedCount: applied.prunedCount,
+        source: applied.source,
+        pruneStrategy: applied.pruneStrategy,
+      },
+      telemetry: applied.telemetry,
+      diagnostics: {
+        statusEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+        attemptsEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
+        attemptsExportEndpoint:
+          "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+        verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+      },
+    });
+  }
+);
 
 router.get("/integrations/messaging/fault-injection/retention", function (_req, res) {
   var totalRecorded = messagingFaultInjectionEvents.length;

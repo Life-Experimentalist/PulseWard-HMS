@@ -197,6 +197,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Replay-attempt query and verify diagnostics now link the export endpoint to support postmortem pivot workflows.
 - Regression tests cover export JSON summaries, CSV content shape, and duplicate-suppression evidence counters.
 
+## M5.13 Replay-Attempt Retention Tuning Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention` for replay-attempt audit retention status and suppression telemetry.
+- Notification runtime now exposes `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` for bounded dedupe-window and max-entry tuning with optional immediate prune.
+- Verify, attempts query, and attempts export diagnostics now link replay-attempt retention status/apply endpoints for operational pivot continuity.
+- Regression tests cover retention status payload semantics, retention apply success paths, and missing-payload rejection behavior.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

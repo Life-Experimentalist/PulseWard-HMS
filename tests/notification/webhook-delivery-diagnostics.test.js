@@ -661,7 +661,15 @@ describe("notification webhook delivery diagnostics", () => {
     expect(Array.isArray(attemptsRetentionStatus.body.telemetry.saturationTrend.snapshots)).toBe(
       true
     );
-    expect(attemptsRetentionStatus.body.telemetry.saturationTrend.snapshots.length).toBeGreaterThan(0);
+    expect(attemptsRetentionStatus.body.telemetry.saturationTrend.snapshots.length).toBeGreaterThan(
+      0
+    );
+    expect(Array.isArray(attemptsRetentionStatus.body.telemetry.anomalies)).toBe(true);
+    expect(
+      [null, "warning", "critical"].includes(
+        attemptsRetentionStatus.body.telemetry.highestAnomalySeverity
+      )
+    ).toBe(true);
 
     const attemptsRetentionApplied = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
@@ -711,6 +719,12 @@ describe("notification webhook delivery diagnostics", () => {
     expect(
       attemptsRetentionApplied.body.telemetry.saturationTrend.summary.totalInWindow
     ).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(attemptsRetentionApplied.body.telemetry.anomalies)).toBe(true);
+    expect(
+      [null, "warning", "critical"].includes(
+        attemptsRetentionApplied.body.telemetry.highestAnomalySeverity
+      )
+    ).toBe(true);
 
     const attemptsRetentionTrend = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=2",
@@ -729,9 +743,16 @@ describe("notification webhook delivery diagnostics", () => {
       attemptsRetentionTrend.body.summary.returned
     );
     expect(attemptsRetentionTrend.body.summary.hasMore).toBe(
-      attemptsRetentionTrend.body.summary.totalInWindow > attemptsRetentionTrend.body.summary.returned
+      attemptsRetentionTrend.body.summary.totalInWindow >
+        attemptsRetentionTrend.body.summary.returned
     );
     expect(Array.isArray(attemptsRetentionTrend.body.snapshots)).toBe(true);
+    expect(Array.isArray(attemptsRetentionTrend.body.summary.anomalies)).toBe(true);
+    expect(
+      [null, "warning", "critical"].includes(
+        attemptsRetentionTrend.body.summary.highestAnomalySeverity
+      )
+    ).toBe(true);
     if (attemptsRetentionTrend.body.snapshots.length > 0) {
       expect(Date.parse(attemptsRetentionTrend.body.snapshots[0].capturedAt)).not.toBeNaN();
       expect(["normal", "warning", "critical"]).toContain(
@@ -743,6 +764,91 @@ describe("notification webhook delivery diagnostics", () => {
       "latestSaturation"
     );
     expect(attemptsRetentionTrend.body.diagnostics.retentionSaturationTrendPath).toBe("snapshots");
+
+    const anomalyRetentionApplied = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dedupeWindowSeconds: 600,
+          maxEntries: 60,
+          pruneNow: false,
+        }),
+      }
+    );
+
+    expect(anomalyRetentionApplied.status).toBe(200);
+    expect(anomalyRetentionApplied.body.retention.maxEntries).toBe(60);
+
+    for (let index = 0; index < 50; index += 1) {
+      await requestJson("/api/v1/integrations/messaging/fault-injection/manifest/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          issuedAt: manifest.body.replayDefense.issuedAt,
+          nonce: manifest.body.replayDefense.nonce,
+          expectedNonce: `incident-2026-04-03-anomaly-${index}`,
+          digest: manifest.body.digest.value,
+          signature: manifest.body.signature,
+        }),
+      });
+    }
+
+    await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+    await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+    const anomalyRetentionStatus = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(anomalyRetentionStatus.status).toBe(200);
+    expect(Array.isArray(anomalyRetentionStatus.body.telemetry.anomalies)).toBe(true);
+
+    const anomalyTrendStatus = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(anomalyTrendStatus.status).toBe(200);
+    expect(Array.isArray(anomalyTrendStatus.body.summary.anomalies)).toBe(true);
+    expect(anomalyTrendStatus.body.summary.anomalies.length).toBeGreaterThan(0);
+    expect(["warning", "critical"]).toContain(anomalyTrendStatus.body.summary.highestAnomalySeverity);
+
+    const anomalyKeys = anomalyTrendStatus.body.summary.anomalies.map((item) => item.key);
+    expect(
+      anomalyKeys.some((key) => key === "sustained-warning" || key === "sustained-critical")
+    ).toBe(true);
+
+    anomalyTrendStatus.body.summary.anomalies.forEach((item) => {
+      expect(["sustained-warning", "sustained-critical", "accelerating-utilization"]).toContain(
+        item.key
+      );
+      expect(["warning", "critical"]).toContain(item.severity);
+      expect(item.recommendedAction.length).toBeGreaterThan(0);
+    });
 
     const attemptsRetentionMissingPayload = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",

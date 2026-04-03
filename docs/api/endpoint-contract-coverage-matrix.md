@@ -218,6 +218,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verify, attempts query/export, and retention diagnostics now include trend discoverability links (`retentionSaturationTrendEndpoint`, `retentionSaturationTrendPath`).
 - Regression tests cover trend payload shape, query window/limit behavior, and trend diagnostics link continuity.
 
+## M5.16 Replay-Attempt Saturation Trend Anomaly Coverage
+
+- Saturation trend summaries now expose anomaly objects with machine-readable keys (`sustained-warning`, `sustained-critical`, `accelerating-utilization`), severity levels, and recommended operator actions.
+- Retention status/apply telemetry now surfaces anomaly aggregates (`anomalies`, `highestAnomalySeverity`) for sustained-risk triage without additional query hops.
+- Trend anomaly evaluation uses bounded in-memory snapshots and lightweight rule checks to preserve low-cost runtime behavior.
+- Regression tests cover anomaly payload shape, supported key/severity enums, sustained-risk anomaly detection, and highest-severity reporting.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

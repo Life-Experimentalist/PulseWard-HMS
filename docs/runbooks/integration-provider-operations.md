@@ -24,6 +24,9 @@
 - If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
 - If replay-attempt retention `telemetry.saturation.alertLevel=critical`, execute immediate retention apply or prune action, then attach before/after telemetry to incident evidence.
 - If retention trend reports `trendDirection=up` while latest alert level remains `warning` or `critical`, escalate to incident commander for sustained-capacity risk review.
+- If anomaly key `sustained-warning` is present, schedule same-shift retention tuning and verify anomaly clearance in the next trend sample.
+- If anomaly key `sustained-critical` is present, execute immediate retention correction, open incident bridge, and archive anomaly evidence payloads.
+- If anomaly key `accelerating-utilization` is present, apply preemptive capacity tuning before crossing sustained-critical thresholds.
 
 ## Weekly checks
 
@@ -47,6 +50,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window and cache size)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
+	- Confirm anomaly key transitions (`sustained-warning`, `sustained-critical`, `accelerating-utilization`) and capture clearance evidence after mitigation.
 
 ## Incident handling
 

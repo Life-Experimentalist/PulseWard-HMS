@@ -1873,6 +1873,15 @@ components:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturation"
         saturationTrend:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationTrend"
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly"
+        highestAnomalySeverity:
+          type: string
+          nullable: true
+          enum: [warning, critical]
+          example: warning
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:
       type: object
       properties:
@@ -1954,6 +1963,32 @@ components:
           type: string
           enum: [up, down, flat]
           example: up
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly"
+        highestAnomalySeverity:
+          type: string
+          nullable: true
+          enum: [warning, critical]
+          example: warning
+    MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:
+      type: object
+      properties:
+        key:
+          type: string
+          enum: [sustained-warning, sustained-critical, accelerating-utilization]
+          example: sustained-warning
+        severity:
+          type: string
+          enum: [warning, critical]
+          example: warning
+        recommendedAction:
+          type: string
+          example: Sustained warning saturation detected. Increase maxEntries or apply prune before the next replay-heavy verification window.
+        evidence:
+          type: object
+          additionalProperties: true
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:
       type: object
       properties:

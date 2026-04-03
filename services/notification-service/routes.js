@@ -76,10 +76,32 @@ var faultManifestVerifyRetentionSaturationTrendMaxSnapshots = parseRetryInt(
   2880
 );
 var faultManifestVerifyRetentionSaturationTrendMinCaptureSeconds = parseRetryInt(
-  process.env.INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_TREND_MIN_CAPTURE_SECONDS,
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_SATURATION_TREND_MIN_CAPTURE_SECONDS,
   30,
   0,
   3600
+);
+var faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots = parseRetryInt(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_SUSTAINED_WARNING_MIN_SNAPSHOTS,
+  3,
+  2,
+  12
+);
+var faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots = parseRetryInt(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_SUSTAINED_CRITICAL_MIN_SNAPSHOTS,
+  2,
+  2,
+  12
+);
+var faultManifestVerifyRetentionAnomalyAccelerationDeltaPercent = parseRetryInt(
+  process.env
+    .INTEGRATION_FAULT_MANIFEST_VERIFY_ATTEMPT_RETENTION_ANOMALY_ACCELERATION_DELTA_PERCENT,
+  5,
+  1,
+  25
 );
 if (
   faultManifestVerifyRetentionSaturationCriticalPercent <=
@@ -694,7 +716,9 @@ function maybeCaptureFaultManifestVerifySaturationTrend(trigger, saturation, for
   }
 
   var elapsedSeconds = (snapshotTimeMs - latestSnapshot.capturedAtMs) / 1000;
-  var utilizationDelta = Math.abs(saturation.utilizationPercent - latestSnapshot.utilizationPercent);
+  var utilizationDelta = Math.abs(
+    saturation.utilizationPercent - latestSnapshot.utilizationPercent
+  );
   var alertLevelChanged = saturation.alertLevel !== latestSnapshot.alertLevel;
 
   if (
@@ -736,6 +760,8 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
     latestUtilizationPercent: null,
     latestAlertLevel: null,
     trendDirection: "flat",
+    anomalies: [],
+    highestAnomalySeverity: null,
   };
 
   if (totalInWindow > 0) {
@@ -757,8 +783,7 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
       }
     });
 
-    var utilizationDelta =
-      lastSnapshot.utilizationPercent - firstSnapshot.utilizationPercent;
+    var utilizationDelta = lastSnapshot.utilizationPercent - firstSnapshot.utilizationPercent;
     var trendDirection = "flat";
     if (utilizationDelta > 0.1) {
       trendDirection = "up";
@@ -770,13 +795,15 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
     summary.lastCapturedAt = lastSnapshot.capturedAt;
     summary.minUtilizationPercent = minUtilizationPercent;
     summary.maxUtilizationPercent = maxUtilizationPercent;
-    summary.avgUtilizationPercent = Number(
-      (totalUtilizationPercent / totalInWindow).toFixed(1)
-    );
+    summary.avgUtilizationPercent = Number((totalUtilizationPercent / totalInWindow).toFixed(1));
     summary.latestUtilizationPercent = lastSnapshot.utilizationPercent;
     summary.latestAlertLevel = lastSnapshot.alertLevel;
     summary.trendDirection = trendDirection;
   }
+
+  var anomalies = evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshotsInWindow);
+  summary.anomalies = anomalies;
+  summary.highestAnomalySeverity = getHighestFaultManifestVerifyAnomalySeverity(anomalies);
 
   return {
     summary: summary,
@@ -792,6 +819,103 @@ function collectFaultManifestVerifyAttemptSaturationTrend(options) {
       };
     }),
   };
+}
+
+function getHighestFaultManifestVerifyAnomalySeverity(anomalies) {
+  if (!Array.isArray(anomalies) || anomalies.length === 0) {
+    return null;
+  }
+
+  var hasCritical = anomalies.some(function (anomaly) {
+    return anomaly.severity === "critical";
+  });
+
+  if (hasCritical) {
+    return "critical";
+  }
+
+  return "warning";
+}
+
+function evaluateFaultManifestVerifySaturationTrendAnomalies(summary, snapshots) {
+  var anomalies = [];
+  var totalSnapshots = snapshots.length;
+
+  if (
+    summary.latestAlertLevel === "warning" &&
+    totalSnapshots >= faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots
+  ) {
+    var warningTail = snapshots.slice(-faultManifestVerifyRetentionAnomalySustainedWarningMinSnapshots);
+    var sustainedWarning = warningTail.every(function (snapshot) {
+      return snapshot.alertLevel === "warning";
+    });
+
+    if (sustainedWarning) {
+      anomalies.push({
+        key: "sustained-warning",
+        severity: "warning",
+        recommendedAction:
+          "Sustained warning saturation detected. Increase maxEntries or apply prune before the next replay-heavy verification window.",
+        evidence: {
+          snapshotCount: warningTail.length,
+          latestUtilizationPercent: summary.latestUtilizationPercent,
+        },
+      });
+    }
+  }
+
+  if (
+    summary.latestAlertLevel === "critical" &&
+    totalSnapshots >= faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots
+  ) {
+    var criticalTail = snapshots.slice(-faultManifestVerifyRetentionAnomalySustainedCriticalMinSnapshots);
+    var sustainedCritical = criticalTail.every(function (snapshot) {
+      return snapshot.alertLevel === "critical";
+    });
+
+    if (sustainedCritical) {
+      anomalies.push({
+        key: "sustained-critical",
+        severity: "critical",
+        recommendedAction:
+          "Critical saturation persisted across recent snapshots. Apply retention correction immediately and capture before/after telemetry for incident evidence.",
+        evidence: {
+          snapshotCount: criticalTail.length,
+          latestUtilizationPercent: summary.latestUtilizationPercent,
+        },
+      });
+    }
+  }
+
+  if (summary.trendDirection === "up" && totalSnapshots >= 4) {
+    var latestSnapshot = snapshots[totalSnapshots - 1];
+    var previousSnapshot = snapshots[totalSnapshots - 2];
+    var baselineSnapshot = snapshots[totalSnapshots - 3];
+    var latestDelta = Number(
+      (latestSnapshot.utilizationPercent - previousSnapshot.utilizationPercent).toFixed(1)
+    );
+    var previousDelta = Number(
+      (previousSnapshot.utilizationPercent - baselineSnapshot.utilizationPercent).toFixed(1)
+    );
+
+    if (
+      latestDelta > 0 &&
+      latestDelta - previousDelta >= faultManifestVerifyRetentionAnomalyAccelerationDeltaPercent
+    ) {
+      anomalies.push({
+        key: "accelerating-utilization",
+        severity: "warning",
+        recommendedAction:
+          "Utilization growth is accelerating. Preemptively tune maxEntries or prune stale attempts before crossing sustained critical saturation.",
+        evidence: {
+          previousDeltaPercent: previousDelta,
+          latestDeltaPercent: latestDelta,
+        },
+      });
+    }
+  }
+
+  return anomalies;
 }
 
 function summarizeFaultManifestVerifyAttemptTelemetry() {
@@ -2243,11 +2367,7 @@ router.get(
   function (req, res) {
     pruneFaultManifestVerifyAttempts(Date.now());
     var telemetry = summarizeFaultManifestVerifyAttemptTelemetry();
-    maybeCaptureFaultManifestVerifySaturationTrend(
-      "retention-status",
-      telemetry.saturation,
-      true
-    );
+    maybeCaptureFaultManifestVerifySaturationTrend("retention-status", telemetry.saturation, true);
     var trend = collectFaultManifestVerifyAttemptSaturationTrend({
       windowMinutes: req.query.windowMinutes,
       limit: req.query.limit,
@@ -2256,6 +2376,8 @@ router.get(
       summary: trend.summary,
       snapshots: trend.snapshots,
     };
+    telemetry.anomalies = trend.summary.anomalies;
+    telemetry.highestAnomalySeverity = trend.summary.highestAnomalySeverity;
 
     res.set("Cache-Control", "no-store");
     res.json({
@@ -2354,6 +2476,8 @@ router.post(
       summary: trend.summary,
       snapshots: trend.snapshots,
     };
+    applied.telemetry.anomalies = trend.summary.anomalies;
+    applied.telemetry.highestAnomalySeverity = trend.summary.highestAnomalySeverity;
 
     res.json({
       appliedAt: new Date().toISOString(),

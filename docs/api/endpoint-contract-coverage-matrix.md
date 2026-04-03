@@ -1179,6 +1179,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.withinSlaCount` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `withinSlaCount` property type drifts from OpenAPI baseline.
 
+## M6.129 Escalation-Acknowledgement-SLA-Summary Breached-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary breached-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.breachedCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `breachedCount` property type drifts from OpenAPI baseline.
+
+## M6.130 Escalation-Acknowledgement-SLA-Summary Acknowledged-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary acknowledged-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.acknowledgedCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `acknowledgedCount` property type drifts from OpenAPI baseline.
+
+## M6.131 Escalation-Acknowledgement-SLA-Summary Acknowledged-Within-SLA-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary acknowledged-within-sla-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.acknowledgedWithinSlaCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `acknowledgedWithinSlaCount` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

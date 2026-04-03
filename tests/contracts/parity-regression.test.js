@@ -357,6 +357,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy enabled schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy defaultFormat schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy maxExportRows schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy includeRecentlyClosedByDefault schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -2411,6 +2420,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy defaultFormat type drifts via policy schema contract", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?defaultFormat:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export policy schema defaultFormat type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy defaultFormat schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy maxExportRows type drifts via policy schema contract", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?maxExportRows:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export policy schema maxExportRows type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy maxExportRows schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.maxExportRows type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy includeRecentlyClosedByDefault type drifts via policy schema contract", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?includeRecentlyClosedByDefault:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export policy schema includeRecentlyClosedByDefault type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportPolicy includeRecentlyClosedByDefault schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault type expected boolean got string"
         );
       }
     );

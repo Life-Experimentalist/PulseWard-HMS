@@ -759,6 +759,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export policy `enabled` property type drifts from OpenAPI baseline.
 
+## M6.69 Escalation-Export Policy Default-Format Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export policy default-format anchors for export policy compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export policy `defaultFormat` property type drifts from OpenAPI baseline.
+
+## M6.70 Escalation-Export Policy Max-Export-Rows Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export policy max-export-rows anchors for export policy compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.maxExportRows` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export policy `maxExportRows` property type drifts from OpenAPI baseline.
+
+## M6.71 Escalation-Export Policy Include-Recently-Closed-By-Default Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export policy include-recently-closed-by-default anchors for export policy compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export policy `includeRecentlyClosedByDefault` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

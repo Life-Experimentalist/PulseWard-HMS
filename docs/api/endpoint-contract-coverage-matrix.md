@@ -1242,6 +1242,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.acknowledgementSla` property presence
 - Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `acknowledgementSla` property is removed from OpenAPI baseline.
 
+## M6.138 Recently-Closed-Anomaly Anomaly-Instance-Id Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly anomaly-instance-id anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.anomalyInstanceId` type `string`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `anomalyInstanceId` property type drifts from OpenAPI baseline.
+
+## M6.139 Recently-Closed-Anomaly Key Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly key anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.key` type `string`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `key` property type drifts from OpenAPI baseline.
+
+## M6.140 Recently-Closed-Anomaly Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include recently-closed-anomaly severity anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly.severity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when recently-closed-anomaly `severity` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

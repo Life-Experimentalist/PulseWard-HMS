@@ -990,6 +990,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.lifecyclePolicy` type `object`
 - Mutation-based parity regressions now prove strict-check failure when retention-policy `lifecyclePolicy` property type drifts from OpenAPI baseline.
 
+## M6.102 Retention-Telemetry Total-Recorded Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry total-recorded anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalRecorded` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `totalRecorded` property type drifts from OpenAPI baseline.
+
+## M6.103 Retention-Telemetry Duplicate-Suppressed-Attempts Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry duplicate-suppressed-attempts anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.duplicateSuppressedAttempts` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `duplicateSuppressedAttempts` property type drifts from OpenAPI baseline.
+
+## M6.104 Retention-Telemetry Total-Suppressed-Events Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry total-suppressed-events anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `totalSuppressedEvents` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

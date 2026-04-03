@@ -456,6 +456,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy lifecyclePolicy schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry totalRecorded schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry duplicateSuppressedAttempts schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry totalSuppressedEvents schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3236,6 +3245,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.lifecyclePolicy type expected object got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry totalRecorded type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?totalRecorded:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention telemetry totalRecorded type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry totalRecorded schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalRecorded type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry duplicateSuppressedAttempts type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?duplicateSuppressedAttempts:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "retention telemetry duplicateSuppressedAttempts type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry duplicateSuppressedAttempts schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.duplicateSuppressedAttempts type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry totalSuppressedEvents type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?totalSuppressedEvents:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention telemetry totalSuppressedEvents type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry totalSuppressedEvents schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents type expected integer got string"
         );
       }
     );

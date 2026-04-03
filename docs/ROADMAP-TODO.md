@@ -593,3 +593,9 @@ Exit criteria:
 268. M6.100 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `escalationExportPolicy` property is removed from OpenAPI baseline.
 269. M6.101 completed: strict contract checker now enforces retention-policy lifecycle-policy anchor for `MessagingFaultManifestVerifyAttemptRetentionPolicy.lifecyclePolicy` object compatibility.
 270. M6.101 evidence checkpoint: mutation regressions now prove strict-check failure when retention-policy `lifecyclePolicy` schema-property type drifts from OpenAPI baseline.
+271. M6.102 completed: strict contract checker now enforces retention-telemetry total-recorded anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalRecorded` integer compatibility.
+272. M6.102 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `totalRecorded` schema-property type drifts from OpenAPI baseline.
+273. M6.103 completed: strict contract checker now enforces retention-telemetry duplicate-suppressed-attempts anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.duplicateSuppressedAttempts` integer compatibility.
+274. M6.103 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `duplicateSuppressedAttempts` schema-property type drifts from OpenAPI baseline.
+275. M6.104 completed: strict contract checker now enforces retention-telemetry total-suppressed-events anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents` integer compatibility.
+276. M6.104 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `totalSuppressedEvents` schema-property type drifts from OpenAPI baseline.

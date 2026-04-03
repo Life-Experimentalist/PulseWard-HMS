@@ -747,6 +747,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord closedAt schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord closedReason schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord clearanceEvidence schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState state schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState severity schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState trigger schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -5661,6 +5676,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedAt type expected string got number"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly closure record closedReason type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyClosureRecord:[\s\S]*?closedReason:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly closure record closedReason type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord closedReason schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedReason type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly closure record clearanceEvidence type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyClosureRecord:[\s\S]*?clearanceEvidence:[\s\S]*?type:\s*)object/,
+          "$1string",
+          "anomaly closure record clearanceEvidence type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord clearanceEvidence schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.clearanceEvidence type expected object got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly escalation state state type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationState:[\s\S]*?state:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly escalation state state type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState state schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationState.state type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly escalation state severity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationState:[\s\S]*?severity:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly escalation state severity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState severity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationState.severity type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly escalation state trigger type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationState:[\s\S]*?trigger:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly escalation state trigger type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState trigger schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationState.trigger type expected string got integer"
         );
       }
     );

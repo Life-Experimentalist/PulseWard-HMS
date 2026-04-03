@@ -787,3 +787,13 @@ Exit criteria:
 462. M6.197 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `escalation` property is removed from OpenAPI baseline.
 463. M6.198 completed: strict contract checker now enforces anomaly-closure-record closed-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedAt` string compatibility.
 464. M6.198 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-closure-record `closedAt` schema-property type drifts from OpenAPI baseline.
+465. M6.199 completed: strict contract checker now enforces anomaly-closure-record closed-reason anchor for `MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedReason` string compatibility.
+466. M6.199 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-closure-record `closedReason` schema-property type drifts from OpenAPI baseline.
+467. M6.200 completed: strict contract checker now enforces anomaly-closure-record clearance-evidence anchor for `MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.clearanceEvidence` object compatibility.
+468. M6.200 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-closure-record `clearanceEvidence` schema-property type drifts from OpenAPI baseline.
+469. M6.201 completed: strict contract checker now enforces anomaly-escalation-state state anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.state` string compatibility.
+470. M6.201 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `state` schema-property type drifts from OpenAPI baseline.
+471. M6.202 completed: strict contract checker now enforces anomaly-escalation-state severity anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.severity` string compatibility.
+472. M6.202 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `severity` schema-property type drifts from OpenAPI baseline.
+473. M6.203 completed: strict contract checker now enforces anomaly-escalation-state trigger anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.trigger` string compatibility.
+474. M6.203 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `trigger` schema-property type drifts from OpenAPI baseline.

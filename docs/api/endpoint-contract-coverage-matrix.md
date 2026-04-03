@@ -183,6 +183,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Duplicate suppression cache is bounded by time window and max-entry controls to limit operational footprint.
 - Regression tests cover first-attempt pass-through, duplicate suppression hits, suppression counter increments, and fingerprint consistency.
 
+## M5.11 Replay-Attempt Audit Query Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest/verify/attempts` for replay-attempt forensic queries.
+- Audit queries support tenant/provider/scenario/fingerprint filters, validity and duplicate-suppression flags, plus bounded limit controls.
+- Verification diagnostics now link the replay-attempt audit endpoint for incident timeline follow-up.
+- Regression tests cover replay-attempt audit retrieval by fingerprint with duplicate suppression evidence checks.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

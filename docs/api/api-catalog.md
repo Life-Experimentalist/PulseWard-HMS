@@ -67,32 +67,33 @@ Under `/api/v1`:
 
 Under `/api/v1`:
 
-| Method | Endpoint                                                  | Purpose                                                                                                 |
-| ------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| GET    | `/notifications`                                          | List notifications.                                                                                     |
-| POST   | `/notifications`                                          | Create notification.                                                                                    |
-| GET    | `/integrations/appointments/events`                       | List appointment lifecycle event receipts.                                                              |
-| POST   | `/integrations/appointments/events`                       | Ingest appointment lifecycle event with dedupe.                                                         |
-| GET    | `/integrations/appointments/events/{id}`                  | Fetch appointment event receipt by id.                                                                  |
-| GET    | `/notifications/{id}`                                     | Fetch notification by id.                                                                               |
-| DELETE | `/notifications/{id}`                                     | Delete notification by id.                                                                              |
-| GET    | `/integrations/messaging/providers`                       | List tenant messaging providers.                                                                        |
-| POST   | `/integrations/messaging/test`                            | Trigger provider test delivery (dry run or live).                                                       |
-| GET    | `/integrations/messaging/telegram/setup`                  | Telegram bootstrap checklist.                                                                           |
-| GET    | `/integrations/messaging/telegram/config-status`          | Telegram secret/config readiness.                                                                       |
-| GET    | `/integrations/messaging/whatsapp/setup`                  | WhatsApp Cloud onboarding checklist.                                                                    |
-| GET    | `/integrations/messaging/whatsapp/config-status`          | WhatsApp secret/config readiness.                                                                       |
-| GET    | `/integrations/messaging/email/config-status`             | SMTP secret/config readiness.                                                                           |
-| GET    | `/integrations/messaging/webhook/diagnostics`             | Website webhook routing, endpoint, and signing-secret diagnostics summary.                              |
-| GET    | `/integrations/messaging/retry-policy`                    | Provider retry mode, backoff, jitter controls, and channel coverage diagnostics.                        |
-| GET    | `/integrations/messaging/fault-injection/simulate`        | Simulate connector fault scenarios and expected retry/fallback actions.                                 |
-| GET    | `/integrations/messaging/fault-injection/events`          | List recorded fault-injection events with tenant/provider/scenario filters.                             |
-| GET    | `/integrations/messaging/fault-injection/export`          | Export fault-injection evidence feed in JSON or CSV for incident handoff.                               |
-| GET    | `/integrations/messaging/fault-injection/manifest`        | Generate signed evidence manifest for cross-team incident handoff traceability.                         |
+| Method | Endpoint                                                  | Purpose                                                                                                                    |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/notifications`                                          | List notifications.                                                                                                        |
+| POST   | `/notifications`                                          | Create notification.                                                                                                       |
+| GET    | `/integrations/appointments/events`                       | List appointment lifecycle event receipts.                                                                                 |
+| POST   | `/integrations/appointments/events`                       | Ingest appointment lifecycle event with dedupe.                                                                            |
+| GET    | `/integrations/appointments/events/{id}`                  | Fetch appointment event receipt by id.                                                                                     |
+| GET    | `/notifications/{id}`                                     | Fetch notification by id.                                                                                                  |
+| DELETE | `/notifications/{id}`                                     | Delete notification by id.                                                                                                 |
+| GET    | `/integrations/messaging/providers`                       | List tenant messaging providers.                                                                                           |
+| POST   | `/integrations/messaging/test`                            | Trigger provider test delivery (dry run or live).                                                                          |
+| GET    | `/integrations/messaging/telegram/setup`                  | Telegram bootstrap checklist.                                                                                              |
+| GET    | `/integrations/messaging/telegram/config-status`          | Telegram secret/config readiness.                                                                                          |
+| GET    | `/integrations/messaging/whatsapp/setup`                  | WhatsApp Cloud onboarding checklist.                                                                                       |
+| GET    | `/integrations/messaging/whatsapp/config-status`          | WhatsApp secret/config readiness.                                                                                          |
+| GET    | `/integrations/messaging/email/config-status`             | SMTP secret/config readiness.                                                                                              |
+| GET    | `/integrations/messaging/webhook/diagnostics`             | Website webhook routing, endpoint, and signing-secret diagnostics summary.                                                 |
+| GET    | `/integrations/messaging/retry-policy`                    | Provider retry mode, backoff, jitter controls, and channel coverage diagnostics.                                           |
+| GET    | `/integrations/messaging/fault-injection/simulate`        | Simulate connector fault scenarios and expected retry/fallback actions.                                                    |
+| GET    | `/integrations/messaging/fault-injection/events`          | List recorded fault-injection events with tenant/provider/scenario filters.                                                |
+| GET    | `/integrations/messaging/fault-injection/export`          | Export fault-injection evidence feed in JSON or CSV for incident handoff.                                                  |
+| GET    | `/integrations/messaging/fault-injection/manifest`        | Generate signed evidence manifest for cross-team incident handoff traceability.                                            |
 | POST   | `/integrations/messaging/fault-injection/manifest/verify` | Verify digest/signature plus replay-defense checks and suppress duplicate replay-attempt submissions within dedupe window. |
-| GET    | `/integrations/messaging/fault-injection/retention`       | Show active retention controls and telemetry window diagnostics.                                        |
-| POST   | `/integrations/messaging/fault-injection/retention/apply` | Apply retention max and optional immediate prune for fault telemetry.                                   |
-| POST   | `/integrations/messaging/webhook/signature/verify`        | Verify webhook signature payloads against configured tenant signing secret.                             |
+| GET    | `/integrations/messaging/fault-injection/manifest/verify/attempts` | Query manifest verification replay-attempt audit history for incident forensics and suppression evidence.                   |
+| GET    | `/integrations/messaging/fault-injection/retention`       | Show active retention controls and telemetry window diagnostics.                                                           |
+| POST   | `/integrations/messaging/fault-injection/retention/apply` | Apply retention max and optional immediate prune for fault telemetry.                                                      |
+| POST   | `/integrations/messaging/webhook/signature/verify`        | Verify webhook signature payloads against configured tenant signing secret.                                                |
 
 ## Appointment Service Highlights
 

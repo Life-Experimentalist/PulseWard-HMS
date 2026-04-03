@@ -187,6 +187,23 @@ function parseRetryBool(value, fallback) {
   return fallback;
 }
 
+function parseOptionalBoolQuery(value) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return null;
+  }
+
+  var normalized = String(value).trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+
+  return null;
+}
+
 function getProviderChannelCoverage(config, providerKey) {
   var coverage = {
     defaultChannels: [],
@@ -592,6 +609,37 @@ function storeFaultManifestVerifyAttempt(fingerprint, responseBody, verifiedAtIs
   return {
     duplicateSuppressed: false,
     attempt: attempt,
+  };
+}
+
+function buildFaultManifestVerifyAttemptAuditItem(attempt) {
+  var responseBody = attempt.responseBody || {};
+  var evidence = responseBody.evidence || {};
+  var filters = evidence.filters || {};
+  var replayDefense = responseBody.replayDefense || {};
+
+  return {
+    attemptId: attempt.attemptId,
+    fingerprint: attempt.fingerprint,
+    firstVerifiedAt: attempt.firstVerifiedAt,
+    lastVerifiedAt: attempt.lastVerifiedAt,
+    valid: Boolean(responseBody.valid),
+    duplicateSuppressed: attempt.suppressCount > 0,
+    suppressCount: attempt.suppressCount,
+    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+    manifestVersion: responseBody.providedManifestVersion || null,
+    tenantKey: filters.tenantKey || null,
+    providerKey: filters.providerKey || null,
+    scenario: filters.scenario || null,
+    totalMatched: evidence.totalMatched,
+    returned: evidence.returned,
+    replayDefense: {
+      issuedAt: replayDefense.issuedAt || null,
+      freshnessMatch: replayDefense.freshnessMatch,
+      nonce: replayDefense.nonce || null,
+      expectedNonce: replayDefense.expectedNonce || null,
+      nonceMatch: replayDefense.nonceMatch,
+    },
   };
 }
 
@@ -1597,6 +1645,8 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      replayAttemptsEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -1619,6 +1669,100 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
   replayAttempt.attempt.responseBody = responseBody;
 
   res.json(responseBody);
+});
+
+router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var providerKey = String(req.query.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(req.query.scenario || "")
+    .trim()
+    .toLowerCase();
+  var fingerprint = normalizeManifestDigestInput(req.query.fingerprint || "");
+  var limit = parseRetryInt(req.query.limit, 50, 1, 500);
+  var validFilter = parseOptionalBoolQuery(req.query.valid);
+  var duplicateSuppressedFilter = parseOptionalBoolQuery(req.query.duplicateSuppressed);
+
+  pruneFaultManifestVerifyAttempts(Date.now());
+
+  var attempts = faultManifestVerifyAttemptCache
+    .slice()
+    .reverse()
+    .map(buildFaultManifestVerifyAttemptAuditItem)
+    .filter(function (item) {
+      if (tenantKey && item.tenantKey !== tenantKey) {
+        return false;
+      }
+
+      if (providerKey && item.providerKey !== providerKey) {
+        return false;
+      }
+
+      if (scenario && item.scenario !== scenario) {
+        return false;
+      }
+
+      if (fingerprint && item.fingerprint !== fingerprint) {
+        return false;
+      }
+
+      if (validFilter !== null && item.valid !== validFilter) {
+        return false;
+      }
+
+      if (
+        duplicateSuppressedFilter !== null &&
+        item.duplicateSuppressed !== duplicateSuppressedFilter
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+  var limited = attempts.slice(0, limit);
+  var totalSuppressedEvents = 0;
+  limited.forEach(function (item) {
+    totalSuppressedEvents += item.suppressCount;
+  });
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    queriedAt: new Date().toISOString(),
+    totalRecorded: faultManifestVerifyAttemptCache.length,
+    totalMatched: attempts.length,
+    returned: limited.length,
+    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+    dedupeMaxEntries: faultManifestVerifyDedupeMaxEntries,
+    summary: {
+      duplicateSuppressedAttempts: limited.filter(function (item) {
+        return item.duplicateSuppressed;
+      }).length,
+      totalSuppressedEvents: totalSuppressedEvents,
+      validAttempts: limited.filter(function (item) {
+        return item.valid;
+      }).length,
+      invalidAttempts: limited.filter(function (item) {
+        return !item.valid;
+      }).length,
+    },
+    filters: {
+      tenantKey: tenantKey || null,
+      providerKey: providerKey || null,
+      scenario: scenario || null,
+      fingerprint: fingerprint || null,
+      valid: validFilter,
+      duplicateSuppressed: duplicateSuppressedFilter,
+      limit: limit,
+    },
+    diagnostics: {
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+    },
+    attempts: limited,
+  });
 });
 
 router.get("/integrations/messaging/fault-injection/retention", function (_req, res) {

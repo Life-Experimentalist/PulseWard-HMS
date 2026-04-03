@@ -370,6 +370,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.checks.nonceMatch).toBe(true);
     expect(verified.body.replayAttempt.duplicateSuppressed).toBe(false);
     expect(verified.body.replayAttempt.suppressCount).toBe(0);
+    expect(verified.body.diagnostics.replayAttemptsEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts"
+    );
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -400,9 +403,29 @@ describe("notification webhook delivery diagnostics", () => {
     expect(duplicate.body.replayAttempt.duplicateSuppressed).toBe(true);
     expect(duplicate.body.replayAttempt.suppressCount).toBe(1);
     expect(duplicate.body.replayAttempt.attemptId).toBe(verified.body.replayAttempt.attemptId);
-    expect(duplicate.body.replayAttempt.fingerprint).toBe(
+    expect(duplicate.body.replayAttempt.fingerprint).toBe(verified.body.replayAttempt.fingerprint);
+
+    const auditByFingerprint = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts?fingerprint=${encodeURIComponent(
+        verified.body.replayAttempt.fingerprint
+      )}&duplicateSuppressed=true&limit=10`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(auditByFingerprint.status).toBe(200);
+    expect(auditByFingerprint.body.totalMatched).toBeGreaterThanOrEqual(1);
+    expect(auditByFingerprint.body.summary.totalSuppressedEvents).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(auditByFingerprint.body.attempts)).toBe(true);
+    expect(auditByFingerprint.body.attempts[0].attemptId).toBe(
+      verified.body.replayAttempt.attemptId
+    );
+    expect(auditByFingerprint.body.attempts[0].fingerprint).toBe(
       verified.body.replayAttempt.fingerprint
     );
+    expect(auditByFingerprint.body.attempts[0].duplicateSuppressed).toBe(true);
+    expect(auditByFingerprint.body.attempts[0].suppressCount).toBeGreaterThanOrEqual(1);
 
     const tampered = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify",

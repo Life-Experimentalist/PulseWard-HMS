@@ -509,6 +509,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotificationErrorResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts:
+    get:
+      summary: Query manifest verification replay-attempt audit history for incident forensics
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: fingerprint
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: valid
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: duplicateSuppressed
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+      responses:
+        "200":
+          description: Manifest verification replay-attempt audit feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryResponse"
   /integrations/messaging/fault-injection/retention:
     get:
       summary: Get connector fault-injection retention policy and telemetry window status
@@ -1392,9 +1441,141 @@ components:
         retentionEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/retention
+        replayAttemptsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
+    MessagingFaultManifestVerifyAttemptAuditItem:
+      type: object
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+          example: 9ba67989bf98d93f59e8ef6ef4d9f8cb96eb96f4cb6c6ad22cb96fbe95ee7f0d
+        firstVerifiedAt:
+          type: string
+          format: date-time
+        lastVerifiedAt:
+          type: string
+          format: date-time
+        valid:
+          type: boolean
+          example: true
+        duplicateSuppressed:
+          type: boolean
+          example: true
+        suppressCount:
+          type: integer
+          example: 2
+        dedupeWindowSeconds:
+          type: integer
+          example: 600
+        manifestVersion:
+          type: string
+          example: m5.9.v1
+        tenantKey:
+          type: string
+          nullable: true
+        providerKey:
+          type: string
+          nullable: true
+        scenario:
+          type: string
+          nullable: true
+        totalMatched:
+          type: integer
+          example: 4
+        returned:
+          type: integer
+          example: 4
+        replayDefense:
+          $ref: "#/components/schemas/MessagingFaultManifestReplayDefense"
+    MessagingFaultManifestVerifyAttemptQuerySummary:
+      type: object
+      properties:
+        duplicateSuppressedAttempts:
+          type: integer
+          example: 1
+        totalSuppressedEvents:
+          type: integer
+          example: 2
+        validAttempts:
+          type: integer
+          example: 3
+        invalidAttempts:
+          type: integer
+          example: 1
+    MessagingFaultManifestVerifyAttemptQueryFilters:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          nullable: true
+        providerKey:
+          type: string
+          nullable: true
+        scenario:
+          type: string
+          nullable: true
+        fingerprint:
+          type: string
+          nullable: true
+        valid:
+          type: boolean
+          nullable: true
+        duplicateSuppressed:
+          type: boolean
+          nullable: true
+        limit:
+          type: integer
+          example: 50
+    MessagingFaultManifestVerifyAttemptQueryDiagnostics:
+      type: object
+      properties:
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        verifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+    MessagingFaultManifestVerifyAttemptQueryResponse:
+      type: object
+      properties:
+        queriedAt:
+          type: string
+          format: date-time
+        totalRecorded:
+          type: integer
+          example: 8
+        totalMatched:
+          type: integer
+          example: 2
+        returned:
+          type: integer
+          example: 2
+        dedupeWindowSeconds:
+          type: integer
+          example: 600
+        dedupeMaxEntries:
+          type: integer
+          example: 500
+        summary:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQuerySummary"
+        filters:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryFilters"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryDiagnostics"
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAuditItem"
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:

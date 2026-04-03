@@ -14,6 +14,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&limit=10`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&limit=25&nonce={incidentNonce}`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify` (submit digest/signature + issuedAt + nonce from latest manifest and confirm `replayAttempt.duplicateSuppressed=false`)
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts?fingerprint={fingerprint}&duplicateSuppressed=true`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
@@ -33,6 +34,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format=json&limit=50`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout&nonce={incidentNonce}`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify` (attach digest/signature + issuedAt + nonce; set expectedNonce to incident nonce; repeated submissions should return `replayAttempt.duplicateSuppressed=true`)
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts?tenantKey={tenantKey}&providerKey={providerKey}&duplicateSuppressed=true&limit=25`
 
 ## Incident handling
 
@@ -57,6 +59,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format={json|csv}`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}&nonce={incidentNonce}`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/retention/apply`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify`

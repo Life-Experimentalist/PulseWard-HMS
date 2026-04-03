@@ -310,6 +310,15 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Escalation export contract gates now enforce response `200` content coverage for both `application/json` and `text/csv`.
 - Mutation-based parity regressions now prove strict checker failure when escalation export response content drifts from `text/csv`, preventing silent operator handoff breakage.
 
+## M6.10 Anomaly Triage Request-Schema Drift Guardrail Coverage
+
+- Contract checker critical parameter assertions now include anomaly triage request-schema anchors for schema-ref and boolean-default invariants.
+- Triage request contract gates now enforce:
+	- request body schema ref must remain `#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest`
+	- `acknowledge` property remains `boolean` with `default: false`
+	- `mitigationApplied` property remains `boolean` with `default: false`
+- Mutation-based parity regressions now prove strict checker failure when triage request schema ref or default semantics drift, preventing silent dashboard command payload incompatibility.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

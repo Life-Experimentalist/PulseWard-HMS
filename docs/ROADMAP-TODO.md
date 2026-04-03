@@ -361,3 +361,5 @@ Exit criteria:
 84. M6.8 evidence checkpoint: strict checker now supports temporary spec override execution for test isolation, and parity regressions validate failure semantics for trend/export parameter drift and retention-apply dryRun anchor drift.
 85. M6.9 completed: strict contract checker now enforces escalation export response media-type guardrails for JSON and CSV handoff contracts.
 86. M6.9 evidence checkpoint: mutation regressions now prove strict-check failure when escalation export response content drifts away from `text/csv`, preventing silent operator handoff breakage.
+87. M6.10 completed: strict contract checker now enforces anomaly triage request-schema anchor guardrails for request-body schema ref plus boolean default semantics (`acknowledge`, `mitigationApplied`).
+88. M6.10 evidence checkpoint: mutation regressions now prove strict-check failure when triage request schema ref drifts or triage boolean defaults diverge from the OpenAPI contract baseline.

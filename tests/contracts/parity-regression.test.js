@@ -144,6 +144,12 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract"
     );
     expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema acknowledge anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationApplied anchor"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
     );
     expect(output).toContain(
@@ -229,6 +235,72 @@ describe("M1 parity regression guard", () => {
           "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
         );
         expect(output).toContain("response 200 missing content type text/csv");
+      }
+    );
+  });
+
+  test("fails strict check when triage request schema ref drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/anomalies\/\{anomalyInstanceId\}\/triage:[\s\S]*?requestBody:[\s\S]*?\$ref:\s*")[^"]+("?)/,
+          "$1#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest$2",
+          "triage request schema ref"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema acknowledge anchor"
+        );
+        expect(output).toContain(
+          "requestBody schema ref expected #/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest got #/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage acknowledge default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?acknowledge:[\s\S]*?default:\s*)false/,
+          "$1true",
+          "triage acknowledge default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema acknowledge anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.acknowledge default expected false got true"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage mitigationApplied default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?mitigationApplied:[\s\S]*?default:\s*)false/,
+          "$1true",
+          "triage mitigationApplied default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationApplied anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationApplied default expected false got true"
+        );
       }
     );
   });

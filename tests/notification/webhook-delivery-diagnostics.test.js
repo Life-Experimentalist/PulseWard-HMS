@@ -653,6 +653,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionStatus.body.diagnostics.retentionSaturationTrendPath).toBe(
       "telemetry.saturationTrend"
     );
+    expect(attemptsRetentionStatus.body.diagnostics.retentionEscalationPath).toBe(
+      "telemetry.escalation"
+    );
     expect(attemptsRetentionStatus.body.telemetry.saturationTrend.summary.windowMinutes).toBe(60);
     expect(attemptsRetentionStatus.body.telemetry.saturationTrend.summary.requestedLimit).toBe(24);
     expect(
@@ -714,6 +717,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(attemptsRetentionApplied.body.diagnostics.retentionSaturationTrendPath).toBe(
       "telemetry.saturationTrend"
     );
+    expect(attemptsRetentionApplied.body.diagnostics.retentionEscalationPath).toBe(
+      "telemetry.escalation"
+    );
     expect(attemptsRetentionApplied.body.telemetry.saturationTrend.summary.windowMinutes).toBe(60);
     expect(attemptsRetentionApplied.body.telemetry.saturationTrend.summary.requestedLimit).toBe(24);
     expect(
@@ -764,6 +770,9 @@ describe("notification webhook delivery diagnostics", () => {
       "latestSaturation"
     );
     expect(attemptsRetentionTrend.body.diagnostics.retentionSaturationTrendPath).toBe("snapshots");
+    expect(attemptsRetentionTrend.body.diagnostics.retentionEscalationPath).toBe(
+      "summary.escalation"
+    );
 
     const anomalyRetentionApplied = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
@@ -862,16 +871,60 @@ describe("notification webhook delivery diagnostics", () => {
       expect(typeof item.triage).toBe("object");
       expect(typeof item.triage.notesCount).toBe("number");
       expect(typeof item.triage.acknowledged).toBe("boolean");
+      expect(typeof item.escalation).toBe("object");
+      expect(typeof item.escalation.state).toBe("string");
     });
 
     expect(anomalyTrendStatus.body.summary.anomalyTracking.statePersistence).toBe("memory-only");
-    expect(
-      anomalyTrendStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate
-    ).toBe(
+    expect(anomalyTrendStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate).toBe(
       "POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage"
     );
 
     const triageTarget = anomalyTrendStatus.body.summary.anomalies[0];
+
+    const escalationPolicyApplied = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply?windowMinutes=60&limit=200",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dedupeWindowSeconds: 600,
+          maxEntries: 60,
+          pruneNow: false,
+          escalationPolicy: {
+            enabled: true,
+            warningUnacknowledgedEscalateAfterSeconds: 0,
+            criticalUnacknowledgedEscalateAfterSeconds: 0,
+            criticalUnmitigatedEscalateAfterSeconds: 0,
+            mitigationNoteTypes: ["mitigation-plan", "status-update"],
+            autoDeescalateOnMitigation: true,
+          },
+        }),
+      }
+    );
+
+    expect(escalationPolicyApplied.status).toBe(200);
+    expect(escalationPolicyApplied.body.retention.escalationPolicyChanged).toBe(true);
+    expect(
+      escalationPolicyApplied.body.telemetry.escalation.activeEscalations
+    ).toBeGreaterThanOrEqual(1);
+
+    const escalatedTrendStatus = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(escalatedTrendStatus.status).toBe(200);
+    const escalatedTarget = escalatedTrendStatus.body.summary.anomalies.find(
+      (item) => item.anomalyInstanceId === triageTarget.anomalyInstanceId
+    );
+    expect(escalatedTarget).toBeTruthy();
+    expect(escalatedTarget.escalation.state.startsWith("escalated-")).toBe(true);
+
     const triageAcknowledge = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
         triageTarget.anomalyInstanceId
@@ -886,6 +939,9 @@ describe("notification webhook delivery diagnostics", () => {
           acknowledgedBy: "ops-oncall@pulseward",
           note: "Capacity tuning planned for this shift.",
           noteType: "mitigation-plan",
+          mitigationApplied: true,
+          mitigationType: "retention-tuning",
+          mitigationEvidenceRef: "INC-2026-04-03-m5-18",
         }),
       }
     );
@@ -896,6 +952,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(triageAcknowledge.body.anomaly.triage.acknowledgedBy).toBe("ops-oncall@pulseward");
     expect(triageAcknowledge.body.anomaly.triage.notesCount).toBeGreaterThanOrEqual(1);
     expect(triageAcknowledge.body.audit.actionType).toBe("acknowledge-and-note");
+    expect(["deescalated", "unchanged"]).toContain(
+      triageAcknowledge.body.audit.escalationTransition
+    );
 
     const triageNoteOnly = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
@@ -931,6 +990,7 @@ describe("notification webhook delivery diagnostics", () => {
     expect(triagedInRetention).toBeTruthy();
     expect(triagedInRetention.triage.acknowledged).toBe(true);
     expect(triagedInRetention.triage.notesCount).toBeGreaterThanOrEqual(2);
+    expect(triagedInRetention.escalation.state).toBe("monitoring");
 
     const trendAfterTriage = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=200",
@@ -945,6 +1005,81 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(triagedInTrend).toBeTruthy();
     expect(triagedInTrend.triage.acknowledged).toBe(true);
+
+    const mitigationWithoutNote = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(
+        triageTarget.anomalyInstanceId
+      )}/triage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mitigationApplied: true,
+        }),
+      }
+    );
+
+    expect(mitigationWithoutNote.status).toBe(400);
+    expect(mitigationWithoutNote.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ANOMALY_MITIGATION_NOTE_REQUIRED"
+    );
+
+    const closureApply = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply?windowMinutes=60&limit=200",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dedupeWindowSeconds: 600,
+          maxEntries: 5000,
+          pruneNow: false,
+        }),
+      }
+    );
+
+    expect(closureApply.status).toBe(200);
+
+    const closureStatus = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention?windowMinutes=60&limit=200",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(closureStatus.status).toBe(200);
+    expect(Array.isArray(closureStatus.body.telemetry.recentlyClosedAnomalies)).toBe(true);
+    expect(closureStatus.body.telemetry.recentlyClosedAnomalies.length).toBeGreaterThan(0);
+    expect(
+      ["signal-cleared", "retention-prune", "manual-reset"].includes(
+        closureStatus.body.telemetry.recentlyClosedAnomalies[0].closedReason
+      )
+    ).toBe(true);
+    expect(typeof closureStatus.body.telemetry.recentlyClosedAnomalies[0].closedAt).toBe("string");
+
+    const escalationPolicyInvalid = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          escalationPolicy: {
+            warningUnacknowledgedEscalateAfterSeconds: 10,
+            criticalUnacknowledgedEscalateAfterSeconds: 30,
+          },
+        }),
+      }
+    );
+
+    expect(escalationPolicyInvalid.status).toBe(400);
+    expect(escalationPolicyInvalid.body.code).toBe(
+      "NOTIFICATION_FAULT_MANIFEST_VERIFY_ESCALATION_POLICY_ORDER_INVALID"
+    );
 
     const triageMissingPayload = await requestJson(
       `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/${encodeURIComponent(

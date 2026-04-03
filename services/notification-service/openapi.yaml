@@ -1893,6 +1893,20 @@ components:
         pruneStrategy:
           type: string
           example: drop-expired-then-oldest
+        escalationPolicy:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
+        lifecyclePolicy:
+          type: object
+          properties:
+            closureHistoryPerInstanceMax:
+              type: integer
+              example: 5
+            recentlyClosedMaxEntries:
+              type: integer
+              example: 50
+            statePersistence:
+              type: string
+              example: memory-only
     MessagingFaultManifestVerifyAttemptRetentionTelemetry:
       type: object
       properties:
@@ -1928,6 +1942,12 @@ components:
           example: warning
         anomalyTracking:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary"
+        escalation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationTelemetry"
+        recentlyClosedAnomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly"
     MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:
       type: object
       properties:
@@ -2020,6 +2040,11 @@ components:
           example: warning
         anomalyTracking:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary"
+        escalation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationTelemetry"
+        recentlyClosedCount:
+          type: integer
+          example: 1
     MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:
       type: object
       properties:
@@ -2054,6 +2079,151 @@ components:
           nullable: true
         triage:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageState"
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedReason:
+          type: string
+          nullable: true
+          enum: [signal-cleared, retention-prune, manual-reset]
+          example: signal-cleared
+        clearanceEvidence:
+          type: object
+          nullable: true
+          additionalProperties: true
+        closureHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyClosureRecord"
+        escalation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyEscalationState"
+    MessagingFaultManifestVerifyAttemptAnomalyClosureRecord:
+      type: object
+      properties:
+        closedAt:
+          type: string
+          format: date-time
+        closedReason:
+          type: string
+          enum: [signal-cleared, retention-prune, manual-reset]
+          example: signal-cleared
+        clearanceEvidence:
+          type: object
+          additionalProperties: true
+    MessagingFaultManifestVerifyAttemptAnomalyEscalationState:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            [
+              monitoring,
+              closed,
+              escalated-warning-unacknowledged,
+              escalated-critical-unacknowledged,
+              escalated-critical-unmitigated,
+            ]
+          example: monitoring
+        severity:
+          type: string
+          enum: [none, warning, critical]
+          example: none
+        trigger:
+          type: string
+          enum:
+            [none, unacknowledged-warning-timeout, unacknowledged-critical-timeout, critical-unmitigated-timeout]
+          example: none
+        pendingSince:
+          type: string
+          format: date-time
+          nullable: true
+        escalatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        dueAt:
+          type: string
+          format: date-time
+          nullable: true
+        actionRequired:
+          type: boolean
+          example: false
+    MessagingFaultManifestVerifyAttemptEscalationPolicy:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: true
+        warningUnacknowledgedEscalateAfterSeconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+          example: 600
+        criticalUnacknowledgedEscalateAfterSeconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+          example: 180
+        criticalUnmitigatedEscalateAfterSeconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+          example: 300
+        mitigationNoteTypes:
+          type: array
+          items:
+            type: string
+          example: [mitigation-plan, mitigation-applied, mitigation]
+        autoDeescalateOnMitigation:
+          type: boolean
+          default: true
+    MessagingFaultManifestVerifyAttemptEscalationTelemetry:
+      type: object
+      properties:
+        activeEscalations:
+          type: integer
+          example: 1
+        pendingEscalations:
+          type: integer
+          example: 2
+        byState:
+          type: object
+          additionalProperties:
+            type: integer
+        highestEscalationSeverity:
+          type: string
+          nullable: true
+          enum: [warning, critical]
+          example: critical
+    MessagingFaultManifestVerifyAttemptRecentlyClosedAnomaly:
+      type: object
+      properties:
+        anomalyInstanceId:
+          type: string
+          format: uuid
+        key:
+          type: string
+          enum: [sustained-warning, sustained-critical, accelerating-utilization]
+          example: sustained-warning
+        severity:
+          type: string
+          enum: [warning, critical]
+          example: warning
+        closedAt:
+          type: string
+          format: date-time
+        closedReason:
+          type: string
+          enum: [signal-cleared, retention-prune, manual-reset]
+          example: signal-cleared
+        clearanceEvidence:
+          type: object
+          additionalProperties: true
     MessagingFaultManifestVerifyAttemptAnomalyTriageNote:
       type: object
       properties:
@@ -2072,6 +2242,17 @@ components:
         author:
           type: string
           example: ops-oncall@pulseward
+        mitigationApplied:
+          type: boolean
+          example: false
+        mitigationType:
+          type: string
+          nullable: true
+          example: retention-tuning
+        mitigationEvidenceRef:
+          type: string
+          nullable: true
+          example: INC-2026-04-03-ops-1
     MessagingFaultManifestVerifyAttemptAnomalyTriageState:
       type: object
       properties:
@@ -2118,6 +2299,11 @@ components:
         noteCount:
           type: integer
           example: 4
+        retainedRecentlyClosedEntries:
+          type: integer
+          example: 1
+        escalation:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationTelemetry"
     MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:
       type: object
       properties:
@@ -2141,6 +2327,17 @@ components:
           type: string
           nullable: true
           example: ops-oncall@pulseward
+        mitigationApplied:
+          type: boolean
+          default: false
+        mitigationType:
+          type: string
+          nullable: true
+          example: retention-tuning
+        mitigationEvidenceRef:
+          type: string
+          nullable: true
+          example: INC-2026-04-03-ops-1
     MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:
       type: object
       properties:
@@ -2159,6 +2356,10 @@ components:
               type: string
               enum: [acknowledge, note-only, acknowledge-and-note]
               example: acknowledge-and-note
+            escalationTransition:
+              type: string
+              enum: [unchanged, escalated, deescalated, closed]
+              example: escalated
         diagnostics:
           type: object
           properties:
@@ -2221,6 +2422,9 @@ components:
             retentionSaturationTrendPath:
               type: string
               example: snapshots
+            retentionEscalationPath:
+              type: string
+              example: summary.escalation
             retentionAnomalyTriageEndpointTemplate:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
@@ -2280,6 +2484,9 @@ components:
         retentionSaturationTrendPath:
           type: string
           example: telemetry.saturationTrend
+        retentionEscalationPath:
+          type: string
+          example: telemetry.escalation
         retentionAnomalyTriageEndpointTemplate:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage
@@ -2306,6 +2513,8 @@ components:
         pruneNow:
           type: boolean
           default: true
+        escalationPolicy:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
     MessagingFaultManifestVerifyAttemptRetentionApplyResponse:
       type: object
       properties:
@@ -2327,6 +2536,13 @@ components:
             maxEntries:
               type: integer
               example: 750
+            previousEscalationPolicy:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
+            escalationPolicy:
+              $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptEscalationPolicy"
+            escalationPolicyChanged:
+              type: boolean
+              example: true
             pruneNow:
               type: boolean
               example: true
@@ -2374,6 +2590,9 @@ components:
             retentionSaturationTrendPath:
               type: string
               example: telemetry.saturationTrend
+            retentionEscalationPath:
+              type: string
+              example: telemetry.escalation
             retentionAnomalyTriageEndpointTemplate:
               type: string
               example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage

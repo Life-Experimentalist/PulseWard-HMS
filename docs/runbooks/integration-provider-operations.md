@@ -19,7 +19,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=60&limit=24`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (set `acknowledge=true`, `acknowledgedBy`, and optional mitigation note)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds` and/or `maxEntries`; keep `pruneNow=true` for immediate cleanup)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (set bounded `dedupeWindowSeconds`/`maxEntries` and optional `escalationPolicy`; keep `pruneNow=true` for immediate cleanup)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 - If replay-attempt retention `telemetry.saturation.alertLevel=warning`, plan a same-day retention apply update and re-check utilization before shift handoff.
@@ -29,6 +29,9 @@
 - If anomaly key `sustained-critical` is present, execute immediate retention correction, open incident bridge, and archive anomaly evidence payloads.
 - If anomaly key `accelerating-utilization` is present, apply preemptive capacity tuning before crossing sustained-critical thresholds.
 - If any active anomaly remains unacknowledged, apply triage acknowledgement using `anomalyInstanceId` and attach mitigation owner in the note before shift handoff.
+- If escalation state enters `escalated-warning-unacknowledged`, treat as same-shift SLA breach and assign owner immediately.
+- If escalation state enters `escalated-critical-unacknowledged` or `escalated-critical-unmitigated`, open incident bridge and attach mitigation evidence reference in triage notes.
+- Verify `telemetry.recentlyClosedAnomalies` after mitigation to confirm closure record (`closedAt`, `closedReason`) was captured.
 - Keep triage notes operational only; do not include patient identifiers or protected health details.
 
 ## Weekly checks
@@ -52,9 +55,10 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend?windowMinutes=240&limit=96`
 	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage` (record acknowledgement and weekly drill note with owner)
-	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window and cache size)
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply` (validate incident-policy bounds for dedupe window/cache size and escalation thresholds)
 	- Confirm retention saturation thresholds and response posture: warning requires scheduled tuning, critical requires immediate capacity correction.
 	- Confirm anomaly key transitions (`sustained-warning`, `sustained-critical`, `accelerating-utilization`) and capture clearance evidence after mitigation.
+	- Confirm escalation policy ordering (`critical` timeout <= `warning` timeout) and verify deescalation on mitigation note types.
 	- Confirm triage note hygiene (`acknowledgedBy`, mitigation summary, timestamp) and no PHI content.
 
 ## Incident handling

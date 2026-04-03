@@ -232,6 +232,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verify, attempts query/export, retention status/apply, and trend diagnostics now include anomaly triage endpoint template discoverability.
 - Regression tests cover acknowledgement-plus-note updates, note-only append behavior, persistence across retention/trend reads, and 400/404 triage guardrails.
 
+## M5.18 Replay-Attempt Anomaly Lifecycle Closure And Escalation Coverage
+
+- Retention and trend anomaly outputs now include closure metadata (`closedAt`, `closedReason`, `clearanceEvidence`, `closureHistory`) and machine-readable escalation state snapshots.
+- Retention telemetry now exposes escalation aggregates and recently-closed anomaly feeds for operator shift-handoff continuity.
+- Retention apply controls now accept escalation policy updates (`escalationPolicy`) and report policy change metadata in response payloads.
+- Regression tests cover escalation transitions, mitigation-driven deescalation, closure feed semantics, and escalation policy validation guardrails.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

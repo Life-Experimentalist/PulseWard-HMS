@@ -335,4 +335,6 @@ Exit criteria:
 58. M5.16 evidence checkpoint: regression coverage now validates anomaly keys, severity levels, and operator guidance across retention telemetry and trend summaries.
 59. M5.17 completed: replay-attempt anomaly outputs now include machine-readable anomaly instance identifiers with acknowledgement and triage-note tracking controls.
 60. M5.17 evidence checkpoint: regression coverage now validates anomaly acknowledgement updates, triage-note append flows, and 400/404 validation guardrails.
-61. M5.18 active next slice: add replay-attempt anomaly lifecycle closure and escalation policy automation controls.
+61. M5.18 completed: replay-attempt anomaly telemetry now automates lifecycle closure records and escalation policy state transitions.
+62. M5.18 evidence checkpoint: regression coverage now validates escalation transitions, closure feed semantics, and escalation policy validation controls.
+63. M5.19 active next slice: add escalation acknowledgement SLA tracking and incident handoff export automation.

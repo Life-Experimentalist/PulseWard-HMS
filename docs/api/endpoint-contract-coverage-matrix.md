@@ -1791,6 +1791,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredFrom` type `string`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredFrom` property type drifts from OpenAPI baseline.
 
+## M6.214 Anomaly-Escalation-State Acknowledgement-Sla Property Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state acknowledgement-sla property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.acknowledgementSla` property presence
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `acknowledgementSla` property is removed from OpenAPI baseline.
+
+## M6.215 Anomaly-Escalation-Acknowledgement-Sla Measured-Until Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla measured-until anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredUntil` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredUntil` property type drifts from OpenAPI baseline.
+
+## M6.216 Anomaly-Escalation-Acknowledgement-Sla Acknowledged-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-acknowledgement-sla acknowledged-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledgedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `acknowledgedAt` property type drifts from OpenAPI baseline.
+
+## M6.217 Escalation-Policy Mitigation-Note-Types Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-policy mitigation-note-types anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.mitigationNoteTypes` type `array`
+- Mutation-based parity regressions now prove strict-check failure when escalation-policy `mitigationNoteTypes` property type drifts from OpenAPI baseline.
+
+## M6.218 Retention-Saturation-Trend-Snapshot Captured-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot captured-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `capturedAt` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

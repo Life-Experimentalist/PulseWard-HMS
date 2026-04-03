@@ -777,6 +777,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState actionRequired schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState acknowledgementSla schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla targetSeconds schema property contract"
     );
     expect(output).toContain(
@@ -790,6 +793,18 @@ describe("M1 parity regression guard", () => {
     );
     expect(output).toContain(
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla measuredFrom schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla measuredUntil schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla acknowledgedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy mitigationNoteTypes schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot capturedAt schema property contract"
     );
     expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
@@ -5931,6 +5946,28 @@ describe("M1 parity regression guard", () => {
     );
   });
 
+  test("fails strict check when anomaly escalation state acknowledgementSla property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationState:[\s\S]*?)\n\s{8}acknowledgementSla:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla"/,
+          "$1",
+          "anomaly escalation state acknowledgementSla property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState acknowledgementSla schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationState.acknowledgementSla"
+        );
+      }
+    );
+  });
+
   test("fails strict check when anomaly escalation acknowledgement SLA targetSeconds type drifts", () => {
     withMutatedNotificationSpec(
       (source) =>
@@ -6036,6 +6073,94 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredFrom type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly escalation acknowledgement SLA measuredUntil type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla:[\s\S]*?measuredUntil:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "anomaly escalation acknowledgement SLA measuredUntil type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla measuredUntil schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredUntil type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly escalation acknowledgement SLA acknowledgedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla:[\s\S]*?acknowledgedAt:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly escalation acknowledgement SLA acknowledgedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla acknowledgedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledgedAt type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation policy mitigationNoteTypes type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationPolicy:[\s\S]*?mitigationNoteTypes:[\s\S]*?type:\s*)array/,
+          "$1object",
+          "escalation policy mitigationNoteTypes type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy mitigationNoteTypes schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationPolicy.mitigationNoteTypes type expected array got object"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot capturedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?capturedAt:[\s\S]*?type:\s*)string/,
+          "$1number",
+          "retention saturation trend snapshot capturedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot capturedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt type expected string got number"
         );
       }
     );

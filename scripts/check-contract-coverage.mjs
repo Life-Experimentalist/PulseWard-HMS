@@ -3169,6 +3169,65 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState acknowledgementSla schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "acknowledgementSla",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla measuredUntil schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla",
+      propertyName: "measuredUntil",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla acknowledgedAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla",
+      propertyName: "acknowledgedAt",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationPolicy mitigationNoteTypes schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "mitigationNoteTypes",
+      type: "array",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot capturedAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "capturedAt",
+      type: "string",
+    },
+  },
+  {
+    label:
       "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla targetSeconds schema property contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

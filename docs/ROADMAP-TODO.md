@@ -817,3 +817,13 @@ Exit criteria:
 492. M6.212 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `breachSeconds` schema-property type drifts from OpenAPI baseline.
 493. M6.213 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla measured-from anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredFrom` string compatibility.
 494. M6.213 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredFrom` schema-property type drifts from OpenAPI baseline.
+495. M6.214 completed: strict contract checker now enforces anomaly-escalation-state acknowledgement-sla property anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.acknowledgementSla` presence compatibility.
+496. M6.214 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `acknowledgementSla` property is removed from OpenAPI baseline.
+497. M6.215 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla measured-until anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.measuredUntil` string compatibility.
+498. M6.215 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `measuredUntil` schema-property type drifts from OpenAPI baseline.
+499. M6.216 completed: strict contract checker now enforces anomaly-escalation-acknowledgement-sla acknowledged-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledgedAt` string compatibility.
+500. M6.216 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-acknowledgement-sla `acknowledgedAt` schema-property type drifts from OpenAPI baseline.
+501. M6.217 completed: strict contract checker now enforces escalation-policy mitigation-note-types anchor for `MessagingFaultManifestVerifyAttemptEscalationPolicy.mitigationNoteTypes` array compatibility.
+502. M6.217 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-policy `mitigationNoteTypes` schema-property type drifts from OpenAPI baseline.
+503. M6.218 completed: strict contract checker now enforces retention-saturation-trend-snapshot captured-at anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt` string compatibility.
+504. M6.218 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `capturedAt` schema-property type drifts from OpenAPI baseline.

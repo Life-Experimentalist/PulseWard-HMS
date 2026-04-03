@@ -1326,6 +1326,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.author` type `string`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-triage-note `author` property type drifts from OpenAPI baseline.
 
+## M6.150 Anomaly-Triage-Note Mitigation-Applied Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-triage-note mitigation-applied anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.mitigationApplied` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-triage-note `mitigationApplied` property type drifts from OpenAPI baseline.
+
+## M6.151 Anomaly-Triage-Note Mitigation-Type Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-triage-note mitigation-type anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.mitigationType` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-triage-note `mitigationType` property type drifts from OpenAPI baseline.
+
+## M6.152 Anomaly-Triage-Note Mitigation-Evidence-Ref Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-triage-note mitigation-evidence-ref anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.mitigationEvidenceRef` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-triage-note `mitigationEvidenceRef` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

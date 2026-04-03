@@ -351,3 +351,5 @@ Exit criteria:
 74. M6.3 evidence checkpoint: notification diagnostics regressions now validate command-path filters/payload invariants used by dashboard handoff controls, with runbook mappings updated for operator workflows.
 75. M6.4 completed: notification-service replay-attempt retention apply now supports atomic validation and `dryRun=true` preview execution with no persisted state mutation.
 76. M6.4 evidence checkpoint: regression coverage now validates dry-run no-mutation semantics and invalid-policy atomic invariants, and runbook guidance now enforces preview-before-apply retention operations.
+77. M6.5 completed: calendar and messaging adapter regression suites now cover additional live failure-path and credential guardrail branches without runtime adapter rewrites.
+78. M6.5 evidence checkpoint: targeted adapter tests now validate Apple/Outlook/ICS bridge edge paths, SMS non-OK/incomplete-credential handling, generic-webhook signed header emission, and bounded webhook failure payload behavior.

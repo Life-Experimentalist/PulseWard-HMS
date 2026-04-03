@@ -149,6 +149,108 @@ describe("notification messaging provider adapters", () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  test("sms gateway provider rejects incomplete live credentials", async () => {
+    const provider = new SmsGatewayProvider({ key: "sms-gateway" });
+
+    const invalid = await provider.send({
+      message: "hello",
+      recipient: "+15550000002",
+      dryRun: false,
+      credentialsOverride: {
+        endpoint: "https://sms.example.test/send",
+      },
+    });
+
+    expect(invalid.accepted).toBe(false);
+    expect(invalid.detail).toContain("credentials are incomplete");
+  });
+
+  test("sms gateway provider reports non-OK delivery fallback error payload", async () => {
+    const provider = new SmsGatewayProvider({ key: "sms-gateway" });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+      json: async () => {
+        throw new Error("bad json");
+      },
+    });
+
+    const failed = await provider.send({
+      message: "hello",
+      recipient: "+15550000003",
+      dryRun: false,
+      credentialsOverride: {
+        endpoint: "https://sms.example.test/send",
+        apiKey: "sms-key",
+      },
+    });
+
+    expect(failed.accepted).toBe(false);
+    expect(failed.detail).toContain("delivery failed");
+    expect(failed.error).toEqual({
+      status: 429,
+      statusText: "Too Many Requests",
+    });
+  });
+
+  test("generic webhook provider reports non-OK responses with bounded response body", async () => {
+    const provider = new GenericWebhookMessagingProvider({
+      key: "generic-webhook",
+      endpoint: "https://hooks.example.test/notify",
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => "y".repeat(1500),
+    });
+
+    const failed = await provider.send({
+      tenantKey: "default",
+      message: "hello",
+      recipient: "ops@pulseward.test",
+      dryRun: false,
+      credentialsOverride: {
+        signingSecret: "hook-secret",
+      },
+    });
+
+    expect(failed.accepted).toBe(false);
+    expect(failed.statusCode).toBe(503);
+    expect(failed.responseBody.length).toBe(800);
+  });
+
+  test("generic webhook provider sends signed header for live delivery", async () => {
+    const provider = new GenericWebhookMessagingProvider({
+      key: "generic-webhook",
+      endpoint: "https://hooks.example.test/notify",
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => "ok",
+    });
+
+    const sent = await provider.send({
+      tenantKey: "default",
+      message: "signed message",
+      recipient: "ops@pulseward.test",
+      dryRun: false,
+      credentialsOverride: {
+        signingSecret: "hook-secret",
+      },
+    });
+
+    expect(sent.accepted).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const requestOptions = global.fetch.mock.calls[0][1];
+    expect(requestOptions.headers["x-pulseward-signature"]).toMatch(/^sha256=/);
+    expect(requestOptions.headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(requestOptions.body).message).toBe("signed message");
+  });
+
   test("telegram provider handles dry-run, missing chat id, failure, and success", async () => {
     const provider = new TelegramBotProvider({ key: "telegram-bot" });
 

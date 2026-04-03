@@ -885,6 +885,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.diagnostics` type `object`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `diagnostics` property type drifts from OpenAPI baseline.
 
+## M6.87 Retention-Saturation-Trend Response Query Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response query anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.query` type `object`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `query` property type drifts from OpenAPI baseline.
+
+## M6.88 Retention-Saturation-Trend Response Summary Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response summary-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.summary` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `summary` property is removed from OpenAPI baseline.
+
+## M6.89 Retention-Saturation-Trend Response Latest-Saturation Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend response latest-saturation-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendResponse.latestSaturation` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend response `latestSaturation` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

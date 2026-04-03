@@ -713,3 +713,9 @@ Exit criteria:
 388. M6.160 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-response `updatedAt` schema-property type drifts from OpenAPI baseline.
 389. M6.161 completed: strict contract checker now enforces anomaly-triage-response anomaly-property anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.anomaly` presence compatibility.
 390. M6.161 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-response `anomaly` property is removed from OpenAPI baseline.
+391. M6.162 completed: strict contract checker now enforces anomaly-triage-response audit anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.audit` object compatibility.
+392. M6.162 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-response `audit` schema-property type drifts from OpenAPI baseline.
+393. M6.163 completed: strict contract checker now enforces anomaly-triage-response diagnostics anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.diagnostics` object compatibility.
+394. M6.163 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-response `diagnostics` schema-property type drifts from OpenAPI baseline.
+395. M6.164 completed: strict contract checker now enforces retention-saturation-trend summary-property anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrend.summary` presence compatibility.
+396. M6.164 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend `summary` property is removed from OpenAPI baseline.

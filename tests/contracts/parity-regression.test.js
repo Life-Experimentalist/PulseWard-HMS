@@ -636,6 +636,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse anomaly schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse audit schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse diagnostics schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrend summary schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -4736,6 +4745,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "missing schema property MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.anomaly"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage response audit type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:[\s\S]*?audit:[\s\S]*?type:\s*)object/,
+          "$1integer",
+          "anomaly triage response audit type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse audit schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.audit type expected object got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage response diagnostics type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:[\s\S]*?diagnostics:[\s\S]*?type:\s*)object/,
+          "$1string",
+          "anomaly triage response diagnostics type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse diagnostics schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.diagnostics type expected object got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend summary property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrend:[\s\S]*?)\n\s{8}summary:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary"/,
+          "$1",
+          "retention saturation trend summary property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrend summary schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrend.summary"
         );
       }
     );

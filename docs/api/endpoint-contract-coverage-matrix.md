@@ -1137,6 +1137,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedRecentlyClosedEntries` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-tracking-summary `retainedRecentlyClosedEntries` property type drifts from OpenAPI baseline.
 
+## M6.123 Escalation-Telemetry Active-Escalations Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-telemetry active-escalations anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.activeEscalations` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `activeEscalations` property type drifts from OpenAPI baseline.
+
+## M6.124 Escalation-Telemetry Pending-Escalations Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-telemetry pending-escalations anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.pendingEscalations` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `pendingEscalations` property type drifts from OpenAPI baseline.
+
+## M6.125 Escalation-Telemetry Highest-Escalation-Severity Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-telemetry highest-escalation-severity anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.highestEscalationSeverity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `highestEscalationSeverity` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

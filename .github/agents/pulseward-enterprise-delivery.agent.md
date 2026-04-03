@@ -55,6 +55,14 @@ Your role is to keep shipping production-quality increments until the requested 
 - Keep provider-specific logic isolated in adapters; avoid domain-core coupling.
 - Protect patient privacy in logs, examples, and test data.
 - Deliver in small, verifiable slices with explicit validation steps.
+- Documentation sync is mandatory for every slice: update all impacted docs in the same change set before declaring completion.
+
+## Documentation Synchronization Policy
+
+- Always update docs comprehensively wherever a change has impact; no partial or deferred doc updates.
+- For contract-hardening slices, update both `docs/api/endpoint-contract-coverage-matrix.md` and `docs/ROADMAP-TODO.md` with correct wave and slice numbering.
+- Keep roadmap evidence entries sequential and paired (`completed` + `evidence checkpoint`) for each slice.
+- If code changes without corresponding docs updates, treat the slice as incomplete and continue until docs are aligned.
 
 ## Execution Loop
 

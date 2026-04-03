@@ -519,6 +519,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary retainedRecentlyClosedEntries schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry activeEscalations schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry pendingEscalations schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry highestEscalationSeverity schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3761,6 +3770,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTrackingSummary.retainedRecentlyClosedEntries type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation telemetry activeEscalations type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationTelemetry:[\s\S]*?activeEscalations:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation telemetry activeEscalations type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry activeEscalations schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.activeEscalations type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation telemetry pendingEscalations type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationTelemetry:[\s\S]*?pendingEscalations:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "escalation telemetry pendingEscalations type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry pendingEscalations schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.pendingEscalations type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation telemetry highestEscalationSeverity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationTelemetry:[\s\S]*?highestEscalationSeverity:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation telemetry highestEscalationSeverity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry highestEscalationSeverity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.highestEscalationSeverity type expected string got integer"
         );
       }
     );

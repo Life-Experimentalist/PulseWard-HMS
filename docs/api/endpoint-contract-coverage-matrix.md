@@ -927,6 +927,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.maxEntries` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when retention-policy `maxEntries` property type drifts from OpenAPI baseline.
 
+## M6.93 Retention-Policy Min-Dedupe-Window-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-policy min-dedupe-window-seconds anchors for policy payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.minDedupeWindowSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-policy `minDedupeWindowSeconds` property type drifts from OpenAPI baseline.
+
+## M6.94 Retention-Policy Max-Dedupe-Window-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-policy max-dedupe-window-seconds anchors for policy payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.maxDedupeWindowSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-policy `maxDedupeWindowSeconds` property type drifts from OpenAPI baseline.
+
+## M6.95 Retention-Policy Min-Max-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-policy min-max-entries anchors for policy payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionPolicy.minMaxEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-policy `minMaxEntries` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

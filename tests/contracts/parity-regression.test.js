@@ -429,6 +429,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy maxEntries schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy minDedupeWindowSeconds schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy maxDedupeWindowSeconds schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy minMaxEntries schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3011,6 +3020,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.maxEntries type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy minDedupeWindowSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?minDedupeWindowSeconds:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention policy minDedupeWindowSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy minDedupeWindowSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.minDedupeWindowSeconds type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy maxDedupeWindowSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?maxDedupeWindowSeconds:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "retention policy maxDedupeWindowSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy maxDedupeWindowSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.maxDedupeWindowSeconds type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention policy minMaxEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionPolicy:[\s\S]*?minMaxEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention policy minMaxEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionPolicy minMaxEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionPolicy.minMaxEntries type expected integer got string"
         );
       }
     );

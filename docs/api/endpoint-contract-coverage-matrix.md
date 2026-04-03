@@ -304,6 +304,12 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- retention apply request schema anchor for `dryRun` guardrail support
 - Parity regression tests now assert PASS output for parameter-contract checks, so CI fails fast when command endpoint parameter contracts drift.
 
+## M6.9 Escalation Export Response Media-Type Contract Coverage
+
+- Contract checker critical parameter assertions now include escalation export response media-type checks to preserve JSON and CSV handoff compatibility.
+- Escalation export contract gates now enforce response `200` content coverage for both `application/json` and `text/csv`.
+- Mutation-based parity regressions now prove strict checker failure when escalation export response content drifts from `text/csv`, preventing silent operator handoff breakage.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

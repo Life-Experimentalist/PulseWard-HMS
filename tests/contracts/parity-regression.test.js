@@ -146,6 +146,9 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
     );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
+    );
   });
 
   test("fails strict check when retention trend parameter defaults drift", () => {
@@ -206,6 +209,26 @@ describe("M1 parity regression guard", () => {
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionApplyRequest.dryRun default expected false got true"
         );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export csv response contract drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?content:[\s\S]*?)text\/csv:/,
+          "$1text/plain:",
+          "escalation export csv response content type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
+        );
+        expect(output).toContain("response 200 missing content type text/csv");
       }
     );
   });

@@ -539,6 +539,17 @@ const criticalParameterContractChecks = [
       default: false,
     },
   },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "response-content-types",
+    responseCode: "200",
+    requiredContentTypes: ["application/json", "text/csv"],
+  },
 ];
 
 const specLinesCache = new Map();
@@ -861,6 +872,37 @@ function getOperationRequestBodyContract(operationLines) {
   };
 }
 
+function getOperationResponseContentTypes(operationLines, responseCode) {
+  const responsesSection = extractIndentedSection(operationLines, "responses", 6);
+  if (!responsesSection) {
+    return null;
+  }
+
+  const responseSection = extractIndentedSection(
+    responsesSection,
+    new RegExp(`^\\s{8}["']?${escapeRegExp(responseCode)}["']?:\\s*$`),
+    8
+  );
+  if (!responseSection) {
+    return null;
+  }
+
+  const contentSection = extractIndentedSection(responseSection, "content", 10);
+  if (!contentSection) {
+    return [];
+  }
+
+  const contentTypes = [];
+  contentSection.forEach((line) => {
+    const match = line.match(/^\s{12}([^:\s][^:]*)\s*:\s*$/);
+    if (match) {
+      contentTypes.push(String(match[1]).trim());
+    }
+  });
+
+  return contentTypes;
+}
+
 function findSchemaPropertyContract(lines, schemaName, propertyName) {
   const schemaPattern = new RegExp(`^\\s{4}${escapeRegExp(schemaName)}:\\s*$`);
   let schemaStart = -1;
@@ -1170,6 +1212,23 @@ function evaluateCriticalParameterContractChecks() {
             );
           }
         }
+      }
+    } else if (check.type === "response-content-types") {
+      const responseContentTypes = getOperationResponseContentTypes(
+        operationLines,
+        String(check.responseCode || "200")
+      );
+
+      if (responseContentTypes === null) {
+        failures.push(`missing response ${String(check.responseCode || "200")}`);
+      } else {
+        (check.requiredContentTypes || []).forEach((contentType) => {
+          if (!responseContentTypes.includes(contentType)) {
+            failures.push(
+              `response ${String(check.responseCode || "200")} missing content type ${contentType}`
+            );
+          }
+        });
       }
     }
 

@@ -406,6 +406,72 @@ function applyFaultInjectionRetention(maxEvents, pruneNow) {
   };
 }
 
+function getFaultEvidenceSigningMaterial() {
+  var primaryKey = "INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET";
+  var fallbackKey = "INTEGRATION_WEBHOOK_SIGNING_SECRET";
+
+  var primary = resolveSecretRef({
+    secretKey: primaryKey,
+  });
+  var primarySecret = String(primary.signingSecret || primary.secret || primary.raw || "").trim();
+
+  if (primarySecret) {
+    return {
+      configured: true,
+      source: primaryKey,
+      secret: primarySecret,
+    };
+  }
+
+  var fallback = resolveSecretRef({
+    secretKey: fallbackKey,
+  });
+  var fallbackSecret = String(fallback.signingSecret || fallback.secret || fallback.raw || "").trim();
+
+  if (fallbackSecret) {
+    return {
+      configured: true,
+      source: fallbackKey,
+      secret: fallbackSecret,
+    };
+  }
+
+  return {
+    configured: false,
+    source: null,
+    secret: "",
+  };
+}
+
+function buildFaultManifestPayload(filters, events, totalMatched) {
+  return {
+    generatedAt: new Date().toISOString(),
+    filters: {
+      tenantKey: filters.tenantKey || null,
+      providerKey: filters.providerKey || null,
+      scenario: filters.scenario || null,
+      limit: filters.limit,
+    },
+    totalMatched: totalMatched,
+    returned: events.length,
+    summary: summarizeFaultInjectionEvents(events),
+    retention: {
+      maxEvents: maxMessagingFaultInjectionEvents,
+      source: messagingFaultRetentionSource,
+      pruneStrategy: "drop-oldest",
+    },
+    eventDigests: events.map(function (event) {
+      return {
+        eventId: event.eventId,
+        occurredAt: event.occurredAt,
+        scenario: event.scenario,
+        classification: event.classification,
+        expectedHttpStatus: event.expectedHttpStatus,
+      };
+    }),
+  };
+}
+
 function hasWebhookSigningSecret(parsedSecret) {
   if (!parsedSecret) {
     return false;
@@ -956,6 +1022,7 @@ router.get("/integrations/messaging/fault-injection/simulate", function (req, re
       eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
       deliveryTestEndpoint: "POST /api/v1/integrations/messaging/test",
     },
   });
@@ -994,6 +1061,7 @@ router.get("/integrations/messaging/fault-injection/events", function (req, res)
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       retentionApplyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
     },
     events: items,
   });
@@ -1044,8 +1112,79 @@ router.get("/integrations/messaging/fault-injection/export", function (req, res)
     diagnostics: {
       eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
     },
     events: items,
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/manifest", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var providerKey = String(req.query.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(req.query.scenario || "")
+    .trim()
+    .toLowerCase();
+  var limit = parseRetryInt(req.query.limit, 100, 1, 1000);
+  var includeEvents = parseRetryBool(req.query.includeEvents, false);
+
+  var filtered = collectFaultInjectionEvents(tenantKey, providerKey, scenario);
+  var items = filtered.slice(-limit);
+  var payload = buildFaultManifestPayload(
+    {
+      tenantKey: tenantKey,
+      providerKey: providerKey,
+      scenario: scenario,
+      limit: limit,
+    },
+    items,
+    filtered.length
+  );
+  var serializedPayload = JSON.stringify(payload);
+  var digestHex = crypto.createHash("sha256").update(serializedPayload, "utf8").digest("hex");
+  var signing = getFaultEvidenceSigningMaterial();
+
+  var signature = null;
+  if (signing.configured) {
+    signature = "sha256=" + crypto.createHmac("sha256", signing.secret).update(digestHex, "utf8").digest("hex");
+  }
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    manifestId: randomUUID(),
+    manifestVersion: "m5.7.v1",
+    generatedAt: payload.generatedAt,
+    signatureStatus: signing.configured ? "signed" : "unsigned",
+    signature: signature,
+    digest: {
+      algorithm: "sha256",
+      value: digestHex,
+      payloadBytes: Buffer.byteLength(serializedPayload, "utf8"),
+    },
+    signer: {
+      algorithm: signing.configured ? "hmac-sha256" : "unsigned",
+      secretSource: signing.source,
+    },
+    evidence: {
+      filters: payload.filters,
+      totalMatched: payload.totalMatched,
+      returned: payload.returned,
+      summary: payload.summary,
+      retention: payload.retention,
+      eventIds: payload.eventDigests.map(function (item) {
+        return item.eventId;
+      }),
+    },
+    eventDigests: payload.eventDigests,
+    events: includeEvents ? items : undefined,
+    diagnostics: {
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
+      retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      handoffGuide:
+        "Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance",
+    },
   });
 });
 
@@ -1064,13 +1203,12 @@ router.get("/integrations/messaging/fault-injection/retention", function (_req, 
       totalRecorded: totalRecorded,
       oldestOccurredAt: totalRecorded > 0 ? messagingFaultInjectionEvents[0].occurredAt : null,
       latestOccurredAt:
-        totalRecorded > 0
-          ? messagingFaultInjectionEvents[totalRecorded - 1].occurredAt
-          : null,
+        totalRecorded > 0 ? messagingFaultInjectionEvents[totalRecorded - 1].occurredAt : null,
     },
     diagnostics: {
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       applyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
     },
   });
 });

@@ -155,6 +155,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Fault-injection simulation and event endpoints now include diagnostics links to export and retention control routes.
 - Regression tests cover export payload behavior, CSV export content type, retention policy apply/status semantics, and missing-payload guardrails.
 
+## M5.7 Signed Evidence Manifest Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest` to produce a traceable evidence manifest with digest and optional HMAC signature.
+- Manifest signing supports dedicated `INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET` with fallback to webhook signing secret when needed.
+- Fault simulation/events/export/retention diagnostics now reference manifest generation endpoint for incident handoff continuity.
+- Regression tests cover signed-manifest generation, digest/signature response shape, and signature reproducibility checks.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -435,6 +435,52 @@ paths:
             text/csv:
               schema:
                 type: string
+  /integrations/messaging/fault-injection/manifest:
+    get:
+      summary: Generate signed fault-injection evidence manifest for incident handoff traceability
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - happy-path
+              - network-timeout
+              - rate-limit
+              - provider-5xx
+              - invalid-signature
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+        - name: includeEvents
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Signed fault-injection evidence manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultInjectionManifestResponse"
   /integrations/messaging/fault-injection/retention:
     get:
       summary: Get connector fault-injection retention policy and telemetry window status
@@ -932,6 +978,9 @@ components:
         retentionEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/retention
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
         deliveryTestEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/test
@@ -1072,6 +1121,9 @@ components:
         retentionApplyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/retention/apply
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
     MessagingFaultExportDiagnostics:
       type: object
       properties:
@@ -1081,6 +1133,130 @@ components:
         retentionEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/retention
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
+    MessagingFaultManifestDigest:
+      type: object
+      properties:
+        algorithm:
+          type: string
+          example: sha256
+        value:
+          type: string
+          example: 091465fceec94e6f8f7f8ddbf6f6f13dca3f5a2498b8455eb72e4f08fd60f3a4
+        payloadBytes:
+          type: integer
+          example: 1042
+    MessagingFaultManifestSigner:
+      type: object
+      properties:
+        algorithm:
+          type: string
+          example: hmac-sha256
+        secretSource:
+          type: string
+          nullable: true
+          example: INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET
+    MessagingFaultManifestEvidence:
+      type: object
+      properties:
+        filters:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              nullable: true
+            providerKey:
+              type: string
+              nullable: true
+            scenario:
+              type: string
+              nullable: true
+            limit:
+              type: integer
+              example: 100
+        totalMatched:
+          type: integer
+          example: 8
+        returned:
+          type: integer
+          example: 8
+        summary:
+          $ref: "#/components/schemas/MessagingFaultInjectionSummary"
+        retention:
+          $ref: "#/components/schemas/MessagingFaultRetentionPolicy"
+        eventIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    MessagingFaultManifestDiagnostics:
+      type: object
+      properties:
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+        eventsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/events
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/retention
+        handoffGuide:
+          type: string
+          example: Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance
+    MessagingFaultInjectionManifestResponse:
+      type: object
+      properties:
+        manifestId:
+          type: string
+          format: uuid
+        manifestVersion:
+          type: string
+          example: m5.7.v1
+        generatedAt:
+          type: string
+          format: date-time
+        signatureStatus:
+          type: string
+          enum:
+            - signed
+            - unsigned
+          example: signed
+        signature:
+          type: string
+          nullable: true
+          example: sha256=6f7f2e8bd4fe2cf45ce09e86f1308ccf4f95ba4a77e64b7e0276312ecacda5f4
+        digest:
+          $ref: "#/components/schemas/MessagingFaultManifestDigest"
+        signer:
+          $ref: "#/components/schemas/MessagingFaultManifestSigner"
+        evidence:
+          $ref: "#/components/schemas/MessagingFaultManifestEvidence"
+        eventDigests:
+          type: array
+          items:
+            type: object
+            properties:
+              eventId:
+                type: string
+                format: uuid
+              occurredAt:
+                type: string
+                format: date-time
+              scenario:
+                type: string
+              classification:
+                type: string
+              expectedHttpStatus:
+                type: integer
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultInjectionEvent"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestDiagnostics"
     MessagingFaultInjectionExportResponse:
       type: object
       properties:
@@ -1144,6 +1320,9 @@ components:
         applyEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/fault-injection/retention/apply
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
     MessagingFaultRetentionStatusResponse:
       type: object
       properties:

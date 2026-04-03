@@ -12,6 +12,7 @@
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
 	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&limit=10`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&limit=25`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
@@ -29,6 +30,7 @@
 	- `GET /api/v1/platform/abha/operational-readiness`
 	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format=json&limit=50`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
 
 ## Incident handling
 
@@ -51,6 +53,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
 	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format={json|csv}`
+	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/retention/apply`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify`
@@ -73,6 +76,7 @@
 - Never delete previous config versions.
 - Use pull requests for config updates.
 - Require rollback notes in PR template.
+- Keep `INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET` in secret store for signed manifest handoff workflows.
 
 ## Post-change validation
 

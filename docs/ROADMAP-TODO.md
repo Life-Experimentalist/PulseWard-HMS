@@ -313,4 +313,6 @@ Exit criteria:
 36. M5.5 evidence checkpoint: regression coverage now validates connector fault simulation/event feeds and ABHA fallback telemetry behavior for operational drills.
 37. M5.6 completed: connector diagnostics now include fault-injection export and retention controls for incident evidence handoff workflows.
 38. M5.6 evidence checkpoint: regression coverage now validates export payloads (JSON/CSV), retention policy diagnostics, and retention apply guardrails.
-39. M5.7 active next slice: add signed evidence manifest output for cross-team incident drill handoff traceability.
+39. M5.7 completed: connector diagnostics now include signed evidence manifest output for cross-team incident drill handoff traceability.
+40. M5.7 evidence checkpoint: regression coverage now validates manifest digest/signature output and handoff diagnostics links.
+41. M5.8 active next slice: add manifest verification endpoint for zero-trust incident evidence validation workflows.

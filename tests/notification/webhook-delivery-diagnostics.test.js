@@ -8,6 +8,7 @@ describe("notification webhook delivery diagnostics", () => {
   let baseUrl;
   const originalWebhookEndpoint = process.env.INTEGRATION_WEBHOOK_ENDPOINT;
   const originalWebhookSigningSecret = process.env.INTEGRATION_WEBHOOK_SIGNING_SECRET;
+  const originalFaultEvidenceSigningSecret = process.env.INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET;
 
   async function requestJson(relativePath, options) {
     const response = await fetch(`${baseUrl}${relativePath}`, options);
@@ -49,6 +50,12 @@ describe("notification webhook delivery diagnostics", () => {
       delete process.env.INTEGRATION_WEBHOOK_SIGNING_SECRET;
     } else {
       process.env.INTEGRATION_WEBHOOK_SIGNING_SECRET = originalWebhookSigningSecret;
+    }
+
+    if (originalFaultEvidenceSigningSecret === undefined) {
+      delete process.env.INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET;
+    } else {
+      process.env.INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET = originalFaultEvidenceSigningSecret;
     }
   });
 
@@ -286,5 +293,46 @@ describe("notification webhook delivery diagnostics", () => {
 
     expect(invalidApply.status).toBe(400);
     expect(invalidApply.body.code).toBe("NOTIFICATION_FAULT_RETENTION_MAX_REQUIRED");
+  });
+
+  test("builds signed fault-injection evidence manifest for incident handoff", async () => {
+    process.env.INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET = "m5-7-evidence-signing-secret";
+
+    await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=provider-5xx",
+      {
+        method: "GET",
+      }
+    );
+
+    const manifest = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest?tenantKey=default&providerKey=generic-webhook&limit=10&includeEvents=true",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(manifest.status).toBe(200);
+    expect(manifest.body.signatureStatus).toBe("signed");
+    expect(manifest.body.signer.algorithm).toBe("hmac-sha256");
+    expect(manifest.body.signer.secretSource).toBe("INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET");
+    expect(manifest.body.digest.algorithm).toBe("sha256");
+    expect(manifest.body.digest.value).toHaveLength(64);
+    expect(manifest.body.signature).toContain("sha256=");
+    expect(manifest.body.evidence.returned).toBeGreaterThan(0);
+    expect(Array.isArray(manifest.body.evidence.eventIds)).toBe(true);
+    expect(Array.isArray(manifest.body.eventDigests)).toBe(true);
+    expect(Array.isArray(manifest.body.events)).toBe(true);
+    expect(manifest.body.diagnostics.exportEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/export"
+    );
+
+    const expectedSignature = `sha256=${createHmac(
+      "sha256",
+      "m5-7-evidence-signing-secret"
+    )
+      .update(manifest.body.digest.value, "utf8")
+      .digest("hex")}`;
+    expect(manifest.body.signature).toBe(expectedSignature);
   });
 });

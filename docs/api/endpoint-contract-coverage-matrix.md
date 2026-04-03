@@ -1721,6 +1721,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.trigger` type `string`
 - Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `trigger` property type drifts from OpenAPI baseline.
 
+## M6.204 Anomaly-Escalation-State Pending-Since Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state pending-since anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.pendingSince` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `pendingSince` property type drifts from OpenAPI baseline.
+
+## M6.205 Anomaly-Escalation-State Escalated-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state escalated-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.escalatedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `escalatedAt` property type drifts from OpenAPI baseline.
+
+## M6.206 Anomaly-Escalation-State Resolved-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state resolved-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.resolvedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `resolvedAt` property type drifts from OpenAPI baseline.
+
+## M6.207 Anomaly-Escalation-State Due-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state due-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.dueAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `dueAt` property type drifts from OpenAPI baseline.
+
+## M6.208 Anomaly-Escalation-State Action-Required Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-escalation-state action-required anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.actionRequired` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-escalation-state `actionRequired` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

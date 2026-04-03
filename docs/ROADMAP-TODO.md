@@ -797,3 +797,13 @@ Exit criteria:
 472. M6.202 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `severity` schema-property type drifts from OpenAPI baseline.
 473. M6.203 completed: strict contract checker now enforces anomaly-escalation-state trigger anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.trigger` string compatibility.
 474. M6.203 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `trigger` schema-property type drifts from OpenAPI baseline.
+475. M6.204 completed: strict contract checker now enforces anomaly-escalation-state pending-since anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.pendingSince` string compatibility.
+476. M6.204 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `pendingSince` schema-property type drifts from OpenAPI baseline.
+477. M6.205 completed: strict contract checker now enforces anomaly-escalation-state escalated-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.escalatedAt` string compatibility.
+478. M6.205 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `escalatedAt` schema-property type drifts from OpenAPI baseline.
+479. M6.206 completed: strict contract checker now enforces anomaly-escalation-state resolved-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.resolvedAt` string compatibility.
+480. M6.206 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `resolvedAt` schema-property type drifts from OpenAPI baseline.
+481. M6.207 completed: strict contract checker now enforces anomaly-escalation-state due-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.dueAt` string compatibility.
+482. M6.207 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `dueAt` schema-property type drifts from OpenAPI baseline.
+483. M6.208 completed: strict contract checker now enforces anomaly-escalation-state action-required anchor for `MessagingFaultManifestVerifyAttemptAnomalyEscalationState.actionRequired` boolean compatibility.
+484. M6.208 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-escalation-state `actionRequired` schema-property type drifts from OpenAPI baseline.

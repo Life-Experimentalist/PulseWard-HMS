@@ -3109,6 +3109,66 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState pendingSince schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "pendingSince",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState escalatedAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "escalatedAt",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState resolvedAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "resolvedAt",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState dueAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "dueAt",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationState actionRequired schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyEscalationState",
+      propertyName: "actionRequired",
+      type: "boolean",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

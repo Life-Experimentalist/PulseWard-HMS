@@ -675,6 +675,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.anomalyStatus` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `anomalyStatus` property type drifts from OpenAPI baseline.
 
+## M6.57 Escalation-Export Filters Include-Recently-Closed Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filters include-recently-closed anchors for export policy filter compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.includeRecentlyClosed` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filters `includeRecentlyClosed` property type drifts from OpenAPI baseline.
+
+## M6.58 Escalation-Export Filters State Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filters state anchors for export filter compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.state` type `array`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filters `state` property type drifts from OpenAPI baseline.
+
+## M6.59 Escalation-Export Filters Acknowledgement-SLA-Status Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export filters acknowledgement-SLA-status anchors for export filter compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.acknowledgementSlaStatus` type `array`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export filters `acknowledgementSlaStatus` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

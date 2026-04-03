@@ -1364,6 +1364,42 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters includeRecentlyClosed schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportFilters",
+      propertyName: "includeRecentlyClosed",
+      type: "boolean",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters state schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportFilters",
+      propertyName: "state",
+      type: "array",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters acknowledgementSlaStatus schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportFilters",
+      propertyName: "acknowledgementSlaStatus",
+      type: "array",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

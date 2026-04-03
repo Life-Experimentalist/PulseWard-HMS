@@ -168,6 +168,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteType anchor"
     );
     expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteAuthor anchor"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor"
     );
     expect(output).toContain(
@@ -625,6 +628,12 @@ describe("M1 parity regression guard", () => {
     );
     expect(output).toContain(
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageState latestNote schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse updatedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse anomaly schema property contract"
     );
     expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
@@ -1449,6 +1458,28 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.noteType type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage noteAuthor type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?noteAuthor:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "triage noteAuthor type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteAuthor anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.noteAuthor type expected string got integer"
         );
       }
     );
@@ -4661,6 +4692,50 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "missing schema property MessagingFaultManifestVerifyAttemptAnomalyTriageState.latestNote"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage response updatedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:[\s\S]*?updatedAt:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "anomaly triage response updatedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse updatedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.updatedAt type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly triage response anomaly property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageResponse:[\s\S]*?)\n\s{8}anomaly:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly"/,
+          "$1",
+          "anomaly triage response anomaly property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse anomaly schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptAnomalyTriageResponse.anomaly"
         );
       }
     );

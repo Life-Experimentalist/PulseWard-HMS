@@ -701,6 +701,22 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteAuthor anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+      propertyName: "noteAuthor",
+      type: "string",
+    },
+  },
+  {
+    label:
       "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -2567,6 +2583,29 @@ const criticalParameterContractChecks = [
     expectedSchemaProperty: {
       schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageState",
       propertyName: "latestNote",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse updatedAt schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageResponse",
+      propertyName: "updatedAt",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptAnomalyTriageResponse anomaly schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageResponse",
+      propertyName: "anomaly",
     },
   },
   {

@@ -732,6 +732,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly closedAt schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly closedReason schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly clearanceEvidence schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly closureHistory schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly escalation schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord closedAt schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -5536,6 +5551,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedAt type expected string got number"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly closedReason type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?closedReason:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention saturation anomaly closedReason type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly closedReason schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedReason type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly clearanceEvidence type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?clearanceEvidence:[\s\S]*?type:\s*)object/,
+          "$1string",
+          "retention saturation anomaly clearanceEvidence type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly clearanceEvidence schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.clearanceEvidence type expected object got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly closureHistory type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?closureHistory:[\s\S]*?type:\s*)array/,
+          "$1object",
+          "retention saturation anomaly closureHistory type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly closureHistory schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closureHistory type expected array got object"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly escalation property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?)\n\s{8}escalation:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptAnomalyEscalationState"/,
+          "$1",
+          "retention saturation anomaly escalation property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly escalation schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.escalation"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when anomaly closure record closedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyClosureRecord:[\s\S]*?closedAt:[\s\S]*?type:\s*)string/,
+          "$1number",
+          "anomaly closure record closedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptAnomalyClosureRecord closedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedAt type expected string got number"
         );
       }
     );

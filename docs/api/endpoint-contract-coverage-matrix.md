@@ -1651,6 +1651,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedAt` type `string`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-anomaly `closedAt` property type drifts from OpenAPI baseline.
 
+## M6.194 Retention-Saturation-Anomaly Closed-Reason Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-anomaly closed-reason anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedReason` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-anomaly `closedReason` property type drifts from OpenAPI baseline.
+
+## M6.195 Retention-Saturation-Anomaly Clearance-Evidence Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-anomaly clearance-evidence anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.clearanceEvidence` type `object`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-anomaly `clearanceEvidence` property type drifts from OpenAPI baseline.
+
+## M6.196 Retention-Saturation-Anomaly Closure-History Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-anomaly closure-history anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closureHistory` type `array`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-anomaly `closureHistory` property type drifts from OpenAPI baseline.
+
+## M6.197 Retention-Saturation-Anomaly Escalation Property Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-anomaly escalation property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.escalation` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-anomaly `escalation` property is removed from OpenAPI baseline.
+
+## M6.198 Anomaly-Closure-Record Closed-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include anomaly-closure-record closed-at anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly-closure-record `closedAt` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

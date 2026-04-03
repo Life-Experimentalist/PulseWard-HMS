@@ -777,3 +777,13 @@ Exit criteria:
 452. M6.192 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `triage` property is removed from OpenAPI baseline.
 453. M6.193 completed: strict contract checker now enforces retention-saturation-anomaly closed-at anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedAt` string compatibility.
 454. M6.193 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `closedAt` schema-property type drifts from OpenAPI baseline.
+455. M6.194 completed: strict contract checker now enforces retention-saturation-anomaly closed-reason anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closedReason` string compatibility.
+456. M6.194 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `closedReason` schema-property type drifts from OpenAPI baseline.
+457. M6.195 completed: strict contract checker now enforces retention-saturation-anomaly clearance-evidence anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.clearanceEvidence` object compatibility.
+458. M6.195 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `clearanceEvidence` schema-property type drifts from OpenAPI baseline.
+459. M6.196 completed: strict contract checker now enforces retention-saturation-anomaly closure-history anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.closureHistory` array compatibility.
+460. M6.196 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `closureHistory` schema-property type drifts from OpenAPI baseline.
+461. M6.197 completed: strict contract checker now enforces retention-saturation-anomaly escalation property anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.escalation` presence compatibility.
+462. M6.197 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-anomaly `escalation` property is removed from OpenAPI baseline.
+463. M6.198 completed: strict contract checker now enforces anomaly-closure-record closed-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyClosureRecord.closedAt` string compatibility.
+464. M6.198 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-closure-record `closedAt` schema-property type drifts from OpenAPI baseline.

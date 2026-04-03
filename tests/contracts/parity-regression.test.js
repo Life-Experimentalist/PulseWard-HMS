@@ -144,6 +144,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export boolean filter parameter contract"
     );
     expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export escalation state/severity filter parameter contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract"
     );
     expect(output).toContain(
@@ -151,6 +154,15 @@ describe("M1 parity regression guard", () => {
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationApplied anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema note anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteType anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor"
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema pruneNow anchor"
@@ -162,10 +174,19 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy autoDeescalateOnMitigation anchor"
     );
     expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy enabled anchor"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy includeRecentlyClosedByDefault anchor"
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy defaultFormat anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy enabled anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy maxExportRows anchor"
     );
     expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
@@ -795,6 +816,180 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property NotificationErrorResponse.details additionalProperties expected true got false"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export state filter type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?- name: state[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "escalation export state filter type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export escalation state/severity filter parameter contract"
+        );
+        expect(output).toContain("parameter query:state type expected string got integer");
+      }
+    );
+  });
+
+  test("fails strict check when escalation export escalationSeverity filter type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?- name: escalationSeverity[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "escalation export escalationSeverity filter type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export escalation state/severity filter parameter contract"
+        );
+        expect(output).toContain(
+          "parameter query:escalationSeverity type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation policy enabled default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationPolicy:[\s\S]*?enabled:[\s\S]*?default:\s*)true/,
+          "$1false",
+          "escalation policy enabled default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy enabled anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationPolicy.enabled default expected true got false"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy enabled type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?enabled:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export policy enabled type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy enabled anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy maxExportRows type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?maxExportRows:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export policy maxExportRows type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy maxExportRows anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.maxExportRows type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage note type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?note:[\s\S]*?type:\s*)string/,
+          "$1array",
+          "triage note type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema note anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.note type expected string got array"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage noteType type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?noteType:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "triage noteType type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteType anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.noteType type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when triage mitigationEvidenceRef type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?mitigationEvidenceRef:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "triage mitigationEvidenceRef type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationEvidenceRef type expected string got integer"
         );
       }
     );

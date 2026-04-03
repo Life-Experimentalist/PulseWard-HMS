@@ -364,6 +364,33 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `NotificationErrorResponse.details` `additionalProperties: true`
 - Mutation-based parity regressions now prove strict-check failure on shared error-schema structural drift, preventing silent dashboard command error-handling incompatibility.
 
+## M6.15 Notification Escalation Export State/Severity Filter Guardrail Coverage
+
+- Contract checker critical parameter assertions now include escalation export state/severity filter contracts used by operations handoff workflows.
+- Parameter contract checks now enforce:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`:
+		- `state` type `string`
+		- `escalationSeverity` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation export state/severity filter parameter types drift from OpenAPI baseline.
+
+## M6.16 Retention-Apply Escalation Policy Property Anchor Guardrail Coverage
+
+- Contract checker request-schema-property assertions now include escalation policy component anchors used by retention apply command workflows.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.enabled` type `boolean` with default `true`
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.enabled` type `boolean` with default `true`
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.maxExportRows` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation policy property anchors drift from OpenAPI baseline.
+
+## M6.17 Anomaly Triage Metadata Property Anchor Guardrail Coverage
+
+- Contract checker request-schema-property assertions now include anomaly triage metadata property anchors for operator note workflows.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.note` type `string`
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.noteType` type `string`
+	- `MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationEvidenceRef` type `string`
+- Mutation-based parity regressions now prove strict-check failure when anomaly triage metadata property types drift from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

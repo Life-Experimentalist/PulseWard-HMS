@@ -539,6 +539,33 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export escalation state/severity filter parameter contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "state",
+        in: "query",
+        required: false,
+        schema: {
+          type: "string",
+        },
+      },
+      {
+        name: "escalationSeverity",
+        in: "query",
+        required: false,
+        schema: {
+          type: "string",
+        },
+      },
+    ],
+  },
+  {
+    label:
       "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -589,6 +616,54 @@ const criticalParameterContractChecks = [
       propertyName: "mitigationApplied",
       type: "boolean",
       default: false,
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema note anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+      propertyName: "note",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema noteType anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+      propertyName: "noteType",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+      propertyName: "mitigationEvidenceRef",
+      type: "string",
     },
   },
   {
@@ -644,6 +719,23 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy enabled anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "enabled",
+      type: "boolean",
+      default: true,
+    },
+  },
+  {
+    label:
       "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy includeRecentlyClosedByDefault anchor",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -674,6 +766,39 @@ const criticalParameterContractChecks = [
       propertyName: "defaultFormat",
       type: "string",
       default: "json",
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy enabled anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportPolicy",
+      propertyName: "enabled",
+      type: "boolean",
+      default: true,
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy maxExportRows anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportPolicy",
+      propertyName: "maxExportRows",
+      type: "integer",
     },
   },
   {
@@ -835,8 +960,7 @@ const criticalParameterContractChecks = [
     },
   },
   {
-    label:
-      "notification-service NotificationErrorResponse details additionalProperties contract",
+    label: "notification-service NotificationErrorResponse details additionalProperties contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
     type: "schema-property-contract",

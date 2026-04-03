@@ -371,3 +371,9 @@ Exit criteria:
 94. M6.13 evidence checkpoint: mutation regressions now prove strict-check failure when command error response schema refs drift from NotificationErrorResponse, preventing silent operator handoff error-contract breakage.
 95. M6.14 completed: strict contract checker now enforces NotificationErrorResponse schema-property anchors (`message`, `code`, `details`) for notification operations command failure-path compatibility.
 96. M6.14 evidence checkpoint: mutation regressions now prove strict-check failure when NotificationErrorResponse property type or `additionalProperties` semantics drift from OpenAPI baseline.
+97. M6.15 completed: strict contract checker now enforces escalation-export state and severity filter parameter contracts for notification operations handoff workflows.
+98. M6.15 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export state/severity filter parameter types drift from OpenAPI baseline.
+99. M6.16 completed: strict contract checker now enforces retention-apply escalation policy component anchors for enabled/default and max-export-rows property compatibility.
+100. M6.16 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply escalation policy property anchors drift from OpenAPI baseline.
+101. M6.17 completed: strict contract checker now enforces anomaly-triage metadata property anchors for note, noteType, and mitigationEvidenceRef payload compatibility.
+102. M6.17 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage metadata property types drift from OpenAPI baseline.

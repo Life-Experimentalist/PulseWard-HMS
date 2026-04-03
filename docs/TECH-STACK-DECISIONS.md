@@ -14,6 +14,10 @@ Planned upgrade path:
 - **Contract model**: OpenAPI-first per service with repository-level contract parity checks.
 - **Type strategy**: shared contracts/types via workspace packages, with incremental TypeScript hardening where practical.
 
+Detailed implementation mapping (service-by-service and app-by-app) is maintained in:
+
+- `docs/architecture/tech-stack-inventory.md`
+
 ## Data Decision
 
 - **Current state**: service-local/in-memory or file-backed stores for rapid iteration where applicable.

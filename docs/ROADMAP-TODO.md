@@ -311,4 +311,6 @@ Exit criteria:
 34. M5.4 evidence checkpoint: ABHA consent-flow simulation endpoint now provides scenario-driven operational drill checkpoints and evidence-link guidance.
 35. M5.5 completed: connector diagnostics now include fault-injection simulation controls and ABHA fallback decision telemetry with route+contract coverage.
 36. M5.5 evidence checkpoint: regression coverage now validates connector fault simulation/event feeds and ABHA fallback telemetry behavior for operational drills.
-37. M5.6 active next slice: add connector drill export/retention controls for incident evidence handoff workflows.
+37. M5.6 completed: connector diagnostics now include fault-injection export and retention controls for incident evidence handoff workflows.
+38. M5.6 evidence checkpoint: regression coverage now validates export payloads (JSON/CSV), retention policy diagnostics, and retention apply guardrails.
+39. M5.7 active next slice: add signed evidence manifest output for cross-team incident drill handoff traceability.

@@ -383,6 +383,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultInjectionEventsResponse"
+  /integrations/messaging/fault-injection/export:
+    get:
+      summary: Export connector fault-injection telemetry for incident evidence handoff
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - happy-path
+              - network-timeout
+              - rate-limit
+              - provider-5xx
+              - invalid-signature
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - csv
+            default: json
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 500
+            minimum: 1
+            maximum: 2000
+      responses:
+        "200":
+          description: Fault-injection export payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultInjectionExportResponse"
+            text/csv:
+              schema:
+                type: string
+  /integrations/messaging/fault-injection/retention:
+    get:
+      summary: Get connector fault-injection retention policy and telemetry window status
+      responses:
+        "200":
+          description: Fault-injection retention status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultRetentionStatusResponse"
+  /integrations/messaging/fault-injection/retention/apply:
+    post:
+      summary: Apply connector fault-injection retention policy for telemetry storage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagingFaultRetentionApplyRequest"
+      responses:
+        "200":
+          description: Applied fault-injection retention policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultRetentionApplyResponse"
+        "400":
+          description: Missing or invalid retention payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
   /integrations/messaging/webhook/signature/verify:
     post:
       summary: Verify website webhook signature against configured signing secret
@@ -842,6 +926,12 @@ components:
         eventsEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/events
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/retention
         deliveryTestEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/test
@@ -946,10 +1036,192 @@ components:
               nullable: true
         summary:
           $ref: "#/components/schemas/MessagingFaultInjectionSummary"
+        retention:
+          $ref: "#/components/schemas/MessagingFaultRetentionPolicy"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultEventsDiagnostics"
         events:
           type: array
           items:
             $ref: "#/components/schemas/MessagingFaultInjectionEvent"
+    MessagingFaultRetentionPolicy:
+      type: object
+      properties:
+        maxEvents:
+          type: integer
+          example: 200
+        source:
+          type: string
+          enum:
+            - default
+            - env
+            - api
+          example: api
+        pruneStrategy:
+          type: string
+          example: drop-oldest
+    MessagingFaultEventsDiagnostics:
+      type: object
+      properties:
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/retention
+        retentionApplyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/retention/apply
+    MessagingFaultExportDiagnostics:
+      type: object
+      properties:
+        eventsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/events
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/retention
+    MessagingFaultInjectionExportResponse:
+      type: object
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        format:
+          type: string
+          example: json
+        totalMatched:
+          type: integer
+          example: 12
+        returned:
+          type: integer
+          example: 12
+        retention:
+          $ref: "#/components/schemas/MessagingFaultRetentionPolicy"
+        filters:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              nullable: true
+            providerKey:
+              type: string
+              nullable: true
+            scenario:
+              type: string
+              nullable: true
+            limit:
+              type: integer
+              example: 500
+        summary:
+          $ref: "#/components/schemas/MessagingFaultInjectionSummary"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultExportDiagnostics"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultInjectionEvent"
+    MessagingFaultRetentionStatusTelemetry:
+      type: object
+      properties:
+        totalRecorded:
+          type: integer
+          example: 18
+        oldestOccurredAt:
+          type: string
+          format: date-time
+          nullable: true
+        latestOccurredAt:
+          type: string
+          format: date-time
+          nullable: true
+    MessagingFaultRetentionStatusDiagnostics:
+      type: object
+      properties:
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+        applyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/retention/apply
+    MessagingFaultRetentionStatusResponse:
+      type: object
+      properties:
+        retention:
+          allOf:
+            - $ref: "#/components/schemas/MessagingFaultRetentionPolicy"
+            - type: object
+              properties:
+                minAllowed:
+                  type: integer
+                  example: 10
+                maxAllowed:
+                  type: integer
+                  example: 5000
+        telemetry:
+          $ref: "#/components/schemas/MessagingFaultRetentionStatusTelemetry"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultRetentionStatusDiagnostics"
+    MessagingFaultRetentionApplyRequest:
+      type: object
+      required:
+        - maxEvents
+      properties:
+        maxEvents:
+          type: integer
+          minimum: 10
+          maximum: 5000
+          example: 100
+        pruneNow:
+          type: boolean
+          default: true
+          example: true
+    MessagingFaultRetentionApplyResponse:
+      type: object
+      properties:
+        appliedAt:
+          type: string
+          format: date-time
+        retention:
+          type: object
+          properties:
+            previousMaxEvents:
+              type: integer
+              example: 200
+            maxEvents:
+              type: integer
+              example: 100
+            pruneNow:
+              type: boolean
+              example: true
+            prunedCount:
+              type: integer
+              example: 5
+            source:
+              type: string
+              enum:
+                - default
+                - env
+                - api
+              example: api
+            pruneStrategy:
+              type: string
+              example: drop-oldest
+        telemetry:
+          type: object
+          properties:
+            totalRecorded:
+              type: integer
+              example: 95
+        diagnostics:
+          type: object
+          properties:
+            statusEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/retention
+            eventsEndpoint:
+              type: string
+              example: GET /api/v1/integrations/messaging/fault-injection/events
     WebhookSigningSecretStatus:
       type: object
       properties:

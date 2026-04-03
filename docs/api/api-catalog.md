@@ -35,33 +35,33 @@ For field-level schemas, always use each service OpenAPI file as the canonical c
 
 Under `/api/v1`:
 
-| Method | Endpoint                                 | Purpose                                                                                                                     |
-| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/auth/roles`                            | List supported role keys.                                                                                                   |
-| GET    | `/auth/session/events`                   | Query role-scoped auth session observability events with tenant/action/outcome filters.                                     |
-| POST   | `/auth/workflow-entry/check`             | Evaluate tenant policy, role compatibility, and MFA state before patient or clinical workflow entry.                        |
-| POST   | `/auth/otp/request`                      | Create tenant-scoped OTP challenge for policy-driven MFA.                                                                   |
-| POST   | `/auth/otp/verify`                       | Verify OTP challenge and return short-lived OTP verification token.                                                         |
-| POST   | `/auth/register`                         | Register role-scoped user.                                                                                                  |
-| POST   | `/auth/login`                            | Role login with tenant policy checks, optional MFA requirement, role-provider compatibility, and policy-driven session TTL. |
-| GET    | `/auth/oauth/providers`                  | OAuth provider readiness list (environment + tenant policy).                                                                |
-| GET    | `/auth/oauth/google/start`               | Google OAuth bootstrap URL with tenant policy guard.                                                                        |
-| POST   | `/auth/oauth/google/callback`            | Exchange callback payload for JWT with tenant policy guard and role-driven session TTL.                                     |
-| GET    | `/auth/oauth/clerk/start`                | Clerk bootstrap metadata with tenant policy guard.                                                                          |
-| GET    | `/auth/oauth/google/config-status`       | Google OAuth env readiness probe.                                                                                           |
-| GET    | `/platform/abha/config-status`           | ABHA config readiness probe.                                                                                                |
-| GET    | `/platform/abha/health-check`            | ABHA gateway reachability check.                                                                                            |
-| GET    | `/platform/abha/health-check/evidence`   | ABHA incident-drill evidence feed with recent gateway check outcomes and summary counters.                                  |
-| GET    | `/platform/abha/consent-flow/simulation` | ABHA consent workflow simulation checkpoints for operational drill scenarios.                                               |
-| GET    | `/platform/abha/fallback-decision/telemetry` | ABHA fallback decision telemetry for config, gateway, and consent drill scenarios.                                      |
-| GET    | `/platform/abha/operational-readiness`   | ABHA operational readiness summary with runbook-linked setup and rollback checklists.                                       |
-| GET    | `/admin/settings/storage`                | Admin settings store metadata.                                                                                              |
-| GET    | `/admin/settings`                        | Read tenant admin settings.                                                                                                 |
-| PUT    | `/admin/settings`                        | Persist tenant admin settings.                                                                                              |
-| POST   | `/admin/settings/auth-policy/validate`   | Validate tenant auth policy payload.                                                                                        |
-| GET    | `/platform/domain-config`                | Resolve tenant domain config.                                                                                               |
-| POST   | `/platform/domain-config/validate`       | Validate origin for tenant.                                                                                                 |
-| GET    | `/platform/domain-config/all`            | Return full domain config model.                                                                                            |
+| Method | Endpoint                                     | Purpose                                                                                                                     |
+| ------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/auth/roles`                                | List supported role keys.                                                                                                   |
+| GET    | `/auth/session/events`                       | Query role-scoped auth session observability events with tenant/action/outcome filters.                                     |
+| POST   | `/auth/workflow-entry/check`                 | Evaluate tenant policy, role compatibility, and MFA state before patient or clinical workflow entry.                        |
+| POST   | `/auth/otp/request`                          | Create tenant-scoped OTP challenge for policy-driven MFA.                                                                   |
+| POST   | `/auth/otp/verify`                           | Verify OTP challenge and return short-lived OTP verification token.                                                         |
+| POST   | `/auth/register`                             | Register role-scoped user.                                                                                                  |
+| POST   | `/auth/login`                                | Role login with tenant policy checks, optional MFA requirement, role-provider compatibility, and policy-driven session TTL. |
+| GET    | `/auth/oauth/providers`                      | OAuth provider readiness list (environment + tenant policy).                                                                |
+| GET    | `/auth/oauth/google/start`                   | Google OAuth bootstrap URL with tenant policy guard.                                                                        |
+| POST   | `/auth/oauth/google/callback`                | Exchange callback payload for JWT with tenant policy guard and role-driven session TTL.                                     |
+| GET    | `/auth/oauth/clerk/start`                    | Clerk bootstrap metadata with tenant policy guard.                                                                          |
+| GET    | `/auth/oauth/google/config-status`           | Google OAuth env readiness probe.                                                                                           |
+| GET    | `/platform/abha/config-status`               | ABHA config readiness probe.                                                                                                |
+| GET    | `/platform/abha/health-check`                | ABHA gateway reachability check.                                                                                            |
+| GET    | `/platform/abha/health-check/evidence`       | ABHA incident-drill evidence feed with recent gateway check outcomes and summary counters.                                  |
+| GET    | `/platform/abha/consent-flow/simulation`     | ABHA consent workflow simulation checkpoints for operational drill scenarios.                                               |
+| GET    | `/platform/abha/fallback-decision/telemetry` | ABHA fallback decision telemetry for config, gateway, and consent drill scenarios.                                          |
+| GET    | `/platform/abha/operational-readiness`       | ABHA operational readiness summary with runbook-linked setup and rollback checklists.                                       |
+| GET    | `/admin/settings/storage`                    | Admin settings store metadata.                                                                                              |
+| GET    | `/admin/settings`                            | Read tenant admin settings.                                                                                                 |
+| PUT    | `/admin/settings`                            | Persist tenant admin settings.                                                                                              |
+| POST   | `/admin/settings/auth-policy/validate`       | Validate tenant auth policy payload.                                                                                        |
+| GET    | `/platform/domain-config`                    | Resolve tenant domain config.                                                                                               |
+| POST   | `/platform/domain-config/validate`           | Validate origin for tenant.                                                                                                 |
+| GET    | `/platform/domain-config/all`                | Return full domain config model.                                                                                            |
 
 ## Notification Service Highlights
 
@@ -87,6 +87,9 @@ Under `/api/v1`:
 | GET    | `/integrations/messaging/retry-policy`             | Provider retry mode, backoff, jitter controls, and channel coverage diagnostics. |
 | GET    | `/integrations/messaging/fault-injection/simulate` | Simulate connector fault scenarios and expected retry/fallback actions.          |
 | GET    | `/integrations/messaging/fault-injection/events`   | List recorded fault-injection events with tenant/provider/scenario filters.      |
+| GET    | `/integrations/messaging/fault-injection/export`   | Export fault-injection evidence feed in JSON or CSV for incident handoff.        |
+| GET    | `/integrations/messaging/fault-injection/retention` | Show active retention controls and telemetry window diagnostics.                 |
+| POST   | `/integrations/messaging/fault-injection/retention/apply` | Apply retention max and optional immediate prune for fault telemetry.     |
 | POST   | `/integrations/messaging/webhook/signature/verify` | Verify webhook signature payloads against configured tenant signing secret.      |
 
 ## Appointment Service Highlights

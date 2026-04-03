@@ -15,6 +15,12 @@ describe("notification webhook delivery diagnostics", () => {
     return { status: response.status, body };
   }
 
+  async function requestText(relativePath, options) {
+    const response = await fetch(`${baseUrl}${relativePath}`, options);
+    const body = await response.text();
+    return { status: response.status, body, headers: response.headers };
+  }
+
   beforeAll(async () => {
     const app = express();
     app.use(express.json());
@@ -187,5 +193,98 @@ describe("notification webhook delivery diagnostics", () => {
     expect(events.body.summary.totalCount).toBeGreaterThan(0);
     expect(Array.isArray(events.body.events)).toBe(true);
     expect(events.body.events[0].providerKey).toBe("generic-webhook");
+    expect(events.body.diagnostics.retentionApplyEndpoint).toBe(
+      "POST /api/v1/integrations/messaging/fault-injection/retention/apply"
+    );
+  });
+
+  test("exports fault-injection evidence and applies retention controls", async () => {
+    await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=network-timeout",
+      {
+        method: "GET",
+      }
+    );
+
+    await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=rate-limit",
+      {
+        method: "GET",
+      }
+    );
+
+    const retentionBefore = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/retention",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(retentionBefore.status).toBe(200);
+    expect(retentionBefore.body.retention.maxEvents).toBeGreaterThanOrEqual(10);
+    expect(retentionBefore.body.telemetry.totalRecorded).toBeGreaterThan(0);
+
+    const applied = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          maxEvents: 2,
+          pruneNow: true,
+        }),
+      }
+    );
+
+    expect(applied.status).toBe(200);
+    expect(applied.body.retention.maxEvents).toBe(10);
+    expect(applied.body.retention.pruneStrategy).toBe("drop-oldest");
+    expect(applied.body.diagnostics.statusEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/retention"
+    );
+
+    const exportJson = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/export?tenantKey=default&providerKey=generic-webhook&format=json&limit=20",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(exportJson.status).toBe(200);
+    expect(exportJson.body.format).toBe("json");
+    expect(exportJson.body.retention.maxEvents).toBe(10);
+    expect(Array.isArray(exportJson.body.events)).toBe(true);
+    expect(exportJson.body.diagnostics.retentionEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/retention"
+    );
+
+    const exportCsv = await requestText(
+      "/api/v1/integrations/messaging/fault-injection/export?tenantKey=default&providerKey=generic-webhook&format=csv&limit=5",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(exportCsv.status).toBe(200);
+    expect(exportCsv.headers.get("content-type")).toContain("text/csv");
+    expect(exportCsv.body).toContain("eventId,occurredAt,tenantKey,providerKey");
+
+    const invalidApply = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/retention/apply",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pruneNow: true,
+        }),
+      }
+    );
+
+    expect(invalidApply.status).toBe(400);
+    expect(invalidApply.body.code).toBe("NOTIFICATION_FAULT_RETENTION_MAX_REQUIRED");
   });
 });

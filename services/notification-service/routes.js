@@ -11,7 +11,17 @@ var router = express.Router();
 var notifications = [];
 var appointmentEventReceipts = [];
 var messagingFaultInjectionEvents = [];
-var maxMessagingFaultInjectionEvents = 200;
+var maxMessagingFaultInjectionEvents = parseRetryInt(
+  process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
+  200,
+  10,
+  5000
+);
+var messagingFaultRetentionSource = String(
+  process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX || ""
+).trim()
+  ? "env"
+  : "default";
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -248,7 +258,8 @@ function buildFaultSimulationResult(scenario, policy, providerEnabled) {
     result.injectedStatus = "signature-invalid";
     result.expectedAction = "block-and-escalate";
     result.expectedHttpStatus = 400;
-    result.recommendation = "Rotate signing secret and validate webhook signature contract before retry";
+    result.recommendation =
+      "Rotate signing secret and validate webhook signature contract before retry";
   }
 
   if (!providerEnabled) {
@@ -256,7 +267,8 @@ function buildFaultSimulationResult(scenario, policy, providerEnabled) {
     result.injectedStatus = "provider-disabled";
     result.expectedAction = "switch-to-enabled-provider";
     result.expectedHttpStatus = 503;
-    result.recommendation = "Enable provider or route default traffic to configured fallback provider";
+    result.recommendation =
+      "Enable provider or route default traffic to configured fallback provider";
   }
 
   result.recommendedMaxAttempts = policy.maxAttempts;
@@ -306,6 +318,91 @@ function summarizeFaultInjectionEvents(events) {
     nonRetryableCount: nonRetryableCount,
     disabledCount: disabledCount,
     lastOccurredAt: events.length > 0 ? events[events.length - 1].occurredAt : null,
+  };
+}
+
+function collectFaultInjectionEvents(tenantKey, providerKey, scenario) {
+  return messagingFaultInjectionEvents.filter(function (event) {
+    if (tenantKey && event.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (providerKey && event.providerKey !== providerKey) {
+      return false;
+    }
+
+    if (scenario && event.scenario !== scenario) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function escapeCsvValue(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  var output = String(value);
+  if (output.indexOf('"') >= 0) {
+    output = output.replace(/"/g, '""');
+  }
+
+  if (output.indexOf(",") >= 0 || output.indexOf("\n") >= 0 || output.indexOf("\r") >= 0) {
+    return '"' + output + '"';
+  }
+
+  return output;
+}
+
+function buildFaultInjectionCsv(events) {
+  var lines = [
+    "eventId,occurredAt,tenantKey,providerKey,scenario,classification,injectedStatus,expectedAction,expectedHttpStatus,recommendedMaxAttempts",
+  ];
+
+  events.forEach(function (event) {
+    lines.push(
+      [
+        escapeCsvValue(event.eventId),
+        escapeCsvValue(event.occurredAt),
+        escapeCsvValue(event.tenantKey),
+        escapeCsvValue(event.providerKey),
+        escapeCsvValue(event.scenario),
+        escapeCsvValue(event.classification),
+        escapeCsvValue(event.injectedStatus),
+        escapeCsvValue(event.expectedAction),
+        escapeCsvValue(event.expectedHttpStatus),
+        escapeCsvValue(event.recommendedMaxAttempts),
+      ].join(",")
+    );
+  });
+
+  return lines.join("\n");
+}
+
+function applyFaultInjectionRetention(maxEvents, pruneNow) {
+  var previousMaxEvents = maxMessagingFaultInjectionEvents;
+  var nextMaxEvents = parseRetryInt(maxEvents, previousMaxEvents, 10, 5000);
+  var prunedCount = 0;
+
+  maxMessagingFaultInjectionEvents = nextMaxEvents;
+  messagingFaultRetentionSource = "api";
+
+  if (pruneNow) {
+    while (messagingFaultInjectionEvents.length > maxMessagingFaultInjectionEvents) {
+      messagingFaultInjectionEvents.shift();
+      prunedCount += 1;
+    }
+  }
+
+  return {
+    previousMaxEvents: previousMaxEvents,
+    maxEvents: maxMessagingFaultInjectionEvents,
+    pruneNow: pruneNow,
+    prunedCount: prunedCount,
+    totalRecorded: messagingFaultInjectionEvents.length,
+    source: messagingFaultRetentionSource,
   };
 }
 
@@ -824,7 +921,11 @@ router.get("/integrations/messaging/fault-injection/simulate", function (req, re
   var provider = findMessagingProvider(config, providerKey);
   var policy = getMessagingRetryPolicy();
   var channelCoverage = getProviderChannelCoverage(config, providerKey);
-  var simulation = buildFaultSimulationResult(scenario, policy, Boolean(provider && provider.enabled));
+  var simulation = buildFaultSimulationResult(
+    scenario,
+    policy,
+    Boolean(provider && provider.enabled)
+  );
   var event = recordMessagingFaultInjectionEvent({
     tenantKey: tenantKey,
     providerKey: providerKey,
@@ -853,6 +954,8 @@ router.get("/integrations/messaging/fault-injection/simulate", function (req, re
     diagnostics: {
       retryPolicyEndpoint: "GET /api/v1/integrations/messaging/retry-policy",
       eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       deliveryTestEndpoint: "POST /api/v1/integrations/messaging/test",
     },
   });
@@ -869,21 +972,7 @@ router.get("/integrations/messaging/fault-injection/events", function (req, res)
   var limit = Number(req.query.limit || 20);
   var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 20;
 
-  var filtered = messagingFaultInjectionEvents.filter(function (event) {
-    if (tenantKey && event.tenantKey !== tenantKey) {
-      return false;
-    }
-
-    if (providerKey && event.providerKey !== providerKey) {
-      return false;
-    }
-
-    if (scenario && event.scenario !== scenario) {
-      return false;
-    }
-
-    return true;
-  });
+  var filtered = collectFaultInjectionEvents(tenantKey, providerKey, scenario);
 
   var items = filtered.slice(-boundedLimit).reverse();
 
@@ -896,7 +985,127 @@ router.get("/integrations/messaging/fault-injection/events", function (req, res)
       scenario: scenario || null,
     },
     summary: summarizeFaultInjectionEvents(filtered),
+    retention: {
+      maxEvents: maxMessagingFaultInjectionEvents,
+      source: messagingFaultRetentionSource,
+      pruneStrategy: "drop-oldest",
+    },
+    diagnostics: {
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      retentionApplyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
+    },
     events: items,
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/export", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var providerKey = String(req.query.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(req.query.scenario || "")
+    .trim()
+    .toLowerCase();
+  var format = String(req.query.format || "json")
+    .trim()
+    .toLowerCase();
+  var limit = parseRetryInt(req.query.limit, 500, 1, 2000);
+  var filtered = collectFaultInjectionEvents(tenantKey, providerKey, scenario);
+  var items = filtered.slice(-limit);
+
+  if (format === "csv") {
+    var csvBody = buildFaultInjectionCsv(items);
+    res.set("Cache-Control", "no-store");
+    res.attachment("messaging-fault-injection-export.csv");
+    res.type("text/csv");
+    res.send(csvBody);
+    return;
+  }
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    exportedAt: new Date().toISOString(),
+    format: "json",
+    totalMatched: filtered.length,
+    returned: items.length,
+    retention: {
+      maxEvents: maxMessagingFaultInjectionEvents,
+      source: messagingFaultRetentionSource,
+      pruneStrategy: "drop-oldest",
+    },
+    filters: {
+      tenantKey: tenantKey || null,
+      providerKey: providerKey || null,
+      scenario: scenario || null,
+      limit: limit,
+    },
+    summary: summarizeFaultInjectionEvents(filtered),
+    diagnostics: {
+      eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
+      retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+    },
+    events: items,
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/retention", function (_req, res) {
+  var totalRecorded = messagingFaultInjectionEvents.length;
+
+  res.json({
+    retention: {
+      maxEvents: maxMessagingFaultInjectionEvents,
+      minAllowed: 10,
+      maxAllowed: 5000,
+      source: messagingFaultRetentionSource,
+      pruneStrategy: "drop-oldest",
+    },
+    telemetry: {
+      totalRecorded: totalRecorded,
+      oldestOccurredAt: totalRecorded > 0 ? messagingFaultInjectionEvents[0].occurredAt : null,
+      latestOccurredAt:
+        totalRecorded > 0
+          ? messagingFaultInjectionEvents[totalRecorded - 1].occurredAt
+          : null,
+    },
+    diagnostics: {
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      applyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
+    },
+  });
+});
+
+router.post("/integrations/messaging/fault-injection/retention/apply", function (req, res) {
+  var payload = req.body || {};
+
+  if (payload.maxEvents === undefined || payload.maxEvents === null) {
+    res.status(400).json({
+      message: "maxEvents is required",
+      code: "NOTIFICATION_FAULT_RETENTION_MAX_REQUIRED",
+    });
+    return;
+  }
+
+  var pruneNow = parseRetryBool(payload.pruneNow, true);
+  var applied = applyFaultInjectionRetention(payload.maxEvents, pruneNow);
+
+  res.json({
+    appliedAt: new Date().toISOString(),
+    retention: {
+      previousMaxEvents: applied.previousMaxEvents,
+      maxEvents: applied.maxEvents,
+      pruneNow: applied.pruneNow,
+      prunedCount: applied.prunedCount,
+      source: applied.source,
+      pruneStrategy: "drop-oldest",
+    },
+    telemetry: {
+      totalRecorded: applied.totalRecorded,
+    },
+    diagnostics: {
+      statusEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
+    },
   });
 });
 

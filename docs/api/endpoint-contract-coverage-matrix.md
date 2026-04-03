@@ -147,6 +147,14 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - ABHA operational-readiness diagnostics now link the fallback decision telemetry endpoint for runbook drill continuity.
 - Regression tests cover fault-injection simulation/event retrieval behavior and ABHA fallback decision telemetry response semantics.
 
+## M5.6 Connector Drill Export And Retention Controls Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/export` with JSON/CSV evidence export support for incident handoff workflows.
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/retention` for retention policy visibility and telemetry window diagnostics.
+- Notification runtime now exposes `POST /integrations/messaging/fault-injection/retention/apply` for bounded retention updates and optional immediate prune operations.
+- Fault-injection simulation and event endpoints now include diagnostics links to export and retention control routes.
+- Regression tests cover export payload behavior, CSV export content type, retention policy apply/status semantics, and missing-payload guardrails.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

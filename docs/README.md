@@ -25,6 +25,7 @@ This directory is the primary source of truth for architecture, API behavior, de
 - Architecture and platform:
 	- `docs/architecture/system-context.md`
 	- `docs/architecture/container-diagram.md`
+	- `docs/architecture/tech-stack-inventory.md`
 	- `docs/TECH-STACK-DECISIONS.md`
 - Development process:
 	- `docs/development-model/iterative-model.md`

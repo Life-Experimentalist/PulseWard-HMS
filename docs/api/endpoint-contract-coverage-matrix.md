@@ -801,6 +801,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.diagnostics` property presence
 - Mutation-based parity regressions now prove strict-check failure when escalation-export response `diagnostics` property is removed from OpenAPI baseline.
 
+## M6.75 Escalation-Export Item Diagnostics Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item diagnostics-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.diagnostics` property presence
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `diagnostics` property is removed from OpenAPI baseline.
+
+## M6.76 Retention-Apply Request Escalation-Policy Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply request escalation-policy-property anchors for request payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.escalationPolicy` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-apply request `escalationPolicy` property is removed from OpenAPI baseline.
+
+## M6.77 Retention-Apply Request Escalation-Export-Policy Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-apply request escalation-export-policy-property anchors for request payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.escalationExportPolicy` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-apply request `escalationExportPolicy` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

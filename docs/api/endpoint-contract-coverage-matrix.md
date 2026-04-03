@@ -1011,6 +1011,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when retention-telemetry `totalSuppressedEvents` property type drifts from OpenAPI baseline.
 
+## M6.105 Retention-Telemetry Oldest-First-Verified-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry oldest-first-verified-at anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.oldestFirstVerifiedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `oldestFirstVerifiedAt` property type drifts from OpenAPI baseline.
+
+## M6.106 Retention-Telemetry Latest-Last-Verified-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry latest-last-verified-at anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.latestLastVerifiedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `latestLastVerifiedAt` property type drifts from OpenAPI baseline.
+
+## M6.107 Retention-Telemetry Saturation Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-telemetry saturation-property anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturation` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-telemetry `saturation` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

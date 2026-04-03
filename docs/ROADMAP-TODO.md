@@ -599,3 +599,9 @@ Exit criteria:
 274. M6.103 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `duplicateSuppressedAttempts` schema-property type drifts from OpenAPI baseline.
 275. M6.104 completed: strict contract checker now enforces retention-telemetry total-suppressed-events anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents` integer compatibility.
 276. M6.104 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `totalSuppressedEvents` schema-property type drifts from OpenAPI baseline.
+277. M6.105 completed: strict contract checker now enforces retention-telemetry oldest-first-verified-at anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.oldestFirstVerifiedAt` string compatibility.
+278. M6.105 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `oldestFirstVerifiedAt` schema-property type drifts from OpenAPI baseline.
+279. M6.106 completed: strict contract checker now enforces retention-telemetry latest-last-verified-at anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.latestLastVerifiedAt` string compatibility.
+280. M6.106 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `latestLastVerifiedAt` schema-property type drifts from OpenAPI baseline.
+281. M6.107 completed: strict contract checker now enforces retention-telemetry saturation-property anchor for `MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturation` presence compatibility.
+282. M6.107 evidence checkpoint: mutation regressions now prove strict-check failure when retention-telemetry `saturation` property is removed from OpenAPI baseline.

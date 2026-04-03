@@ -465,6 +465,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry totalSuppressedEvents schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry oldestFirstVerifiedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry latestLastVerifiedAt schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry saturation schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3311,6 +3320,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.totalSuppressedEvents type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry oldestFirstVerifiedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?oldestFirstVerifiedAt:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention telemetry oldestFirstVerifiedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry oldestFirstVerifiedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.oldestFirstVerifiedAt type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry latestLastVerifiedAt type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?latestLastVerifiedAt:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention telemetry latestLastVerifiedAt type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry latestLastVerifiedAt schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.latestLastVerifiedAt type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention telemetry saturation property is removed", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionTelemetry:[\s\S]*?)\n\s{8}saturation:\n\s{10}\$ref:\s*"#\/components\/schemas\/MessagingFaultManifestVerifyAttemptRetentionSaturation"/,
+          "$1",
+          "retention telemetry saturation property"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionTelemetry saturation schema property contract"
+        );
+        expect(output).toContain(
+          "missing schema property MessagingFaultManifestVerifyAttemptRetentionTelemetry.saturation"
         );
       }
     );

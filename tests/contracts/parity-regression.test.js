@@ -1,15 +1,65 @@
+const fs = require("fs");
+const os = require("os");
 const { spawnSync } = require("child_process");
 const path = require("path");
 
+const repoRoot = path.resolve(__dirname, "../..");
+const scriptPath = path.resolve(__dirname, "../../scripts/check-contract-coverage.mjs");
+const notificationSpecSource = "services/notification-service/openapi.yaml";
+
+function runStrictContractCheck(extraEnv) {
+  return spawnSync("node", [scriptPath, "--strict"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      ...(extraEnv || {}),
+    },
+  });
+}
+
+function buildOutput(result) {
+  return `${result.stdout || ""}\n${result.stderr || ""}`;
+}
+
+function replaceOneOrThrow(source, matcher, replacement, hint) {
+  const replaced = source.replace(matcher, replacement);
+  if (replaced === source) {
+    throw new Error(`Could not apply mutation for ${hint}`);
+  }
+
+  return replaced;
+}
+
+function withMutatedNotificationSpec(mutateSource, assertions) {
+  const sourcePath = path.resolve(repoRoot, notificationSpecSource);
+  const sourceText = fs.readFileSync(sourcePath, "utf8");
+  const mutatedText = mutateSource(sourceText);
+
+  expect(mutatedText).not.toBe(sourceText);
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pulseward-contract-check-"));
+  const mutatedSpecPath = path.join(tempDir, "notification-openapi.yaml");
+
+  fs.writeFileSync(mutatedSpecPath, mutatedText, "utf8");
+
+  try {
+    const result = runStrictContractCheck({
+      CONTRACT_CHECK_SPEC_OVERRIDES: JSON.stringify({
+        [notificationSpecSource]: mutatedSpecPath,
+      }),
+    });
+    const output = buildOutput(result);
+    assertions(result, output);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 describe("M1 parity regression guard", () => {
   test("strict contract parity check passes", () => {
-    const scriptPath = path.resolve(__dirname, "../../scripts/check-contract-coverage.mjs");
-    const result = spawnSync("node", [scriptPath, "--strict"], {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf8",
-    });
-
-    const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`;
+    const result = runStrictContractCheck();
+    const combinedOutput = buildOutput(result);
 
     expect(result.status).toBe(0);
     expect(combinedOutput).toContain("Mode: strict");
@@ -22,13 +72,8 @@ describe("M1 parity regression guard", () => {
   });
 
   test("previously drifted services remain parity clean", () => {
-    const scriptPath = path.resolve(__dirname, "../../scripts/check-contract-coverage.mjs");
-    const result = spawnSync("node", [scriptPath, "--strict"], {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf8",
-    });
-
-    const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+    const result = runStrictContractCheck();
+    const output = buildOutput(result);
 
     expect(output).toContain("- api-gateway");
     expect(output).toContain("- ehr-service");
@@ -40,13 +85,8 @@ describe("M1 parity regression guard", () => {
   });
 
   test("critical endpoint schema checks stay covered", () => {
-    const scriptPath = path.resolve(__dirname, "../../scripts/check-contract-coverage.mjs");
-    const result = spawnSync("node", [scriptPath, "--strict"], {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf8",
-    });
-
-    const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+    const result = runStrictContractCheck();
+    const output = buildOutput(result);
 
     expect(output).toContain("Critical endpoint schema checks:");
     expect(output).toContain("PASS: auth-service POST /auth/login");
@@ -105,6 +145,68 @@ describe("M1 parity regression guard", () => {
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
+    );
+  });
+
+  test("fails strict check when retention trend parameter defaults drift", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/saturation-trend:[\s\S]*?- name: limit[\s\S]*?default:\s*)24/,
+          "$199",
+          "saturation-trend limit default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend parameters"
+        );
+        expect(output).toContain("default expected 24 got 99");
+      }
+    );
+  });
+
+  test("fails strict check when escalation export enum contract drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?enum:\s*[\r\n]+\s*-\s*json[\r\n]+\s*-\s*)csv/,
+          "$1yaml",
+          "escalation export format enum"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters"
+        );
+        expect(output).toContain("enum missing csv");
+      }
+    );
+  });
+
+  test("fails strict check when retention apply dryRun schema anchor drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionApplyRequest:[\s\S]*?dryRun:[\s\S]*?default:\s*)false/,
+          "$1true",
+          "retention apply dryRun default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionApplyRequest.dryRun default expected false got true"
+        );
+      }
     );
   });
 });

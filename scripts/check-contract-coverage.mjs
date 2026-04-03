@@ -3,6 +3,23 @@ import path from "node:path";
 
 const HTTP_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD", "TRACE"]);
 const STRICT_MODE = process.argv.includes("--strict");
+const SPEC_SOURCE_OVERRIDES = (() => {
+  const raw = String(process.env.CONTRACT_CHECK_SPEC_OVERRIDES || "").trim();
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return parsed;
+  } catch (_error) {
+    return {};
+  }
+})();
 
 const serviceChecks = [
   {
@@ -526,6 +543,19 @@ const criticalParameterContractChecks = [
 
 const specLinesCache = new Map();
 
+function resolveSpecSourcePath(specSource) {
+  if (!specSource) {
+    return specSource;
+  }
+
+  const override = SPEC_SOURCE_OVERRIDES[specSource];
+  if (typeof override !== "string" || !override.trim()) {
+    return specSource;
+  }
+
+  return override.trim();
+}
+
 function existsInRepo(relativePath) {
   if (!relativePath) {
     return false;
@@ -549,13 +579,14 @@ function escapeRegExp(value) {
 }
 
 function getSpecLines(specPath) {
-  if (!specLinesCache.has(specPath)) {
-    const absolutePath = path.resolve(process.cwd(), specPath);
+  const resolvedSpecPath = resolveSpecSourcePath(specPath);
+  if (!specLinesCache.has(resolvedSpecPath)) {
+    const absolutePath = path.resolve(process.cwd(), resolvedSpecPath);
     const lines = fs.readFileSync(absolutePath, "utf8").split(/\r?\n/);
-    specLinesCache.set(specPath, lines);
+    specLinesCache.set(resolvedSpecPath, lines);
   }
 
-  return specLinesCache.get(specPath);
+  return specLinesCache.get(resolvedSpecPath);
 }
 
 function findOperationBlock(lines, targetPath, method) {
@@ -794,7 +825,9 @@ function parseOperationParameters(operationLines) {
       inEnumBlock = false;
     }
 
-    const schemaKeyValueMatch = line.match(/^\s{12}(type|format|minimum|maximum|default):\s*(.+)\s*$/);
+    const schemaKeyValueMatch = line.match(
+      /^\s{12}(type|format|minimum|maximum|default):\s*(.+)\s*$/
+    );
     if (schemaKeyValueMatch) {
       current.schema[schemaKeyValueMatch[1]] = parseYamlScalar(schemaKeyValueMatch[2]);
     }
@@ -904,7 +937,7 @@ function evaluateCriticalSchemaChecks() {
     const label = `${check.service} ${check.method.toUpperCase()} ${check.path}`;
     const failures = [];
 
-    if (!existsInRepo(check.specSource)) {
+    if (!existsInRepo(resolveSpecSourcePath(check.specSource))) {
       failures.push(`missing spec source: ${check.specSource}`);
       return { ...check, label, pass: false, failures };
     }
@@ -970,7 +1003,7 @@ function evaluateCriticalParameterContractChecks() {
   const results = criticalParameterContractChecks.map((check) => {
     const failures = [];
 
-    if (!existsInRepo(check.specSource)) {
+    if (!existsInRepo(resolveSpecSourcePath(check.specSource))) {
       failures.push(`missing spec source: ${check.specSource}`);
       return { ...check, pass: false, failures };
     }
@@ -992,9 +1025,7 @@ function evaluateCriticalParameterContractChecks() {
         );
 
         if (!actualParameter) {
-          failures.push(
-            `missing parameter ${expectedParameter.in}:${expectedParameter.name}`
-          );
+          failures.push(`missing parameter ${expectedParameter.in}:${expectedParameter.name}`);
           return;
         }
 
@@ -1015,9 +1046,9 @@ function evaluateCriticalParameterContractChecks() {
           actualParameter.schema.type !== expectedSchema.type
         ) {
           failures.push(
-            `parameter ${expectedParameter.in}:${expectedParameter.name} type expected ${expectedSchema.type} got ${String(
-              actualParameter.schema.type || ""
-            )}`
+            `parameter ${expectedParameter.in}:${expectedParameter.name} type expected ${
+              expectedSchema.type
+            } got ${String(actualParameter.schema.type || "")}`
           );
         }
 
@@ -1026,9 +1057,9 @@ function evaluateCriticalParameterContractChecks() {
           actualParameter.schema.format !== expectedSchema.format
         ) {
           failures.push(
-            `parameter ${expectedParameter.in}:${expectedParameter.name} format expected ${expectedSchema.format} got ${String(
-              actualParameter.schema.format || ""
-            )}`
+            `parameter ${expectedParameter.in}:${expectedParameter.name} format expected ${
+              expectedSchema.format
+            } got ${String(actualParameter.schema.format || "")}`
           );
         }
 
@@ -1120,9 +1151,9 @@ function evaluateCriticalParameterContractChecks() {
             propertyContract.type !== expectedProperty.type
           ) {
             failures.push(
-              `schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName} type expected ${expectedProperty.type} got ${String(
-                propertyContract.type || ""
-              )}`
+              `schema property ${expectedProperty.schemaName}.${
+                expectedProperty.propertyName
+              } type expected ${expectedProperty.type} got ${String(propertyContract.type || "")}`
             );
           }
 
@@ -1131,9 +1162,11 @@ function evaluateCriticalParameterContractChecks() {
             propertyContract.default !== expectedProperty.default
           ) {
             failures.push(
-              `schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName} default expected ${String(
-                expectedProperty.default
-              )} got ${String(propertyContract.default)}`
+              `schema property ${expectedProperty.schemaName}.${
+                expectedProperty.propertyName
+              } default expected ${String(expectedProperty.default)} got ${String(
+                propertyContract.default
+              )}`
             );
           }
         }
@@ -1228,7 +1261,8 @@ function parseRuntimeOperations(filePath, runtimeOperationPrefix) {
 }
 
 function parseOpenApiOperations(filePath) {
-  const absolutePath = path.resolve(process.cwd(), filePath);
+  const resolvedSpecPath = resolveSpecSourcePath(filePath);
+  const absolutePath = path.resolve(process.cwd(), resolvedSpecPath);
   const lines = fs.readFileSync(absolutePath, "utf8").split(/\r?\n/);
 
   const operations = new Set();
@@ -1356,7 +1390,7 @@ function evaluateParity(serviceConfig) {
 
 const rows = serviceChecks.map((item) => {
   const runtimeOk = existsInRepo(item.runtimeRouteSource);
-  const specOk = existsInRepo(item.openapiSpecSource);
+  const specOk = existsInRepo(resolveSpecSourcePath(item.openapiSpecSource));
   const presenceCheck = runtimeOk && specOk ? "PASS" : "FAIL";
 
   const presenceDetail =

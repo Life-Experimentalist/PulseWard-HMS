@@ -357,3 +357,5 @@ Exit criteria:
 80. M6.6 evidence checkpoint: parity regression assertions now verify PASS coverage for notification operations command endpoints, preventing silent OpenAPI schema drift for dashboard handoff controls.
 81. M6.7 completed: strict contract checker now enforces parameter-level command-surface guardrails for notification retention trend/export/triage workflows and retention apply request schema anchors.
 82. M6.7 evidence checkpoint: parity regression assertions now verify PASS output for critical parameter-contract checks, causing CI to fail fast on query/path parameter constraint drift.
+83. M6.8 completed: contract regression suite now includes mutation-based negative checks that prove strict parameter/schema guardrails fail on real OpenAPI drift for notification command surfaces.
+84. M6.8 evidence checkpoint: strict checker now supports temporary spec override execution for test isolation, and parity regressions validate failure semantics for trend/export parameter drift and retention-apply dryRun anchor drift.

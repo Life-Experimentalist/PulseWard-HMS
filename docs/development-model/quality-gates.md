@@ -69,6 +69,7 @@ Required outcomes:
 - M5 adapter work must include provider readiness and test-run instructions in deployment/runbook docs.
 - M6 experience surface work must include web/mobile operational startup documentation.
 - M6.5 adapter branch-hardening work must include explicit negative-path adapter tests (non-OK provider responses, credential guardrails, and fallback id/response branches) for any provider module below coverage target.
+- M6.8 contract hardening work must include mutation-based negative tests proving strict checker failure on critical command parameter drift and request-schema anchor drift.
 
 ## Assets Packaging Verification (M6.5)
 

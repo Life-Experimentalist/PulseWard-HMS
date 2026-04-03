@@ -551,3 +551,9 @@ Exit criteria:
 226. M6.79 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply response `telemetry` property is removed from OpenAPI baseline.
 227. M6.80 completed: strict contract checker now enforces retention-apply response diagnostics anchor for `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.diagnostics` object compatibility.
 228. M6.80 evidence checkpoint: mutation regressions now prove strict-check failure when retention-apply response `diagnostics` schema-property type drifts from OpenAPI baseline.
+229. M6.81 completed: strict contract checker now enforces retention-status response retention-property anchor for `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.retention` presence compatibility.
+230. M6.81 evidence checkpoint: mutation regressions now prove strict-check failure when retention-status response `retention` property is removed from OpenAPI baseline.
+231. M6.82 completed: strict contract checker now enforces retention-status response telemetry-property anchor for `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.telemetry` presence compatibility.
+232. M6.82 evidence checkpoint: mutation regressions now prove strict-check failure when retention-status response `telemetry` property is removed from OpenAPI baseline.
+233. M6.83 completed: strict contract checker now enforces retention-status response diagnostics-property anchor for `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.diagnostics` presence compatibility.
+234. M6.83 evidence checkpoint: mutation regressions now prove strict-check failure when retention-status response `diagnostics` property is removed from OpenAPI baseline.

@@ -843,6 +843,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionApplyResponse.diagnostics` type `object`
 - Mutation-based parity regressions now prove strict-check failure when retention-apply response `diagnostics` property type drifts from OpenAPI baseline.
 
+## M6.81 Retention-Status Response Retention Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-status response retention-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.retention` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-status response `retention` property is removed from OpenAPI baseline.
+
+## M6.82 Retention-Status Response Telemetry Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-status response telemetry-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.telemetry` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-status response `telemetry` property is removed from OpenAPI baseline.
+
+## M6.83 Retention-Status Response Diagnostics Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-status response diagnostics-property anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionStatusResponse.diagnostics` property presence
+- Mutation-based parity regressions now prove strict-check failure when retention-status response `diagnostics` property is removed from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

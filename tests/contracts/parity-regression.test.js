@@ -258,6 +258,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportFilters breached schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem triageAcknowledged schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaElapsedSeconds schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaRemainingSeconds schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -1586,6 +1595,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationExportFilters.breached type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item triageAcknowledged type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?triageAcknowledged:[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export item triageAcknowledged type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem triageAcknowledged schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.triageAcknowledged type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item acknowledgementSlaElapsedSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?acknowledgementSlaElapsedSeconds:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export item acknowledgementSlaElapsedSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaElapsedSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaElapsedSeconds type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export item acknowledgementSlaRemainingSeconds type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportItem:[\s\S]*?acknowledgementSlaRemainingSeconds:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation export item acknowledgementSlaRemainingSeconds type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportItem acknowledgementSlaRemainingSeconds schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaRemainingSeconds type expected integer got string"
         );
       }
     );

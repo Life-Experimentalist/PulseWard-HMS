@@ -413,3 +413,9 @@ Exit criteria:
 136. M6.34 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `acknowledgementSlaTargetSeconds` schema-property type drifts from OpenAPI baseline.
 137. M6.35 completed: strict contract checker now enforces escalation-export filter breach-state anchor for `MessagingFaultManifestVerifyAttemptEscalationExportFilters.breached` boolean compatibility.
 138. M6.35 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export filter `breached` schema-property type drifts from OpenAPI baseline.
+139. M6.36 completed: strict contract checker now enforces escalation-export item triage-acknowledged anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.triageAcknowledged` boolean compatibility.
+140. M6.36 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `triageAcknowledged` schema-property type drifts from OpenAPI baseline.
+141. M6.37 completed: strict contract checker now enforces escalation-export item acknowledgement elapsed-seconds anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaElapsedSeconds` integer compatibility.
+142. M6.37 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `acknowledgementSlaElapsedSeconds` schema-property type drifts from OpenAPI baseline.
+143. M6.38 completed: strict contract checker now enforces escalation-export item acknowledgement remaining-seconds anchor for `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaRemainingSeconds` integer compatibility.
+144. M6.38 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export item `acknowledgementSlaRemainingSeconds` schema-property type drifts from OpenAPI baseline.

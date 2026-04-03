@@ -138,6 +138,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend parameters"
     );
     expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention parameters"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters"
     );
     expect(output).toContain(
@@ -163,6 +166,9 @@ describe("M1 parity regression guard", () => {
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationEvidenceRef anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationType anchor"
     );
     expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema pruneNow anchor"
@@ -213,6 +219,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla acknowledged schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse escalations schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -257,6 +266,9 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
     );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/export response media-type contract"
+    );
   });
 
   test("fails strict check when retention trend parameter defaults drift", () => {
@@ -273,6 +285,26 @@ describe("M1 parity regression guard", () => {
         expect(output).toContain("Parameter contract failures");
         expect(output).toContain(
           "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend parameters"
+        );
+        expect(output).toContain("default expected 24 got 99");
+      }
+    );
+  });
+
+  test("fails strict check when retention status parameter defaults drift", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention:[\s\S]*?- name: limit[\s\S]*?default:\s*)24/,
+          "$199",
+          "retention status limit default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention parameters"
         );
         expect(output).toContain("default expected 24 got 99");
       }
@@ -335,6 +367,26 @@ describe("M1 parity regression guard", () => {
         expect(output).toContain("Parameter contract failures");
         expect(output).toContain(
           "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
+        );
+        expect(output).toContain("response 200 missing content type text/csv");
+      }
+    );
+  });
+
+  test("fails strict check when verify-attempt export csv response contract drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/export:[\s\S]*?content:[\s\S]*?)text\/csv:/,
+          "$1text/plain:",
+          "verify-attempt export csv response content type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/export response media-type contract"
         );
         expect(output).toContain("response 200 missing content type text/csv");
       }
@@ -1019,6 +1071,28 @@ describe("M1 parity regression guard", () => {
     );
   });
 
+  test("fails strict check when triage mitigationType type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptAnomalyTriageRequest:[\s\S]*?mitigationType:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "triage mitigationType type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationType anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationType type expected string got boolean"
+        );
+      }
+    );
+  });
+
   test("fails strict check when retention apply dedupeWindowSeconds type drifts", () => {
     withMutatedNotificationSpec(
       (source) =>
@@ -1190,6 +1264,28 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledged type expected boolean got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export response escalations type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportResponse:[\s\S]*?escalations:[\s\S]*?type:\s*)array/,
+          "$1object",
+          "escalation export response escalations type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse escalations schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportResponse.escalations type expected array got object"
         );
       }
     );

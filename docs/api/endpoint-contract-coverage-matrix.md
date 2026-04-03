@@ -417,6 +417,33 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla.acknowledged` type `boolean`
 - Mutation-based parity regressions now prove strict-check failure when acknowledgement SLA property types drift from OpenAPI baseline.
 
+## M6.21 Retention-Status Query Parameter Anchor Guardrail Coverage
+
+- Contract checker parameter assertions now include retention-status query parameter anchors for replay-attempt retention operations.
+- Parameter contract checks now enforce:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention`:
+		- `windowMinutes` type `integer`, bounds `5..1440`, default `60`
+		- `limit` type `integer`, bounds `1..288`, default `24`
+- Mutation-based parity regressions now prove strict-check failure when retention-status query parameter defaults drift from OpenAPI baseline.
+
+## M6.22 Triage Mitigation Anchor And Verify-Export Media-Type Guardrail Coverage
+
+- Contract checker request-schema-property assertions now include anomaly triage payload anchor for mitigation classification compatibility.
+- Request schema property contract checks now enforce:
+	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage`:
+		- `MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationType` type `string`
+- Contract checker response media-type assertions now include verify-attempt export handoff compatibility gates.
+- Response media-type contract checks now enforce:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/export` response `200` includes `application/json` and `text/csv`
+- Mutation-based parity regressions now prove strict-check failure when triage `mitigationType` type or verify-attempt export `text/csv` content-type drifts from OpenAPI baseline.
+
+## M6.23 Escalation-Export Response Component Property Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response component anchors for dashboard handoff payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.escalations` type `array`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `escalations` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

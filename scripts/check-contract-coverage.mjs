@@ -455,6 +455,39 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention parameters",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "windowMinutes",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 5,
+          maximum: 1440,
+          default: 60,
+        },
+      },
+      {
+        name: "limit",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 1,
+          maximum: 288,
+          default: 24,
+        },
+      },
+    ],
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -663,6 +696,22 @@ const criticalParameterContractChecks = [
     expectedSchemaProperty: {
       schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
       propertyName: "mitigationEvidenceRef",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationType anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptAnomalyTriageRequest",
+      propertyName: "mitigationType",
       type: "string",
     },
   },
@@ -907,6 +956,18 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptEscalationExportResponse escalations schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportResponse",
+      propertyName: "escalations",
+      type: "array",
+    },
+  },
+  {
+    label:
       "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -1073,6 +1134,17 @@ const criticalParameterContractChecks = [
       propertyName: "details",
       additionalProperties: true,
     },
+  },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/export response media-type contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/export",
+    type: "response-content-types",
+    responseCode: "200",
+    requiredContentTypes: ["application/json", "text/csv"],
   },
   {
     label:

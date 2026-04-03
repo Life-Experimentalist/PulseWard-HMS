@@ -383,3 +383,9 @@ Exit criteria:
 106. M6.19 evidence checkpoint: mutation regressions now prove strict-check failure when escalation policy threshold property types drift from OpenAPI baseline.
 107. M6.20 completed: strict contract checker now enforces anomaly escalation acknowledgement SLA property anchors for `status`, `breached`, and `acknowledged` payload compatibility.
 108. M6.20 evidence checkpoint: mutation regressions now prove strict-check failure when acknowledgement SLA property types drift from OpenAPI baseline.
+109. M6.21 completed: strict contract checker now enforces retention-status query parameter anchors for `windowMinutes` and `limit` on replay-attempt retention operations.
+110. M6.21 evidence checkpoint: mutation regressions now prove strict-check failure when retention-status query defaults drift from OpenAPI baseline.
+111. M6.22 completed: strict contract checker now enforces triage request payload `mitigationType` schema-property anchor and verify-attempt export response media-type guardrails for JSON/CSV handoff compatibility.
+112. M6.22 evidence checkpoint: mutation regressions now prove strict-check failure when triage `mitigationType` type or verify-attempt export `text/csv` response content-type drifts from OpenAPI baseline.
+113. M6.23 completed: strict contract checker now enforces escalation-export response component anchor for `MessagingFaultManifestVerifyAttemptEscalationExportResponse.escalations` array compatibility.
+114. M6.23 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-export response `escalations` schema-property type drifts from OpenAPI baseline.

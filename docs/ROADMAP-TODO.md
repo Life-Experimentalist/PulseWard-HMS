@@ -683,3 +683,9 @@ Exit criteria:
 358. M6.145 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `noteId` schema-property type drifts from OpenAPI baseline.
 359. M6.146 completed: strict contract checker now enforces anomaly-triage-note note-type anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.noteType` string compatibility.
 360. M6.146 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `noteType` schema-property type drifts from OpenAPI baseline.
+361. M6.147 completed: strict contract checker now enforces anomaly-triage-note content anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.content` string compatibility.
+362. M6.147 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `content` schema-property type drifts from OpenAPI baseline.
+363. M6.148 completed: strict contract checker now enforces anomaly-triage-note created-at anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.createdAt` string compatibility.
+364. M6.148 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `createdAt` schema-property type drifts from OpenAPI baseline.
+365. M6.149 completed: strict contract checker now enforces anomaly-triage-note author anchor for `MessagingFaultManifestVerifyAttemptAnomalyTriageNote.author` string compatibility.
+366. M6.149 evidence checkpoint: mutation regressions now prove strict-check failure when anomaly-triage-note `author` schema-property type drifts from OpenAPI baseline.

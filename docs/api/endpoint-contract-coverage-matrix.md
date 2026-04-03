@@ -1452,6 +1452,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.requestedLimit` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `requestedLimit` property type drifts from OpenAPI baseline.
 
+## M6.168 Retention-Saturation-Trend-Summary Total-In-Window Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary total-in-window anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.totalInWindow` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `totalInWindow` property type drifts from OpenAPI baseline.
+
+## M6.169 Retention-Saturation-Trend-Summary Returned Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary returned anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.returned` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `returned` property type drifts from OpenAPI baseline.
+
+## M6.170 Retention-Saturation-Trend-Summary Has-More Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary has-more anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.hasMore` type `boolean`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `hasMore` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

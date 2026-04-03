@@ -323,4 +323,6 @@ Exit criteria:
 46. M5.10 evidence checkpoint: regression coverage now validates duplicate suppression hit behavior, suppression counter increments, and stable attempt fingerprint linkage.
 47. M5.11 completed: replay-attempt audit query endpoint now exposes manifest verification suppression history for incident forensics.
 48. M5.11 evidence checkpoint: regression coverage now validates replay-attempt audit retrieval by fingerprint and duplicate-suppression evidence counters.
-49. M5.12 active next slice: add replay-attempt export endpoint for audit snapshot handoff in postmortem workflows.
+49. M5.12 completed: replay-attempt export endpoint now provides JSON/CSV audit snapshots for postmortem handoff workflows.
+50. M5.12 evidence checkpoint: regression coverage now validates replay-attempt export payloads, CSV content shape, and duplicate-suppression evidence summaries.
+51. M5.13 active next slice: add replay-attempt retention tuning controls dedicated to verification audit history.

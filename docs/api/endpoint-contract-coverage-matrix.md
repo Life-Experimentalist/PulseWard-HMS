@@ -190,6 +190,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Verification diagnostics now link the replay-attempt audit endpoint for incident timeline follow-up.
 - Regression tests cover replay-attempt audit retrieval by fingerprint with duplicate suppression evidence checks.
 
+## M5.12 Replay-Attempt Export Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/manifest/verify/attempts/export` for replay-attempt audit snapshot handoff.
+- Export supports JSON and CSV formats with shared forensic filters (`tenantKey`, `providerKey`, `scenario`, `fingerprint`, `valid`, `duplicateSuppressed`) and bounded limit controls.
+- Replay-attempt query and verify diagnostics now link the export endpoint to support postmortem pivot workflows.
+- Regression tests cover export JSON summaries, CSV content shape, and duplicate-suppression evidence counters.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

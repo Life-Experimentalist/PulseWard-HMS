@@ -373,6 +373,9 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.diagnostics.replayAttemptsEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts"
     );
+    expect(verified.body.diagnostics.replayAttemptsExportEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export"
+    );
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -426,6 +429,38 @@ describe("notification webhook delivery diagnostics", () => {
     );
     expect(auditByFingerprint.body.attempts[0].duplicateSuppressed).toBe(true);
     expect(auditByFingerprint.body.attempts[0].suppressCount).toBeGreaterThanOrEqual(1);
+
+    const attemptsExportJson = await requestJson(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint=${encodeURIComponent(
+        verified.body.replayAttempt.fingerprint
+      )}&duplicateSuppressed=true&limit=10`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(attemptsExportJson.status).toBe(200);
+    expect(attemptsExportJson.body.format).toBe("json");
+    expect(attemptsExportJson.body.totalMatched).toBeGreaterThanOrEqual(1);
+    expect(attemptsExportJson.body.summary.totalSuppressedEvents).toBeGreaterThanOrEqual(1);
+    expect(attemptsExportJson.body.diagnostics.attemptsEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts"
+    );
+    expect(Array.isArray(attemptsExportJson.body.attempts)).toBe(true);
+
+    const attemptsExportCsv = await requestText(
+      `/api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export?fingerprint=${encodeURIComponent(
+        verified.body.replayAttempt.fingerprint
+      )}&duplicateSuppressed=true&format=csv&limit=10`,
+      {
+        method: "GET",
+      }
+    );
+
+    expect(attemptsExportCsv.status).toBe(200);
+    expect(attemptsExportCsv.headers.get("content-type")).toContain("text/csv");
+    expect(attemptsExportCsv.body).toContain("attemptId,fingerprint,firstVerifiedAt");
+    expect(attemptsExportCsv.body).toContain(verified.body.replayAttempt.attemptId);
 
     const tampered = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify",

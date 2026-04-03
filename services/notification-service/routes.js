@@ -643,6 +643,129 @@ function buildFaultManifestVerifyAttemptAuditItem(attempt) {
   };
 }
 
+function collectFaultManifestVerifyAttemptAudit(options) {
+  var tenantKey = String(options.tenantKey || "").trim();
+  var providerKey = String(options.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(options.scenario || "")
+    .trim()
+    .toLowerCase();
+  var fingerprint = normalizeManifestDigestInput(options.fingerprint || "");
+  var validFilter = options.validFilter;
+  var duplicateSuppressedFilter = options.duplicateSuppressedFilter;
+  var limit = parseRetryInt(options.limit, options.limitFallback || 50, 1, options.limitMax || 500);
+
+  pruneFaultManifestVerifyAttempts(Date.now());
+
+  var attempts = faultManifestVerifyAttemptCache
+    .slice()
+    .reverse()
+    .map(buildFaultManifestVerifyAttemptAuditItem)
+    .filter(function (item) {
+      if (tenantKey && item.tenantKey !== tenantKey) {
+        return false;
+      }
+
+      if (providerKey && item.providerKey !== providerKey) {
+        return false;
+      }
+
+      if (scenario && item.scenario !== scenario) {
+        return false;
+      }
+
+      if (fingerprint && item.fingerprint !== fingerprint) {
+        return false;
+      }
+
+      if (validFilter !== null && item.valid !== validFilter) {
+        return false;
+      }
+
+      if (
+        duplicateSuppressedFilter !== null &&
+        item.duplicateSuppressed !== duplicateSuppressedFilter
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+  var limited = attempts.slice(0, limit);
+  var totalSuppressedEvents = 0;
+  limited.forEach(function (item) {
+    totalSuppressedEvents += item.suppressCount;
+  });
+
+  return {
+    totalRecorded: faultManifestVerifyAttemptCache.length,
+    totalMatched: attempts.length,
+    returned: limited.length,
+    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
+    dedupeMaxEntries: faultManifestVerifyDedupeMaxEntries,
+    summary: {
+      duplicateSuppressedAttempts: limited.filter(function (item) {
+        return item.duplicateSuppressed;
+      }).length,
+      totalSuppressedEvents: totalSuppressedEvents,
+      validAttempts: limited.filter(function (item) {
+        return item.valid;
+      }).length,
+      invalidAttempts: limited.filter(function (item) {
+        return !item.valid;
+      }).length,
+    },
+    filters: {
+      tenantKey: tenantKey || null,
+      providerKey: providerKey || null,
+      scenario: scenario || null,
+      fingerprint: fingerprint || null,
+      valid: validFilter,
+      duplicateSuppressed: duplicateSuppressedFilter,
+      limit: limit,
+    },
+    attempts: limited,
+  };
+}
+
+function buildFaultManifestVerifyAttemptCsv(attempts) {
+  var lines = [
+    "attemptId,fingerprint,firstVerifiedAt,lastVerifiedAt,valid,duplicateSuppressed,suppressCount,dedupeWindowSeconds,manifestVersion,tenantKey,providerKey,scenario,totalMatched,returned,replayIssuedAt,replayFreshnessMatch,replayNonce,replayExpectedNonce,replayNonceMatch",
+  ];
+
+  attempts.forEach(function (attempt) {
+    var replayDefense = attempt.replayDefense || {};
+
+    lines.push(
+      [
+        escapeCsvValue(attempt.attemptId),
+        escapeCsvValue(attempt.fingerprint),
+        escapeCsvValue(attempt.firstVerifiedAt),
+        escapeCsvValue(attempt.lastVerifiedAt),
+        escapeCsvValue(attempt.valid),
+        escapeCsvValue(attempt.duplicateSuppressed),
+        escapeCsvValue(attempt.suppressCount),
+        escapeCsvValue(attempt.dedupeWindowSeconds),
+        escapeCsvValue(attempt.manifestVersion),
+        escapeCsvValue(attempt.tenantKey),
+        escapeCsvValue(attempt.providerKey),
+        escapeCsvValue(attempt.scenario),
+        escapeCsvValue(attempt.totalMatched),
+        escapeCsvValue(attempt.returned),
+        escapeCsvValue(replayDefense.issuedAt),
+        escapeCsvValue(replayDefense.freshnessMatch),
+        escapeCsvValue(replayDefense.nonce),
+        escapeCsvValue(replayDefense.expectedNonce),
+        escapeCsvValue(replayDefense.nonceMatch),
+      ].join(",")
+    );
+  });
+
+  return lines.join("\n");
+}
+
 function normalizeFaultManifestNonce(value) {
   return String(value || "").trim();
 }
@@ -1647,6 +1770,8 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       replayAttemptsEndpoint:
         "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
+      replayAttemptsExportEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
       handoffGuide:
         "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
@@ -1672,96 +1797,82 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
 });
 
 router.get("/integrations/messaging/fault-injection/manifest/verify/attempts", function (req, res) {
-  var tenantKey = String(req.query.tenantKey || "").trim();
-  var providerKey = String(req.query.providerKey || "")
-    .trim()
-    .toLowerCase();
-  var scenario = String(req.query.scenario || "")
-    .trim()
-    .toLowerCase();
-  var fingerprint = normalizeManifestDigestInput(req.query.fingerprint || "");
-  var limit = parseRetryInt(req.query.limit, 50, 1, 500);
-  var validFilter = parseOptionalBoolQuery(req.query.valid);
-  var duplicateSuppressedFilter = parseOptionalBoolQuery(req.query.duplicateSuppressed);
-
-  pruneFaultManifestVerifyAttempts(Date.now());
-
-  var attempts = faultManifestVerifyAttemptCache
-    .slice()
-    .reverse()
-    .map(buildFaultManifestVerifyAttemptAuditItem)
-    .filter(function (item) {
-      if (tenantKey && item.tenantKey !== tenantKey) {
-        return false;
-      }
-
-      if (providerKey && item.providerKey !== providerKey) {
-        return false;
-      }
-
-      if (scenario && item.scenario !== scenario) {
-        return false;
-      }
-
-      if (fingerprint && item.fingerprint !== fingerprint) {
-        return false;
-      }
-
-      if (validFilter !== null && item.valid !== validFilter) {
-        return false;
-      }
-
-      if (
-        duplicateSuppressedFilter !== null &&
-        item.duplicateSuppressed !== duplicateSuppressedFilter
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
-  var limited = attempts.slice(0, limit);
-  var totalSuppressedEvents = 0;
-  limited.forEach(function (item) {
-    totalSuppressedEvents += item.suppressCount;
+  var audit = collectFaultManifestVerifyAttemptAudit({
+    tenantKey: req.query.tenantKey,
+    providerKey: req.query.providerKey,
+    scenario: req.query.scenario,
+    fingerprint: req.query.fingerprint,
+    validFilter: parseOptionalBoolQuery(req.query.valid),
+    duplicateSuppressedFilter: parseOptionalBoolQuery(req.query.duplicateSuppressed),
+    limit: req.query.limit,
+    limitFallback: 50,
+    limitMax: 500,
   });
 
   res.set("Cache-Control", "no-store");
   res.json({
     queriedAt: new Date().toISOString(),
-    totalRecorded: faultManifestVerifyAttemptCache.length,
-    totalMatched: attempts.length,
-    returned: limited.length,
-    dedupeWindowSeconds: faultManifestVerifyDedupeWindowSeconds,
-    dedupeMaxEntries: faultManifestVerifyDedupeMaxEntries,
-    summary: {
-      duplicateSuppressedAttempts: limited.filter(function (item) {
-        return item.duplicateSuppressed;
-      }).length,
-      totalSuppressedEvents: totalSuppressedEvents,
-      validAttempts: limited.filter(function (item) {
-        return item.valid;
-      }).length,
-      invalidAttempts: limited.filter(function (item) {
-        return !item.valid;
-      }).length,
-    },
-    filters: {
-      tenantKey: tenantKey || null,
-      providerKey: providerKey || null,
-      scenario: scenario || null,
-      fingerprint: fingerprint || null,
-      valid: validFilter,
-      duplicateSuppressed: duplicateSuppressedFilter,
-      limit: limit,
-    },
+    totalRecorded: audit.totalRecorded,
+    totalMatched: audit.totalMatched,
+    returned: audit.returned,
+    dedupeWindowSeconds: audit.dedupeWindowSeconds,
+    dedupeMaxEntries: audit.dedupeMaxEntries,
+    summary: audit.summary,
+    filters: audit.filters,
     diagnostics: {
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
       verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      attemptsExportEndpoint:
+        "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export",
     },
-    attempts: limited,
+    attempts: audit.attempts,
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/manifest/verify/attempts/export", function (req, res) {
+  var format = String(req.query.format || "json")
+    .trim()
+    .toLowerCase();
+  var audit = collectFaultManifestVerifyAttemptAudit({
+    tenantKey: req.query.tenantKey,
+    providerKey: req.query.providerKey,
+    scenario: req.query.scenario,
+    fingerprint: req.query.fingerprint,
+    validFilter: parseOptionalBoolQuery(req.query.valid),
+    duplicateSuppressedFilter: parseOptionalBoolQuery(req.query.duplicateSuppressed),
+    limit: req.query.limit,
+    limitFallback: 250,
+    limitMax: 2000,
+  });
+
+  if (format === "csv") {
+    var csvBody = buildFaultManifestVerifyAttemptCsv(audit.attempts);
+    res.set("Cache-Control", "no-store");
+    res.attachment("messaging-fault-manifest-verify-attempts-export.csv");
+    res.type("text/csv");
+    res.send(csvBody);
+    return;
+  }
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    exportedAt: new Date().toISOString(),
+    format: "json",
+    totalRecorded: audit.totalRecorded,
+    totalMatched: audit.totalMatched,
+    returned: audit.returned,
+    dedupeWindowSeconds: audit.dedupeWindowSeconds,
+    dedupeMaxEntries: audit.dedupeMaxEntries,
+    summary: audit.summary,
+    filters: audit.filters,
+    diagnostics: {
+      attemptsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts",
+      verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      faultInjectionExportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+    },
+    attempts: audit.attempts,
   });
 });
 

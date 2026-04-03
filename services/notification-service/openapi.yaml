@@ -558,6 +558,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryResponse"
+  /integrations/messaging/fault-injection/manifest/verify/attempts/export:
+    get:
+      summary: Export manifest verification replay-attempt audit snapshots for postmortem handoff
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: fingerprint
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: valid
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: duplicateSuppressed
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - csv
+            default: json
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2000
+            default: 250
+      responses:
+        "200":
+          description: Manifest verification replay-attempt export payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptExportResponse"
+            text/csv:
+              schema:
+                type: string
   /integrations/messaging/fault-injection/retention:
     get:
       summary: Get connector fault-injection retention policy and telemetry window status
@@ -1444,6 +1505,9 @@ components:
         replayAttemptsEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts
+        replayAttemptsExportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
         handoffGuide:
           type: string
           example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
@@ -1545,6 +1609,9 @@ components:
         exportEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/export
+        attemptsExportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/export
     MessagingFaultManifestVerifyAttemptQueryResponse:
       type: object
       properties:
@@ -1572,6 +1639,55 @@ components:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryFilters"
         diagnostics:
           $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryDiagnostics"
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptAuditItem"
+    MessagingFaultManifestVerifyAttemptExportDiagnostics:
+      type: object
+      properties:
+        attemptsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts
+        verifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        faultInjectionExportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+    MessagingFaultManifestVerifyAttemptExportResponse:
+      type: object
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        format:
+          type: string
+          example: json
+        totalRecorded:
+          type: integer
+          example: 8
+        totalMatched:
+          type: integer
+          example: 2
+        returned:
+          type: integer
+          example: 2
+        dedupeWindowSeconds:
+          type: integer
+          example: 600
+        dedupeMaxEntries:
+          type: integer
+          example: 500
+        summary:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQuerySummary"
+        filters:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptQueryFilters"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerifyAttemptExportDiagnostics"
         attempts:
           type: array
           items:

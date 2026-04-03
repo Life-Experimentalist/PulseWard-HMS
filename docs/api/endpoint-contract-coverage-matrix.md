@@ -32,6 +32,8 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `notification-service`
 - Any missing critical schema block fails the contract check and CI.
 
+# M2 Identity, Access, and Tenant Policy Options
+
 ## M2.3 Auth Policy Guardrail Coverage
 
 - Critical schema assertions now include auth policy-enforced login and OAuth flow endpoints in `auth-service`.
@@ -46,6 +48,8 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 
 - Critical schema assertions include OTP challenge and verification endpoints in `auth-service`.
 - Login schema assertions now include MFA-required response coverage for policy-driven auth flows.
+
+# M3 Core Clinical Data Services
 
 ## M3.1 Workflow Entry And Session Observability Coverage
 
@@ -83,6 +87,8 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Billing runtime now validates actor role, trigger semantics, and idempotent `correlationId` handling for lab and prescription workflow events.
 - Regression tests cover successful lab/prescription trigger processing, trigger receipt queries, and duplicate correlation rejection behavior.
 
+# M4 Scheduling and Notification Reliability
+
 ## M4.1 Appointment Lifecycle Conflict Reliability Coverage
 
 - Critical schema assertions for `POST /appointments` and `PUT /appointments/{id}` include conflict response coverage (`409`) for slot and lifecycle reliability paths.
@@ -110,6 +116,8 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Appointment runtime now exposes `GET /integrations/notifications/dead-letter` for dead-letter query workflows by tenant, appointment, event type, status, correlation-id, and reason.
 - Appointment runtime now exposes `GET /integrations/notifications/dispatch-telemetry` with counters for total, delivered, failed, skipped, dead-lettered, missed reminders, and delayed reminders plus event-type summaries.
 - Regression tests cover skipped endpoint-not-configured behavior, failed retry-exhausted behavior, delayed-delivery telemetry counters, and late-delivery dead-letter records.
+
+# M5 Connector and Adapter Completion
 
 ## M5.1 Connector Diagnostics Hardening Coverage
 
@@ -253,6 +261,8 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Transaction handlers now support safe dry-run defaults, optional live gateway execution (`dryRun=false`), and health-check-derived fallback routing for at-risk ABHA states.
 - Auth runtime now exposes `GET /platform/abha/transactions/evidence` for consent, fallback, and transactional-outcome audit telemetry.
 - Regression tests cover consent-required blocking, fallback-path behavior, simulated read/write paths, and transactional evidence query semantics.
+
+# M6 Experience Surfaces and Mobile Notifications
 
 ## M6.1 Operations Dashboard Connector Reliability Surface Coverage
 
@@ -1493,6 +1503,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Schema property contract checks now enforce:
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.minUtilizationPercent` type `number`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `minUtilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.174 Retention-Saturation-Trend-Summary Max-Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary max-utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.maxUtilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `maxUtilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.175 Retention-Saturation-Trend-Summary Avg-Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary avg-utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.avgUtilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `avgUtilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.176 Retention-Saturation-Trend-Summary Latest-Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary latest-utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.latestUtilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `latestUtilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.177 Retention-Saturation-Trend-Summary Latest-Alert-Level Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary latest-alert-level anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.latestAlertLevel` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `latestAlertLevel` property type drifts from OpenAPI baseline.
+
+## M6.178 Retention-Saturation-Trend-Summary Trend-Direction Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-summary trend-direction anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.trendDirection` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-summary `trendDirection` property type drifts from OpenAPI baseline.
 
 ## M5 Reporting Consolidation Guidance
 

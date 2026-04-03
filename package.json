@@ -34,6 +34,8 @@
     "build:apps:ci": "npm run build:admin:ci && npm run build:clinician:ci && npm run build:operations:ci && npm run build:patient:ci",
     "test": "jest --config jest.config.cjs --coverage --runInBand --verbose",
     "test:quick": "jest --config jest.config.cjs --runInBand",
+    "test:contracts": "npm run contracts:check -- --strict && npm run test:quick -- tests/contracts/parity-regression.test.js",
+    "verify:m6": "npm run test:contracts && npm run test:quick",
     "test:smoke": "node ./scripts/smoke-test-platform.mjs",
     "test:routes": "node -e \"require('./services/auth-service/routes'); require('./services/notification-service/routes'); require('./services/appointment-service/routes'); require('./services/ehr-service/routes'); require('./services/lab-service/routes'); require('./services/pharmacy-service/src'); require('./services/billing-service/src'); console.log('Route modules loaded');\"",
     "contracts:check": "node ./scripts/check-contract-coverage.mjs",
@@ -51,7 +53,9 @@
     "demo:down": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-down.ps1",
     "demo:opd": "powershell -ExecutionPolicy Bypass -File ./scripts/demo-opd-flow.ps1",
     "visuals:generate": "node ./scripts/generate-mermaid-visuals.mjs",
-    "integrations:validate": "node ./scripts/validate-integration-config.mjs"
+    "integrations:validate": "node ./scripts/validate-integration-config.mjs",
+    "env:check": "node ./scripts/check-env-consistency.mjs",
+    "env:guide": "node -e \"console.log('See docs/development-model/env-setup.md for setup steps and key acquisition guidance.')\""
   },
   "author": "VKrishna04",
   "license": "UNLICENSED",

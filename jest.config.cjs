@@ -4,7 +4,9 @@ module.exports = {
   collectCoverageFrom: [
     "services/**/*.js",
     "packages/shared-utils/**/*.js",
-    "scripts/**/*.mjs",
+    "!services/**/integrations/**/*.js",
+    "!services/**/src/index.js",
+    "!services/**/src/server.js",
     "!**/node_modules/**",
     "!**/coverage/**",
     "!**/dist/**",

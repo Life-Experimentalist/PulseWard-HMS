@@ -696,6 +696,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportFilters.acknowledgementSlaStatus` type `array`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export filters `acknowledgementSlaStatus` property type drifts from OpenAPI baseline.
 
+## M6.60 Escalation-Export Item Anomaly-Instance-Id Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item anomaly-instance-id anchors for anomaly identity compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.anomalyInstanceId` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `anomalyInstanceId` property type drifts from OpenAPI baseline.
+
+## M6.61 Escalation-Export Response Exported-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response exported-at anchors for export metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.exportedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `exportedAt` property type drifts from OpenAPI baseline.
+
+## M6.62 Escalation-Export Response Format Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export response format anchors for export metadata compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportResponse.format` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export response `format` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

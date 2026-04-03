@@ -20,6 +20,8 @@ var authSessionEvents = [];
 var maxAuthSessionEvents = 500;
 var abhaHealthCheckEvents = [];
 var maxAbhaHealthCheckEvents = 200;
+var abhaFallbackDecisionEvents = [];
+var maxAbhaFallbackDecisionEvents = 200;
 var roles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
 var workflowRoleMatrix = {
   "patient.profile.view": ["admin", "doctor", "nurse", "patient", "frontdesk"],
@@ -233,6 +235,114 @@ function buildAbhaConsentSimulationSteps(scenario, simulationStatus) {
       status: status,
     };
   });
+}
+
+function buildAbhaFallbackDecision(scenario, enabled, configured, latestHealthEvent) {
+  var decision = {
+    decisionCode: "ABHA_USE_PRIMARY_PATH",
+    shouldFallback: false,
+    reason: "ABHA ready for primary path",
+    action: {
+      switchToBaseline: false,
+      triggerIncident: false,
+      retryAfterSeconds: 0,
+    },
+  };
+
+  if (!enabled) {
+    decision.decisionCode = "ABHA_DISABLED_USE_BASELINE";
+    decision.shouldFallback = true;
+    decision.reason = "ABHA feature is disabled";
+    decision.action.switchToBaseline = true;
+    return decision;
+  }
+
+  if (!configured) {
+    decision.decisionCode = "ABHA_CONFIG_AT_RISK_USE_BASELINE";
+    decision.shouldFallback = true;
+    decision.reason = "ABHA is enabled but required config is incomplete";
+    decision.action.switchToBaseline = true;
+    decision.action.triggerIncident = true;
+    decision.action.retryAfterSeconds = 300;
+    return decision;
+  }
+
+  if (scenario === "consent-denied") {
+    decision.decisionCode = "ABHA_CONSENT_DENIED_USE_BASELINE";
+    decision.shouldFallback = true;
+    decision.reason = "Patient denied ABHA consent";
+    decision.action.switchToBaseline = true;
+    return decision;
+  }
+
+  if (scenario === "gateway-timeout") {
+    decision.decisionCode = "ABHA_GATEWAY_TIMEOUT_USE_BASELINE";
+    decision.shouldFallback = true;
+    decision.reason = "ABHA gateway timeout during workflow";
+    decision.action.switchToBaseline = true;
+    decision.action.triggerIncident = true;
+    decision.action.retryAfterSeconds = 300;
+    return decision;
+  }
+
+  if (scenario === "health-check-derived" && latestHealthEvent && !latestHealthEvent.reachable) {
+    decision.decisionCode = "ABHA_HEALTH_UNREACHABLE_USE_BASELINE";
+    decision.shouldFallback = true;
+    decision.reason = "Latest ABHA health-check indicates gateway unreachable";
+    decision.action.switchToBaseline = true;
+    decision.action.triggerIncident = true;
+    decision.action.retryAfterSeconds = 300;
+    return decision;
+  }
+
+  return decision;
+}
+
+function recordAbhaFallbackDecisionEvent(entry) {
+  var event = {
+    eventId: randomUUID(),
+    recordedAt: new Date().toISOString(),
+    tenantKey: entry.tenantKey || "default",
+    scenario: entry.scenario || "health-check-derived",
+    decisionCode: entry.decisionCode || "ABHA_USE_PRIMARY_PATH",
+    shouldFallback: Boolean(entry.shouldFallback),
+    reason: entry.reason || "",
+    action: entry.action || {
+      switchToBaseline: false,
+      triggerIncident: false,
+      retryAfterSeconds: 0,
+    },
+    latestHealthCheck: entry.latestHealthCheck || null,
+  };
+
+  abhaFallbackDecisionEvents.push(event);
+  if (abhaFallbackDecisionEvents.length > maxAbhaFallbackDecisionEvents) {
+    abhaFallbackDecisionEvents.shift();
+  }
+
+  return event;
+}
+
+function summarizeAbhaFallbackDecisionEvents(events) {
+  var fallbackCount = 0;
+  var incidentCount = 0;
+
+  events.forEach(function (event) {
+    if (event.shouldFallback) {
+      fallbackCount += 1;
+    }
+
+    if (event.action && event.action.triggerIncident) {
+      incidentCount += 1;
+    }
+  });
+
+  return {
+    totalCount: events.length,
+    fallbackCount: fallbackCount,
+    incidentCount: incidentCount,
+    lastRecordedAt: events.length > 0 ? events[events.length - 1].recordedAt : null,
+  };
 }
 
 function getWorkflowAllowedRoles(workflowKey) {
@@ -1195,6 +1305,66 @@ router.get("/platform/abha/consent-flow/simulation", function (req, res) {
   });
 });
 
+router.get("/platform/abha/fallback-decision/telemetry", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "default").trim() || "default";
+  var scenario = String(req.query.scenario || "health-check-derived")
+    .trim()
+    .toLowerCase();
+  if (["health-check-derived", "gateway-timeout", "consent-denied", "happy-path"].indexOf(scenario) < 0) {
+    scenario = "health-check-derived";
+  }
+
+  var enabled = process.env.ABHA_ENABLED === "true";
+  var configured =
+    hasRealConfigValue(process.env.ABHA_CLIENT_ID) &&
+    hasRealConfigValue(process.env.ABHA_CLIENT_SECRET) &&
+    hasRealConfigValue(process.env.ABHA_GATEWAY_BASE_URL);
+  var latestHealthEvent =
+    abhaHealthCheckEvents.length > 0 ? abhaHealthCheckEvents[abhaHealthCheckEvents.length - 1] : null;
+  var decision = buildAbhaFallbackDecision(scenario, enabled, configured, latestHealthEvent);
+  var recorded = recordAbhaFallbackDecisionEvent({
+    tenantKey: tenantKey,
+    scenario: scenario,
+    decisionCode: decision.decisionCode,
+    shouldFallback: decision.shouldFallback,
+    reason: decision.reason,
+    action: decision.action,
+    latestHealthCheck: latestHealthEvent
+      ? {
+          checkId: latestHealthEvent.checkId,
+          checkedAt: latestHealthEvent.checkedAt,
+          reachable: latestHealthEvent.reachable,
+          statusCode: latestHealthEvent.statusCode,
+        }
+      : null,
+  });
+
+  var limit = Number(req.query.limit || 20);
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 20;
+  var items = abhaFallbackDecisionEvents
+    .filter(function (event) {
+      return event.tenantKey === tenantKey;
+    })
+    .slice(-boundedLimit)
+    .reverse();
+
+  res.json({
+    tenantKey: tenantKey,
+    mode: process.env.ABHA_ENVIRONMENT || "sandbox",
+    scenario: scenario,
+    enabled: enabled,
+    configured: configured,
+    latestDecision: recorded,
+    summary: summarizeAbhaFallbackDecisionEvents(items),
+    events: items,
+    diagnostics: {
+      consentSimulationEndpoint: "GET /api/v1/platform/abha/consent-flow/simulation",
+      healthCheckEndpoint: "GET /api/v1/platform/abha/health-check",
+      healthCheckEvidenceEndpoint: "GET /api/v1/platform/abha/health-check/evidence",
+    },
+  });
+});
+
 router.get("/platform/abha/operational-readiness", function (_req, res) {
   var enabled = process.env.ABHA_ENABLED === "true";
   var hasClientId = hasRealConfigValue(process.env.ABHA_CLIENT_ID);
@@ -1225,6 +1395,7 @@ router.get("/platform/abha/operational-readiness", function (_req, res) {
       gatewayHealthEndpoint: "GET /api/v1/platform/abha/health-check",
       healthCheckEvidenceEndpoint: "GET /api/v1/platform/abha/health-check/evidence",
       consentFlowSimulationEndpoint: "GET /api/v1/platform/abha/consent-flow/simulation",
+      fallbackDecisionTelemetryEndpoint: "GET /api/v1/platform/abha/fallback-decision/telemetry",
       healthCheckTimeoutMsDefault: 4000,
     },
     runbook: {

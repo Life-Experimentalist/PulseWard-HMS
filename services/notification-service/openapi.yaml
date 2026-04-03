@@ -308,6 +308,81 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingRetryPolicyResponse"
+  /integrations/messaging/fault-injection/simulate:
+    get:
+      summary: Simulate connector fault scenarios for retry and fallback decision drills
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: generic-webhook
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - happy-path
+              - network-timeout
+              - rate-limit
+              - provider-5xx
+              - invalid-signature
+            default: network-timeout
+      responses:
+        "200":
+          description: Fault-injection simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultSimulationResponse"
+  /integrations/messaging/fault-injection/events:
+    get:
+      summary: List recorded connector fault-injection simulation events
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: providerKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - happy-path
+              - network-timeout
+              - rate-limit
+              - provider-5xx
+              - invalid-signature
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Fault-injection event feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultInjectionEventsResponse"
   /integrations/messaging/webhook/signature/verify:
     post:
       summary: Verify website webhook signature against configured signing secret
@@ -730,6 +805,151 @@ components:
           $ref: "#/components/schemas/WebhookRouteCoverage"
         guidance:
           $ref: "#/components/schemas/MessagingRetryPolicyGuidance"
+    MessagingFaultSimulationResult:
+      type: object
+      properties:
+        scenario:
+          type: string
+          example: network-timeout
+        classification:
+          type: string
+          enum:
+            - none
+            - retryable
+            - non-retryable
+            - disabled
+          example: retryable
+        injectedStatus:
+          type: string
+          example: timeout
+        expectedAction:
+          type: string
+          example: retry-then-fallback
+        expectedHttpStatus:
+          type: integer
+          example: 503
+        recommendation:
+          type: string
+        recommendedMaxAttempts:
+          type: integer
+          example: 3
+    MessagingFaultSimulationDiagnostics:
+      type: object
+      properties:
+        retryPolicyEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/retry-policy
+        eventsEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/events
+        deliveryTestEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/test
+    MessagingFaultSimulationResponse:
+      type: object
+      properties:
+        simulationId:
+          type: string
+          format: uuid
+        tenantKey:
+          type: string
+          example: default
+        providerKey:
+          type: string
+          example: generic-webhook
+        providerEnabled:
+          type: boolean
+          example: true
+        scenario:
+          type: string
+          example: network-timeout
+        simulation:
+          $ref: "#/components/schemas/MessagingFaultSimulationResult"
+        retryPolicy:
+          $ref: "#/components/schemas/MessagingRetryPolicy"
+        channelCoverage:
+          $ref: "#/components/schemas/WebhookRouteCoverage"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultSimulationDiagnostics"
+    MessagingFaultInjectionEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        tenantKey:
+          type: string
+          example: default
+        providerKey:
+          type: string
+          example: generic-webhook
+        scenario:
+          type: string
+          example: network-timeout
+        classification:
+          type: string
+          example: retryable
+        injectedStatus:
+          type: string
+          example: timeout
+        expectedAction:
+          type: string
+          example: retry-then-fallback
+        expectedHttpStatus:
+          type: integer
+          example: 503
+        recommendedMaxAttempts:
+          type: integer
+          example: 3
+    MessagingFaultInjectionSummary:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          example: 4
+        retryableCount:
+          type: integer
+          example: 3
+        nonRetryableCount:
+          type: integer
+          example: 1
+        disabledCount:
+          type: integer
+          example: 0
+        lastOccurredAt:
+          type: string
+          format: date-time
+          nullable: true
+    MessagingFaultInjectionEventsResponse:
+      type: object
+      properties:
+        totalRecorded:
+          type: integer
+          example: 8
+        returned:
+          type: integer
+          example: 5
+        filters:
+          type: object
+          properties:
+            tenantKey:
+              type: string
+              nullable: true
+            providerKey:
+              type: string
+              nullable: true
+            scenario:
+              type: string
+              nullable: true
+        summary:
+          $ref: "#/components/schemas/MessagingFaultInjectionSummary"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessagingFaultInjectionEvent"
     WebhookSigningSecretStatus:
       type: object
       properties:

@@ -453,6 +453,45 @@ paths:
               schema:
                 $ref: "#/components/schemas/AbhaConsentFlowSimulationResponse"
 
+  /platform/abha/fallback-decision/telemetry:
+    get:
+      summary: Return ABHA fallback decision telemetry for operational drills
+      tags:
+        - Platform Domains
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - health-check-derived
+              - gateway-timeout
+              - consent-denied
+              - happy-path
+            default: health-check-derived
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: ABHA fallback decision telemetry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaFallbackDecisionTelemetryResponse"
+
   /platform/abha/operational-readiness:
     get:
       summary: Get ABHA operational readiness checklist and diagnostics summary
@@ -1331,6 +1370,116 @@ components:
           $ref: "#/components/schemas/AbhaConsentSimulationEvidence"
         automation:
           $ref: "#/components/schemas/AbhaConsentSimulationAutomation"
+    AbhaFallbackDecisionAction:
+      type: object
+      properties:
+        switchToBaseline:
+          type: boolean
+          example: true
+        triggerIncident:
+          type: boolean
+          example: true
+        retryAfterSeconds:
+          type: integer
+          example: 300
+    AbhaFallbackDecisionHealthSnapshot:
+      type: object
+      properties:
+        checkId:
+          type: string
+          format: uuid
+        checkedAt:
+          type: string
+          format: date-time
+        reachable:
+          type: boolean
+        statusCode:
+          type: integer
+          example: 502
+      nullable: true
+    AbhaFallbackDecisionEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        recordedAt:
+          type: string
+          format: date-time
+        tenantKey:
+          type: string
+          example: default
+        scenario:
+          type: string
+          example: gateway-timeout
+        decisionCode:
+          type: string
+          example: ABHA_GATEWAY_TIMEOUT_USE_BASELINE
+        shouldFallback:
+          type: boolean
+          example: true
+        reason:
+          type: string
+        action:
+          $ref: "#/components/schemas/AbhaFallbackDecisionAction"
+        latestHealthCheck:
+          $ref: "#/components/schemas/AbhaFallbackDecisionHealthSnapshot"
+    AbhaFallbackDecisionSummary:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          example: 5
+        fallbackCount:
+          type: integer
+          example: 4
+        incidentCount:
+          type: integer
+          example: 3
+        lastRecordedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AbhaFallbackTelemetryDiagnostics:
+      type: object
+      properties:
+        consentSimulationEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/consent-flow/simulation
+        healthCheckEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check
+        healthCheckEvidenceEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/health-check/evidence
+    AbhaFallbackDecisionTelemetryResponse:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: default
+        mode:
+          type: string
+          example: sandbox
+        scenario:
+          type: string
+          example: health-check-derived
+        enabled:
+          type: boolean
+          example: true
+        configured:
+          type: boolean
+          example: true
+        latestDecision:
+          $ref: "#/components/schemas/AbhaFallbackDecisionEvent"
+        summary:
+          $ref: "#/components/schemas/AbhaFallbackDecisionSummary"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbhaFallbackDecisionEvent"
+        diagnostics:
+          $ref: "#/components/schemas/AbhaFallbackTelemetryDiagnostics"
     AbhaOperationalReadinessChecks:
       type: object
       properties:
@@ -1361,6 +1510,9 @@ components:
         consentFlowSimulationEndpoint:
           type: string
           example: GET /api/v1/platform/abha/consent-flow/simulation
+        fallbackDecisionTelemetryEndpoint:
+          type: string
+          example: GET /api/v1/platform/abha/fallback-decision/telemetry
         healthCheckTimeoutMsDefault:
           type: integer
           example: 4000

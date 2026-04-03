@@ -177,6 +177,9 @@ describe("auth-service route surface coverage", () => {
     expect(abhaOperationalReadiness.body.diagnostics.consentFlowSimulationEndpoint).toBe(
       "GET /api/v1/platform/abha/consent-flow/simulation"
     );
+    expect(abhaOperationalReadiness.body.diagnostics.fallbackDecisionTelemetryEndpoint).toBe(
+      "GET /api/v1/platform/abha/fallback-decision/telemetry"
+    );
     expect(abhaOperationalReadiness.body.runbook.document).toBe(
       "docs/runbooks/abha-operational-readiness.md"
     );
@@ -196,6 +199,26 @@ describe("auth-service route surface coverage", () => {
     expect(Array.isArray(abhaConsentSimulation.body.steps)).toBe(true);
     expect(abhaConsentSimulation.body.evidence.healthCheckEvidenceEndpoint).toBe(
       "GET /api/v1/platform/abha/health-check/evidence"
+    );
+
+    const fallbackTelemetry = await requestJson(
+      "/api/v1/platform/abha/fallback-decision/telemetry?tenantKey=citycare-hospital&scenario=gateway-timeout&limit=5",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(fallbackTelemetry.status).toBe(200);
+    expect(fallbackTelemetry.body.tenantKey).toBe("citycare-hospital");
+    expect(fallbackTelemetry.body.scenario).toBe("gateway-timeout");
+    expect(fallbackTelemetry.body.latestDecision.decisionCode).toMatch(
+      /ABHA_(GATEWAY_TIMEOUT|CONFIG_AT_RISK)_USE_BASELINE/
+    );
+    expect(fallbackTelemetry.body.latestDecision.shouldFallback).toBe(true);
+    expect(fallbackTelemetry.body.summary.totalCount).toBeGreaterThan(0);
+    expect(Array.isArray(fallbackTelemetry.body.events)).toBe(true);
+    expect(fallbackTelemetry.body.diagnostics.consentSimulationEndpoint).toBe(
+      "GET /api/v1/platform/abha/consent-flow/simulation"
     );
 
     const storageMeta = await requestJson("/api/v1/admin/settings/storage", {

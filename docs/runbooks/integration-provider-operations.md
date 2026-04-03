@@ -11,6 +11,7 @@
 	- `GET /api/v1/integrations/messaging/email/config-status?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
+	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&limit=10`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
 ## Weekly checks
@@ -23,7 +24,9 @@
 	- `GET /api/v1/platform/abha/health-check`
 	- `GET /api/v1/platform/abha/health-check/evidence`
 	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario=gateway-timeout`
+	- `GET /api/v1/platform/abha/fallback-decision/telemetry?scenario=health-check-derived&limit=10`
 	- `GET /api/v1/platform/abha/operational-readiness`
+	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
 
 ## Incident handling
 
@@ -43,10 +46,13 @@
 	- `GET /api/v1/integrations/messaging/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/webhook/diagnostics?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
+	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
+	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify`
 	- `POST /api/v1/integrations/messaging/test`
 	- `GET /api/v1/platform/abha/health-check/evidence`
 	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario={scenario}`
+	- `GET /api/v1/platform/abha/fallback-decision/telemetry?scenario={scenario}`
 - Calendar routing:
 	- `GET /api/v1/integrations/calendars/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/calendars/interoperability/diagnostics?tenantKey={tenantKey}`

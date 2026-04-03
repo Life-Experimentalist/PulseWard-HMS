@@ -25,6 +25,8 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
   - `GET /api/v1/platform/abha/health-check/evidence`
 - Consent-flow simulation checkpoints:
   - `GET /api/v1/platform/abha/consent-flow/simulation?scenario=happy-path`
+- Fallback decision telemetry feed:
+  - `GET /api/v1/platform/abha/fallback-decision/telemetry?scenario=health-check-derived`
 - Operational readiness summary:
   - `GET /api/v1/platform/abha/operational-readiness`
 
@@ -41,14 +43,16 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
    - `GET /api/v1/platform/abha/health-check?timeoutMs=4000`
 3. Capture `checkId` from each health-check and verify evidence feed includes the same check outcomes.
 4. Execute consent simulation for `happy-path`, `consent-denied`, and `gateway-timeout` scenarios.
-5. Confirm no secret-key drift between tenant config and deployment secret store.
+5. Execute fallback telemetry for `health-check-derived`, `gateway-timeout`, and `consent-denied` scenarios.
+6. Confirm no secret-key drift between tenant config and deployment secret store.
 
 ## Incident Triage
 
 1. Validate ABHA config-status and operational-readiness first.
 2. If `configured=false`, treat as config incident and rotate/reapply secrets.
 3. If config is healthy but reachability fails, treat as gateway/network incident.
-4. Route to platform owner when repeated `502` checks occur over triage window.
+4. Use fallback telemetry `decisionCode` and `latestHealthCheck` to verify baseline-switch recommendation before disabling ABHA.
+5. Route to platform owner when repeated `502` checks occur over triage window.
 
 ## Rollback Guidance
 
@@ -61,5 +65,6 @@ This runbook defines the minimum operational checks to keep ABHA adapter workflo
 - Timestamped output from all readiness endpoints.
 - Health-check `checkId` values plus corresponding `/health-check/evidence` records.
 - Consent simulation output payload for all three scenarios.
+- Fallback telemetry output including `decisionCode`, `shouldFallback`, and action plan fields.
 - Environment mode (`sandbox` or `production`) at incident time.
 - Applied remediation and post-fix health-check evidence.

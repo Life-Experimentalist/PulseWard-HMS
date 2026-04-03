@@ -139,6 +139,14 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - ABHA operational-readiness diagnostics now link the consent simulation endpoint for drill planning workflows.
 - Regression tests cover retry-policy diagnostics response shape and ABHA consent simulation behavior under at-risk configuration conditions.
 
+## M5.5 Fault Injection Controls And ABHA Fallback Telemetry Coverage
+
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/simulate` for scenario-driven connector fault simulation (`happy-path`, `network-timeout`, `rate-limit`, `provider-5xx`, `invalid-signature`).
+- Notification runtime now exposes `GET /integrations/messaging/fault-injection/events` for queryable simulation-event telemetry with tenant/provider/scenario filters and summary counters.
+- Auth runtime now exposes `GET /platform/abha/fallback-decision/telemetry` for operational fallback decision evidence, including latest health-check snapshot linkage.
+- ABHA operational-readiness diagnostics now link the fallback decision telemetry endpoint for runbook drill continuity.
+- Regression tests cover fault-injection simulation/event retrieval behavior and ABHA fallback decision telemetry response semantics.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

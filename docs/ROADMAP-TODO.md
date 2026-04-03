@@ -309,4 +309,6 @@ Exit criteria:
 32. M5.3 evidence checkpoint: ABHA health-check now records checkId-scoped outcomes and exposes `/platform/abha/health-check/evidence` for incident drill artifact automation.
 33. M5.4 completed: messaging retry-policy diagnostics now expose production-safe retry controls and channel coverage visibility per provider.
 34. M5.4 evidence checkpoint: ABHA consent-flow simulation endpoint now provides scenario-driven operational drill checkpoints and evidence-link guidance.
-35. M5.5 active next slice: add connector fault-injection simulation controls and ABHA fallback decision telemetry.
+35. M5.5 completed: connector diagnostics now include fault-injection simulation controls and ABHA fallback decision telemetry with route+contract coverage.
+36. M5.5 evidence checkpoint: regression coverage now validates connector fault simulation/event feeds and ABHA fallback telemetry behavior for operational drills.
+37. M5.6 active next slice: add connector drill export/retention controls for incident evidence handoff workflows.

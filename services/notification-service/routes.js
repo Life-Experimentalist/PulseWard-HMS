@@ -10,6 +10,8 @@ var resolveSecretRef = require("../../packages/shared-utils/resolve-secret-ref")
 var router = express.Router();
 var notifications = [];
 var appointmentEventReceipts = [];
+var messagingFaultInjectionEvents = [];
+var maxMessagingFaultInjectionEvents = 200;
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -136,9 +138,7 @@ function parseRetryBool(value, fallback) {
     return fallback;
   }
 
-  var normalized = String(value)
-    .trim()
-    .toLowerCase();
+  var normalized = String(value).trim().toLowerCase();
 
   if (normalized === "true" || normalized === "1" || normalized === "yes") {
     return true;
@@ -170,7 +170,10 @@ function getProviderChannelCoverage(config, providerKey) {
       coverage.defaultChannels.push(route.channel);
     }
 
-    if (Array.isArray(route.fallbackProviders) && route.fallbackProviders.indexOf(providerKey) >= 0) {
+    if (
+      Array.isArray(route.fallbackProviders) &&
+      route.fallbackProviders.indexOf(providerKey) >= 0
+    ) {
       coverage.fallbackChannels.push(route.channel);
     }
   });
@@ -196,6 +199,113 @@ function getMessagingRetryPolicy() {
     jitterEnabled: parseRetryBool(process.env.INTEGRATION_RETRY_JITTER, true),
     retryOn: ["network-error", "timeout", "429", "5xx"],
     nonRetryable: ["400", "401", "403", "404", "validation-error"],
+  };
+}
+
+function normalizeFaultScenario(input) {
+  var normalized = String(input || "network-timeout")
+    .trim()
+    .toLowerCase();
+  var supported = [
+    "happy-path",
+    "network-timeout",
+    "rate-limit",
+    "provider-5xx",
+    "invalid-signature",
+  ];
+
+  if (supported.indexOf(normalized) < 0) {
+    return "network-timeout";
+  }
+
+  return normalized;
+}
+
+function buildFaultSimulationResult(scenario, policy, providerEnabled) {
+  var result = {
+    scenario: scenario,
+    classification: "retryable",
+    injectedStatus: "timeout",
+    expectedAction: "retry-then-fallback",
+    expectedHttpStatus: 0,
+    recommendation: "Validate retry caps and fallback routing before enabling live traffic",
+  };
+
+  if (scenario === "happy-path") {
+    result.classification = "none";
+    result.injectedStatus = "delivered";
+    result.expectedAction = "deliver";
+    result.expectedHttpStatus = 200;
+    result.recommendation = "No fault injected; baseline provider path is healthy";
+  } else if (scenario === "rate-limit") {
+    result.injectedStatus = "rate-limited";
+    result.expectedHttpStatus = 429;
+  } else if (scenario === "provider-5xx") {
+    result.injectedStatus = "provider-error";
+    result.expectedHttpStatus = 503;
+  } else if (scenario === "invalid-signature") {
+    result.classification = "non-retryable";
+    result.injectedStatus = "signature-invalid";
+    result.expectedAction = "block-and-escalate";
+    result.expectedHttpStatus = 400;
+    result.recommendation = "Rotate signing secret and validate webhook signature contract before retry";
+  }
+
+  if (!providerEnabled) {
+    result.classification = "disabled";
+    result.injectedStatus = "provider-disabled";
+    result.expectedAction = "switch-to-enabled-provider";
+    result.expectedHttpStatus = 503;
+    result.recommendation = "Enable provider or route default traffic to configured fallback provider";
+  }
+
+  result.recommendedMaxAttempts = policy.maxAttempts;
+  return result;
+}
+
+function recordMessagingFaultInjectionEvent(entry) {
+  var event = {
+    eventId: randomUUID(),
+    occurredAt: new Date().toISOString(),
+    tenantKey: entry.tenantKey || "default",
+    providerKey: entry.providerKey || "generic-webhook",
+    scenario: entry.scenario || "network-timeout",
+    classification: entry.classification || "retryable",
+    injectedStatus: entry.injectedStatus || "timeout",
+    expectedAction: entry.expectedAction || "retry-then-fallback",
+    expectedHttpStatus: Number(entry.expectedHttpStatus) || 0,
+    recommendedMaxAttempts: Number(entry.recommendedMaxAttempts) || 0,
+  };
+
+  messagingFaultInjectionEvents.push(event);
+  if (messagingFaultInjectionEvents.length > maxMessagingFaultInjectionEvents) {
+    messagingFaultInjectionEvents.shift();
+  }
+
+  return event;
+}
+
+function summarizeFaultInjectionEvents(events) {
+  var retryableCount = 0;
+  var nonRetryableCount = 0;
+  var disabledCount = 0;
+
+  events.forEach(function (event) {
+    if (event.classification === "retryable") {
+      retryableCount += 1;
+    } else if (event.classification === "non-retryable") {
+      nonRetryableCount += 1;
+    } else if (event.classification === "disabled") {
+      disabledCount += 1;
+    }
+  });
+
+  return {
+    totalCount: events.length,
+    retryableCount: retryableCount,
+    nonRetryableCount: nonRetryableCount,
+    disabledCount: disabledCount,
+    lastOccurredAt: events.length > 0 ? events[events.length - 1].occurredAt : null,
   };
 }
 
@@ -701,6 +811,92 @@ router.get("/integrations/messaging/retry-policy", function (req, res) {
       recommendation:
         "Verify retry settings for each enabled provider before switching from dry-run to live delivery",
     },
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/simulate", function (req, res) {
+  var tenantKey = req.query.tenantKey || "default";
+  var providerKey = String(req.query.providerKey || "generic-webhook")
+    .trim()
+    .toLowerCase();
+  var scenario = normalizeFaultScenario(req.query.scenario);
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var provider = findMessagingProvider(config, providerKey);
+  var policy = getMessagingRetryPolicy();
+  var channelCoverage = getProviderChannelCoverage(config, providerKey);
+  var simulation = buildFaultSimulationResult(scenario, policy, Boolean(provider && provider.enabled));
+  var event = recordMessagingFaultInjectionEvent({
+    tenantKey: tenantKey,
+    providerKey: providerKey,
+    scenario: simulation.scenario,
+    classification: simulation.classification,
+    injectedStatus: simulation.injectedStatus,
+    expectedAction: simulation.expectedAction,
+    expectedHttpStatus: simulation.expectedHttpStatus,
+    recommendedMaxAttempts: simulation.recommendedMaxAttempts,
+  });
+
+  res.json({
+    simulationId: event.eventId,
+    tenantKey: tenantKey,
+    providerKey: providerKey,
+    providerEnabled: Boolean(provider && provider.enabled),
+    scenario: simulation.scenario,
+    simulation: simulation,
+    retryPolicy: policy,
+    channelCoverage: {
+      defaultChannels: channelCoverage.defaultChannels,
+      fallbackChannels: channelCoverage.fallbackChannels,
+      defaultChannelCount: channelCoverage.defaultChannels.length,
+      fallbackChannelCount: channelCoverage.fallbackChannels.length,
+    },
+    diagnostics: {
+      retryPolicyEndpoint: "GET /api/v1/integrations/messaging/retry-policy",
+      eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
+      deliveryTestEndpoint: "POST /api/v1/integrations/messaging/test",
+    },
+  });
+});
+
+router.get("/integrations/messaging/fault-injection/events", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var providerKey = String(req.query.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(req.query.scenario || "")
+    .trim()
+    .toLowerCase();
+  var limit = Number(req.query.limit || 20);
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 20;
+
+  var filtered = messagingFaultInjectionEvents.filter(function (event) {
+    if (tenantKey && event.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (providerKey && event.providerKey !== providerKey) {
+      return false;
+    }
+
+    if (scenario && event.scenario !== scenario) {
+      return false;
+    }
+
+    return true;
+  });
+
+  var items = filtered.slice(-boundedLimit).reverse();
+
+  res.json({
+    totalRecorded: messagingFaultInjectionEvents.length,
+    returned: items.length,
+    filters: {
+      tenantKey: tenantKey || null,
+      providerKey: providerKey || null,
+      scenario: scenario || null,
+    },
+    summary: summarizeFaultInjectionEvents(filtered),
+    events: items,
   });
 });
 

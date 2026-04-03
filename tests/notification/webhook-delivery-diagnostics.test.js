@@ -155,4 +155,37 @@ describe("notification webhook delivery diagnostics", () => {
       "POST /api/v1/integrations/messaging/test"
     );
   });
+
+  test("simulates messaging fault injection and lists telemetry events", async () => {
+    const simulated = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=provider-5xx",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(simulated.status).toBe(200);
+    expect(simulated.body.tenantKey).toBe("default");
+    expect(simulated.body.providerKey).toBe("generic-webhook");
+    expect(simulated.body.scenario).toBe("provider-5xx");
+    expect(simulated.body.simulation.classification).toBe("retryable");
+    expect(simulated.body.simulation.expectedAction).toContain("retry");
+    expect(simulated.body.diagnostics.eventsEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/events"
+    );
+
+    const events = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/events?tenantKey=default&providerKey=generic-webhook&limit=5",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(events.status).toBe(200);
+    expect(events.body.totalRecorded).toBeGreaterThan(0);
+    expect(events.body.returned).toBeGreaterThan(0);
+    expect(events.body.summary.totalCount).toBeGreaterThan(0);
+    expect(Array.isArray(events.body.events)).toBe(true);
+    expect(events.body.events[0].providerKey).toBe("generic-webhook");
+  });
 });

@@ -702,6 +702,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary recentlyClosedCount schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly key schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly severity schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly recommendedAction schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly evidence schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly anomalyInstanceId schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -5286,6 +5301,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSummary.recentlyClosedCount type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly key type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?key:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention saturation anomaly key type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly key schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.key type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly severity type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?severity:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention saturation anomaly severity type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly severity schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.severity type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly recommendedAction type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?recommendedAction:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention saturation anomaly recommendedAction type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly recommendedAction schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.recommendedAction type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly evidence type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?evidence:[\s\S]*?type:\s*)object/,
+          "$1string",
+          "retention saturation anomaly evidence type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly evidence schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.evidence type expected object got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation anomaly anomalyInstanceId type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly:[\s\S]*?anomalyInstanceId:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention saturation anomaly anomalyInstanceId type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly anomalyInstanceId schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationAnomaly.anomalyInstanceId type expected string got boolean"
         );
       }
     );

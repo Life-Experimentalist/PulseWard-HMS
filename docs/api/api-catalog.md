@@ -88,7 +88,8 @@ Under `/api/v1`:
 | GET    | `/integrations/messaging/fault-injection/simulate`        | Simulate connector fault scenarios and expected retry/fallback actions.          |
 | GET    | `/integrations/messaging/fault-injection/events`          | List recorded fault-injection events with tenant/provider/scenario filters.      |
 | GET    | `/integrations/messaging/fault-injection/export`          | Export fault-injection evidence feed in JSON or CSV for incident handoff.        |
-| GET    | `/integrations/messaging/fault-injection/manifest`        | Generate signed evidence manifest for cross-team incident handoff traceability.   |
+| GET    | `/integrations/messaging/fault-injection/manifest`        | Generate signed evidence manifest for cross-team incident handoff traceability.  |
+| POST   | `/integrations/messaging/fault-injection/manifest/verify` | Verify provided manifest digest/signature against live canonical evidence payload. |
 | GET    | `/integrations/messaging/fault-injection/retention`       | Show active retention controls and telemetry window diagnostics.                 |
 | POST   | `/integrations/messaging/fault-injection/retention/apply` | Apply retention max and optional immediate prune for fault telemetry.            |
 | POST   | `/integrations/messaging/webhook/signature/verify`        | Verify webhook signature payloads against configured tenant signing secret.      |

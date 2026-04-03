@@ -481,6 +481,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessagingFaultInjectionManifestResponse"
+  /integrations/messaging/fault-injection/manifest/verify:
+    post:
+      summary: Verify signed fault-injection manifest for zero-trust incident evidence validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagingFaultInjectionManifestVerifyRequest"
+      responses:
+        "200":
+          description: Fault-injection manifest verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagingFaultInjectionManifestVerifyResponse"
+        "400":
+          description: Missing digest input for verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationErrorResponse"
   /integrations/messaging/fault-injection/retention:
     get:
       summary: Get connector fault-injection retention policy and telemetry window status
@@ -981,6 +1003,9 @@ components:
         manifestEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        manifestVerifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
         deliveryTestEndpoint:
           type: string
           example: POST /api/v1/integrations/messaging/test
@@ -1124,6 +1149,9 @@ components:
         manifestEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        manifestVerifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
     MessagingFaultExportDiagnostics:
       type: object
       properties:
@@ -1136,6 +1164,9 @@ components:
         manifestEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        manifestVerifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
     MessagingFaultManifestDigest:
       type: object
       properties:
@@ -1203,9 +1234,125 @@ components:
         retentionEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/retention
+        verifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
         handoffGuide:
           type: string
           example: Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance
+    MessagingFaultManifestVerificationChecks:
+      type: object
+      properties:
+        versionMatch:
+          type: boolean
+          example: true
+        digestMatch:
+          type: boolean
+          example: true
+        signatureMatch:
+          type: boolean
+          example: true
+        signingConfigured:
+          type: boolean
+          example: true
+        signatureProvided:
+          type: boolean
+          example: true
+        signingSecretSource:
+          type: string
+          nullable: true
+          example: INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET
+    MessagingFaultManifestVerificationComputed:
+      type: object
+      properties:
+        digest:
+          $ref: "#/components/schemas/MessagingFaultManifestDigest"
+        signature:
+          type: string
+          nullable: true
+          example: sha256=6f7f2e8bd4fe2cf45ce09e86f1308ccf4f95ba4a77e64b7e0276312ecacda5f4
+        signatureAlgorithm:
+          type: string
+          example: hmac-sha256
+    MessagingFaultManifestVerificationProvided:
+      type: object
+      properties:
+        digest:
+          type: string
+          example: 091465fceec94e6f8f7f8ddbf6f6f13dca3f5a2498b8455eb72e4f08fd60f3a4
+        signature:
+          type: string
+          nullable: true
+          example: sha256=6f7f2e8bd4fe2cf45ce09e86f1308ccf4f95ba4a77e64b7e0276312ecacda5f4
+    MessagingFaultManifestVerificationDiagnostics:
+      type: object
+      properties:
+        manifestEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        exportEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/export
+        retentionEndpoint:
+          type: string
+          example: GET /api/v1/integrations/messaging/fault-injection/retention
+        handoffGuide:
+          type: string
+          example: Recompute digest and signature with shared secret before accepting external manifest evidence
+    MessagingFaultInjectionManifestVerifyRequest:
+      type: object
+      required:
+        - digest
+      properties:
+        tenantKey:
+          type: string
+          nullable: true
+        providerKey:
+          type: string
+          nullable: true
+        scenario:
+          type: string
+          nullable: true
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+        manifestVersion:
+          type: string
+          example: m5.7.v1
+        digest:
+          type: string
+          example: 091465fceec94e6f8f7f8ddbf6f6f13dca3f5a2498b8455eb72e4f08fd60f3a4
+        signature:
+          type: string
+          nullable: true
+          example: sha256=6f7f2e8bd4fe2cf45ce09e86f1308ccf4f95ba4a77e64b7e0276312ecacda5f4
+    MessagingFaultInjectionManifestVerifyResponse:
+      type: object
+      properties:
+        verifiedAt:
+          type: string
+          format: date-time
+        valid:
+          type: boolean
+          example: true
+        expectedManifestVersion:
+          type: string
+          example: m5.7.v1
+        providedManifestVersion:
+          type: string
+          example: m5.7.v1
+        checks:
+          $ref: "#/components/schemas/MessagingFaultManifestVerificationChecks"
+        provided:
+          $ref: "#/components/schemas/MessagingFaultManifestVerificationProvided"
+        computed:
+          $ref: "#/components/schemas/MessagingFaultManifestVerificationComputed"
+        evidence:
+          $ref: "#/components/schemas/MessagingFaultManifestEvidence"
+        diagnostics:
+          $ref: "#/components/schemas/MessagingFaultManifestVerificationDiagnostics"
     MessagingFaultInjectionManifestResponse:
       type: object
       properties:
@@ -1323,6 +1470,9 @@ components:
         manifestEndpoint:
           type: string
           example: GET /api/v1/integrations/messaging/fault-injection/manifest
+        manifestVerifyEndpoint:
+          type: string
+          example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
     MessagingFaultRetentionStatusResponse:
       type: object
       properties:

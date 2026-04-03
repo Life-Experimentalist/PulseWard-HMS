@@ -426,7 +426,9 @@ function getFaultEvidenceSigningMaterial() {
   var fallback = resolveSecretRef({
     secretKey: fallbackKey,
   });
-  var fallbackSecret = String(fallback.signingSecret || fallback.secret || fallback.raw || "").trim();
+  var fallbackSecret = String(
+    fallback.signingSecret || fallback.secret || fallback.raw || ""
+  ).trim();
 
   if (fallbackSecret) {
     return {
@@ -472,6 +474,17 @@ function buildFaultManifestPayload(filters, events, totalMatched) {
   };
 }
 
+function buildFaultManifestDigestPayload(manifestPayload) {
+  return {
+    filters: manifestPayload.filters,
+    totalMatched: manifestPayload.totalMatched,
+    returned: manifestPayload.returned,
+    summary: manifestPayload.summary,
+    retention: manifestPayload.retention,
+    eventDigests: manifestPayload.eventDigests,
+  };
+}
+
 function hasWebhookSigningSecret(parsedSecret) {
   if (!parsedSecret) {
     return false;
@@ -492,6 +505,15 @@ function normalizeWebhookSignatureInput(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function normalizeManifestDigestInput(value) {
+  var normalized = normalizeWebhookSignatureInput(value);
+  if (normalized.indexOf("sha256=") === 0) {
+    return normalized.slice(7);
+  }
+
+  return normalized;
 }
 
 function serializeWebhookPayload(payload) {
@@ -520,6 +542,23 @@ function buildWebhookSignature(payloadString, signingSecret) {
 function areWebhookSignaturesEqual(actualSignature, expectedSignature) {
   var actual = normalizeWebhookSignatureInput(actualSignature);
   var expected = normalizeWebhookSignatureInput(expectedSignature);
+
+  if (!actual || !expected) {
+    return false;
+  }
+
+  var actualBuffer = Buffer.from(actual, "utf8");
+  var expectedBuffer = Buffer.from(expected, "utf8");
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function areFaultManifestDigestsEqual(actualDigest, expectedDigest) {
+  var actual = normalizeManifestDigestInput(actualDigest);
+  var expected = normalizeManifestDigestInput(expectedDigest);
 
   if (!actual || !expected) {
     return false;
@@ -1023,6 +1062,7 @@ router.get("/integrations/messaging/fault-injection/simulate", function (req, re
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      manifestVerifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
       deliveryTestEndpoint: "POST /api/v1/integrations/messaging/test",
     },
   });
@@ -1062,6 +1102,7 @@ router.get("/integrations/messaging/fault-injection/events", function (req, res)
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       retentionApplyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      manifestVerifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
     },
     events: items,
   });
@@ -1113,6 +1154,7 @@ router.get("/integrations/messaging/fault-injection/export", function (req, res)
       eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      manifestVerifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
     },
     events: items,
   });
@@ -1141,13 +1183,15 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
     items,
     filtered.length
   );
-  var serializedPayload = JSON.stringify(payload);
+  var serializedPayload = JSON.stringify(buildFaultManifestDigestPayload(payload));
   var digestHex = crypto.createHash("sha256").update(serializedPayload, "utf8").digest("hex");
   var signing = getFaultEvidenceSigningMaterial();
 
   var signature = null;
   if (signing.configured) {
-    signature = "sha256=" + crypto.createHmac("sha256", signing.secret).update(digestHex, "utf8").digest("hex");
+    signature =
+      "sha256=" +
+      crypto.createHmac("sha256", signing.secret).update(digestHex, "utf8").digest("hex");
   }
 
   res.set("Cache-Control", "no-store");
@@ -1182,8 +1226,105 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       eventsEndpoint: "GET /api/v1/integrations/messaging/fault-injection/events",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
       handoffGuide:
         "Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance",
+    },
+  });
+});
+
+router.post("/integrations/messaging/fault-injection/manifest/verify", function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = String(payload.tenantKey || "").trim();
+  var providerKey = String(payload.providerKey || "")
+    .trim()
+    .toLowerCase();
+  var scenario = String(payload.scenario || "")
+    .trim()
+    .toLowerCase();
+  var limit = parseRetryInt(payload.limit, 100, 1, 1000);
+  var expectedManifestVersion = "m5.7.v1";
+  var manifestVersion = String(payload.manifestVersion || expectedManifestVersion).trim();
+  var providedDigest = normalizeManifestDigestInput(payload.digest);
+  var providedSignature = String(payload.signature || "").trim();
+
+  if (!providedDigest) {
+    res.status(400).json({
+      message: "digest is required",
+      code: "NOTIFICATION_FAULT_MANIFEST_DIGEST_REQUIRED",
+    });
+    return;
+  }
+
+  var filtered = collectFaultInjectionEvents(tenantKey, providerKey, scenario);
+  var items = filtered.slice(-limit);
+  var manifestPayload = buildFaultManifestPayload(
+    {
+      tenantKey: tenantKey,
+      providerKey: providerKey,
+      scenario: scenario,
+      limit: limit,
+    },
+    items,
+    filtered.length
+  );
+  var serializedPayload = JSON.stringify(buildFaultManifestDigestPayload(manifestPayload));
+  var computedDigest = crypto.createHash("sha256").update(serializedPayload, "utf8").digest("hex");
+  var signing = getFaultEvidenceSigningMaterial();
+  var expectedSignature = signing.configured
+    ? "sha256=" +
+      crypto.createHmac("sha256", signing.secret).update(computedDigest, "utf8").digest("hex")
+    : null;
+  var digestMatch = areFaultManifestDigestsEqual(providedDigest, computedDigest);
+  var signatureProvided = Boolean(providedSignature);
+  var signatureMatch = signing.configured
+    ? signatureProvided && areWebhookSignaturesEqual(providedSignature, expectedSignature)
+    : !signatureProvided;
+  var versionMatch = manifestVersion === expectedManifestVersion;
+  var valid = versionMatch && digestMatch && signatureMatch && signing.configured;
+
+  res.json({
+    verifiedAt: new Date().toISOString(),
+    valid: valid,
+    expectedManifestVersion: expectedManifestVersion,
+    providedManifestVersion: manifestVersion,
+    checks: {
+      versionMatch: versionMatch,
+      digestMatch: digestMatch,
+      signatureMatch: signatureMatch,
+      signingConfigured: signing.configured,
+      signatureProvided: signatureProvided,
+      signingSecretSource: signing.source,
+    },
+    provided: {
+      digest: providedDigest,
+      signature: signatureProvided ? providedSignature : null,
+    },
+    computed: {
+      digest: {
+        algorithm: "sha256",
+        value: computedDigest,
+        payloadBytes: Buffer.byteLength(serializedPayload, "utf8"),
+      },
+      signature: expectedSignature,
+      signatureAlgorithm: signing.configured ? "hmac-sha256" : "unsigned",
+    },
+    evidence: {
+      filters: manifestPayload.filters,
+      totalMatched: manifestPayload.totalMatched,
+      returned: manifestPayload.returned,
+      summary: manifestPayload.summary,
+      retention: manifestPayload.retention,
+      eventIds: manifestPayload.eventDigests.map(function (item) {
+        return item.eventId;
+      }),
+    },
+    diagnostics: {
+      manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
+      retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
+      handoffGuide:
+        "Recompute digest and signature with shared secret before accepting external manifest evidence",
     },
   });
 });
@@ -1209,6 +1350,7 @@ router.get("/integrations/messaging/fault-injection/retention", function (_req, 
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       applyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/retention/apply",
       manifestEndpoint: "GET /api/v1/integrations/messaging/fault-injection/manifest",
+      manifestVerifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
     },
   });
 });

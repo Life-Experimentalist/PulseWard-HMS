@@ -315,4 +315,6 @@ Exit criteria:
 38. M5.6 evidence checkpoint: regression coverage now validates export payloads (JSON/CSV), retention policy diagnostics, and retention apply guardrails.
 39. M5.7 completed: connector diagnostics now include signed evidence manifest output for cross-team incident drill handoff traceability.
 40. M5.7 evidence checkpoint: regression coverage now validates manifest digest/signature output and handoff diagnostics links.
-41. M5.8 active next slice: add manifest verification endpoint for zero-trust incident evidence validation workflows.
+41. M5.8 completed: connector diagnostics now include zero-trust manifest verification endpoint coverage for incident evidence acceptance workflows.
+42. M5.8 evidence checkpoint: regression coverage now validates manifest verification success, tampered-digest rejection, and required-digest guardrails.
+43. M5.9 active next slice: add signed handoff replay-defense controls (issued-at freshness and optional nonce correlation checks).

@@ -327,12 +327,75 @@ describe("notification webhook delivery diagnostics", () => {
       "GET /api/v1/integrations/messaging/fault-injection/export"
     );
 
-    const expectedSignature = `sha256=${createHmac(
-      "sha256",
-      "m5-7-evidence-signing-secret"
-    )
+    const expectedSignature = `sha256=${createHmac("sha256", "m5-7-evidence-signing-secret")
       .update(manifest.body.digest.value, "utf8")
       .digest("hex")}`;
     expect(manifest.body.signature).toBe(expectedSignature);
+    
+    const verified = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          digest: manifest.body.digest.value,
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(verified.status).toBe(200);
+    expect(verified.body.valid).toBe(true);
+    expect(verified.body.checks.versionMatch).toBe(true);
+    expect(verified.body.checks.digestMatch).toBe(true);
+    expect(verified.body.checks.signatureMatch).toBe(true);
+    expect(verified.body.checks.signingConfigured).toBe(true);
+    expect(verified.body.diagnostics.manifestEndpoint).toBe(
+      "GET /api/v1/integrations/messaging/fault-injection/manifest"
+    );
+
+    const tampered = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          digest: "sha256=0000000000000000000000000000000000000000000000000000000000000000",
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(tampered.status).toBe(200);
+    expect(tampered.body.valid).toBe(false);
+    expect(tampered.body.checks.digestMatch).toBe(false);
+
+    const missingDigest = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(missingDigest.status).toBe(400);
+    expect(missingDigest.body.code).toBe("NOTIFICATION_FAULT_MANIFEST_DIGEST_REQUIRED");
   });
 });

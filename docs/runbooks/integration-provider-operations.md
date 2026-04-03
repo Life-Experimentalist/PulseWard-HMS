@@ -13,6 +13,7 @@
 	- `GET /api/v1/integrations/messaging/retry-policy?tenantKey={tenantKey}&providerKey={providerKey}`
 	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&limit=10`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&limit=25`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify` (submit digest/signature from latest manifest)
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify` (sample payload + expected signature check)
 
@@ -31,6 +32,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format=json&limit=50`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify` (attach digest/signature from manifest response)
 
 ## Incident handling
 
@@ -54,6 +56,7 @@
 	- `GET /api/v1/integrations/messaging/fault-injection/events?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format={json|csv}`
 	- `GET /api/v1/integrations/messaging/fault-injection/manifest?tenantKey={tenantKey}&providerKey={providerKey}&scenario={scenario}`
+	- `POST /api/v1/integrations/messaging/fault-injection/manifest/verify`
 	- `GET /api/v1/integrations/messaging/fault-injection/retention`
 	- `POST /api/v1/integrations/messaging/fault-injection/retention/apply`
 	- `POST /api/v1/integrations/messaging/webhook/signature/verify`

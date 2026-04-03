@@ -162,6 +162,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Fault simulation/events/export/retention diagnostics now reference manifest generation endpoint for incident handoff continuity.
 - Regression tests cover signed-manifest generation, digest/signature response shape, and signature reproducibility checks.
 
+## M5.8 Manifest Verification Coverage
+
+- Notification runtime now exposes `POST /integrations/messaging/fault-injection/manifest/verify` for zero-trust manifest validation before incident handoff acceptance.
+- Verification responses now report version, digest, and signature checks with signing-source diagnostics for operator triage.
+- Manifest digest computation now uses deterministic canonical evidence fields to avoid timestamp-induced verification drift.
+- Regression tests cover verification success, tampered digest rejection, and required-digest guardrail behavior.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

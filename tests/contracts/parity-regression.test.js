@@ -822,6 +822,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot remainingEntries schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot alertLevel schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation currentEntries schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation maxEntries schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation utilizationPercent schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation remainingEntries schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -6286,6 +6301,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.remainingEntries type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot alertLevel type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?alertLevel:[\s\S]*?type:\s*)string/,
+          "$1integer",
+          "retention saturation trend snapshot alertLevel type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot alertLevel schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.alertLevel type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation currentEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturation:[\s\S]*?currentEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention saturation currentEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation currentEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturation.currentEntries type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation maxEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturation:[\s\S]*?maxEntries:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "retention saturation maxEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation maxEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturation.maxEntries type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation utilizationPercent type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturation:[\s\S]*?utilizationPercent:[\s\S]*?type:\s*)number/,
+          "$1integer",
+          "retention saturation utilizationPercent type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation utilizationPercent schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturation.utilizationPercent type expected number got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation remainingEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturation:[\s\S]*?remainingEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention saturation remainingEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturation remainingEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturation.remainingEntries type expected integer got string"
         );
       }
     );

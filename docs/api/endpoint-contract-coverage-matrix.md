@@ -1861,6 +1861,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.remainingEntries` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `remainingEntries` property type drifts from OpenAPI baseline.
 
+## M6.224 Retention-Saturation-Trend-Snapshot Alert-Level Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot alert-level anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.alertLevel` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `alertLevel` property type drifts from OpenAPI baseline.
+
+## M6.225 Retention-Saturation Current-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation current-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturation.currentEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation `currentEntries` property type drifts from OpenAPI baseline.
+
+## M6.226 Retention-Saturation Max-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation max-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturation.maxEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation `maxEntries` property type drifts from OpenAPI baseline.
+
+## M6.227 Retention-Saturation Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturation.utilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation `utilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.228 Retention-Saturation Remaining-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation remaining-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturation.remainingEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation `remainingEntries` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

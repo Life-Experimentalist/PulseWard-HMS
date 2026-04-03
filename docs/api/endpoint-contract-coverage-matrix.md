@@ -1200,6 +1200,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.acknowledgedWithinSlaCount` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `acknowledgedWithinSlaCount` property type drifts from OpenAPI baseline.
 
+## M6.132 Escalation-Acknowledgement-SLA-Summary Acknowledged-Breached-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary acknowledged-breached-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.acknowledgedBreachedCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `acknowledgedBreachedCount` property type drifts from OpenAPI baseline.
+
+## M6.133 Escalation-Acknowledgement-SLA-Summary Open-Breach-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary open-breach-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.openBreachCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `openBreachCount` property type drifts from OpenAPI baseline.
+
+## M6.134 Escalation-Acknowledgement-SLA-Summary Average-Acknowledgement-Seconds Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary average-acknowledgement-seconds anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.averageAcknowledgementSeconds` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `averageAcknowledgementSeconds` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

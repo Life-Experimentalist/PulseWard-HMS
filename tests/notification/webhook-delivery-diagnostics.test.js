@@ -836,10 +836,22 @@ describe("notification webhook delivery diagnostics", () => {
     expect(anomalyRetentionStatus.body.telemetry.anomalyTracking.statePersistence).toBe(
       "memory-only"
     );
-    expect(typeof anomalyRetentionStatus.body.retention.escalationExportPolicy).toBe("object");
+    expect(typeof anomalyRetentionStatus.body.telemetry.saturation.utilizationPercent).toBe(
+      "number"
+    );
     expect(
-      anomalyRetentionStatus.body.diagnostics.retentionEscalationExportEndpointTemplate
-    ).toBe(
+      ["normal", "warning", "critical"].includes(
+        anomalyRetentionStatus.body.telemetry.saturation.alertLevel
+      )
+    ).toBe(true);
+    expect(typeof anomalyRetentionStatus.body.telemetry.escalation.acknowledgementSla).toBe(
+      "object"
+    );
+    expect(
+      typeof anomalyRetentionStatus.body.telemetry.escalation.acknowledgementSla.openBreachCount
+    ).toBe("number");
+    expect(typeof anomalyRetentionStatus.body.retention.escalationExportPolicy).toBe("object");
+    expect(anomalyRetentionStatus.body.diagnostics.retentionEscalationExportEndpointTemplate).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export"
     );
     expect(anomalyRetentionStatus.body.diagnostics.retentionAnomalyTriageEndpointTemplate).toBe(
@@ -854,6 +866,8 @@ describe("notification webhook delivery diagnostics", () => {
     );
 
     expect(anomalyTrendStatus.status).toBe(200);
+    expect(typeof anomalyTrendStatus.body.summary.returned).toBe("number");
+    expect(typeof anomalyTrendStatus.body.summary.latestAlertLevel).toBe("string");
     expect(Array.isArray(anomalyTrendStatus.body.summary.anomalies)).toBe(true);
     expect(anomalyTrendStatus.body.summary.anomalies.length).toBeGreaterThan(0);
     expect(["warning", "critical"]).toContain(
@@ -1034,6 +1048,10 @@ describe("notification webhook delivery diagnostics", () => {
     );
 
     expect(escalationExport.status).toBe(200);
+    expect(typeof escalationExport.body.totalTracked).toBe("number");
+    expect(typeof escalationExport.body.totalMatched).toBe("number");
+    expect(typeof escalationExport.body.returned).toBe("number");
+    expect(typeof escalationExport.body.policy.maxExportRows).toBe("number");
     expect(Array.isArray(escalationExport.body.escalations)).toBe(true);
     expect(escalationExport.body.diagnostics.retentionEscalationExportEndpointTemplate).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export"

@@ -2309,13 +2309,7 @@ components:
         status:
           type: string
           enum:
-            [
-              not-applicable,
-              within-sla,
-              breached,
-              acknowledged-within-sla,
-              acknowledged-breached,
-            ]
+            [not-applicable, within-sla, breached, acknowledged-within-sla, acknowledged-breached]
           example: within-sla
         targetSeconds:
           type: integer
@@ -2857,13 +2851,7 @@ components:
         acknowledgementSlaStatus:
           type: string
           enum:
-            [
-              not-applicable,
-              within-sla,
-              breached,
-              acknowledged-within-sla,
-              acknowledged-breached,
-            ]
+            [not-applicable, within-sla, breached, acknowledged-within-sla, acknowledged-breached]
           example: within-sla
         acknowledgementSlaTargetSeconds:
           type: integer

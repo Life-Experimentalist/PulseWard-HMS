@@ -6,6 +6,7 @@ Framework-based operations control surface built with React + Vite.
 
 - Service-health and throughput KPI presentation
 - Incident queue and command panel experience
+- Live connector reliability telemetry for replay-attempt saturation, anomaly escalation, and acknowledgement-SLA breach tracking
 - Compile-first static deployment for faster startup
 
 ## Development
@@ -18,6 +19,26 @@ npm run start:operations:dev
 ```
 
 Default Vite dev host runs with automatic port selection near `4312`.
+
+### Local Telemetry Configuration
+
+The dashboard reads notification reliability telemetry from existing notification-service APIs.
+
+By default in dev:
+
+- Frontend requests use `/api/v1/*`
+- Vite proxies `/api/v1` to `http://127.0.0.1:8088`
+
+Optional overrides:
+
+- `VITE_NOTIFICATION_API_BASE_URL` controls the browser base URL used by the app (default `/api/v1`)
+- `VITE_NOTIFICATION_PROXY_TARGET` controls the Vite dev proxy target (default `http://127.0.0.1:8088`)
+
+Required backend endpoints for live telemetry:
+
+- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention`
+- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend`
+- `GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`
 
 ## Production-Fast Start
 

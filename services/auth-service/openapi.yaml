@@ -505,6 +505,131 @@ paths:
               schema:
                 $ref: "#/components/schemas/AbhaOperationalReadinessResponse"
 
+  /platform/abha/transactions/read:
+    post:
+      summary: Execute ABHA transactional read with consent and fallback controls
+      tags:
+        - Platform Domains
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbhaTransactionalRequest"
+      responses:
+        "200":
+          description: Transactional read completed or simulated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "202":
+          description: ABHA fallback path engaged for transactional read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "403":
+          description: Consent is required before ABHA transactional reads
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "502":
+          description: ABHA transactional read failed against gateway
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+
+  /platform/abha/transactions/write:
+    post:
+      summary: Execute ABHA transactional write with consent and fallback controls
+      tags:
+        - Platform Domains
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbhaTransactionalRequest"
+      responses:
+        "200":
+          description: Transactional write completed or simulated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "202":
+          description: ABHA fallback path engaged for transactional write
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "403":
+          description: Consent is required before ABHA transactional writes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+        "502":
+          description: ABHA transactional write failed against gateway
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionalResponse"
+
+  /platform/abha/transactions/evidence:
+    get:
+      summary: Retrieve ABHA transactional evidence feed for consent and fallback audits
+      tags:
+        - Platform Domains
+      parameters:
+        - name: tenantKey
+          in: query
+          required: false
+          schema:
+            type: string
+            default: all
+        - name: operation
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - read
+              - write
+            default: all
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - simulated
+              - completed
+              - fallback
+              - blocked
+              - failed
+            default: all
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: ABHA transactional evidence payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbhaTransactionEvidenceResponse"
+
   /admin/settings/storage:
     get:
       summary: Get admin settings storage metadata
@@ -1555,6 +1680,331 @@ components:
           $ref: "#/components/schemas/AbhaOperationalReadinessDiagnostics"
         runbook:
           $ref: "#/components/schemas/AbhaOperationalReadinessRunbook"
+    AbhaTransactionConsent:
+      type: object
+      properties:
+        granted:
+          type: boolean
+          example: true
+        consentId:
+          type: string
+          nullable: true
+          example: consent-citycare-20260402
+        purpose:
+          type: string
+          nullable: true
+          example: opd-followup-review
+    AbhaTransactionalRequest:
+      type: object
+      properties:
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        correlationId:
+          type: string
+          nullable: true
+          example: 3a9c26ff-e339-4c9d-aee4-113f5a6f4e3f
+        dryRun:
+          type: boolean
+          default: true
+          example: true
+        fallbackScenario:
+          type: string
+          enum:
+            - health-check-derived
+            - gateway-timeout
+            - consent-denied
+            - happy-path
+          default: health-check-derived
+          example: happy-path
+        resourceType:
+          type: string
+          example: health-record
+        resourceId:
+          type: string
+          nullable: true
+          example: hr-1001
+        consent:
+          $ref: "#/components/schemas/AbhaTransactionConsent"
+        payload:
+          type: object
+          additionalProperties: true
+          example:
+            summary: Follow-up BP review
+            clinicianId: cln-42
+      required:
+        - consent
+    AbhaTransactionalAbhaState:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        configured:
+          type: boolean
+          example: true
+        primaryPathEligible:
+          type: boolean
+          example: true
+        gatewayStatusCode:
+          type: integer
+          nullable: true
+          example: 200
+    AbhaTransactionalRequestMeta:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          example: health-record
+        resourceId:
+          type: string
+          nullable: true
+          example: hr-1001
+        dataKeyCount:
+          type: integer
+          example: 2
+        dataKeys:
+          type: array
+          items:
+            type: string
+          example:
+            - clinicianId
+            - summary
+    AbhaTransactionalGatewaySummary:
+      type: object
+      properties:
+        received:
+          type: boolean
+          example: true
+        responseType:
+          type: string
+          example: object
+        keys:
+          type: array
+          items:
+            type: string
+          example:
+            - status
+            - transactionId
+        acknowledgementId:
+          type: string
+          nullable: true
+          example: abha-txn-2001
+        status:
+          type: string
+          nullable: true
+          example: accepted
+    AbhaTransactionalResult:
+      type: object
+      properties:
+        path:
+          type: string
+          example: abha-dry-run
+        reason:
+          type: string
+          example: Dry-run mode executed without live gateway write
+        gateway:
+          $ref: "#/components/schemas/AbhaTransactionalGatewaySummary"
+    AbhaTransactionalResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          example: b23c95f1-2f11-486b-9dd7-56ea8f49a0b7
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        operation:
+          type: string
+          enum:
+            - read
+            - write
+          example: read
+        status:
+          type: string
+          enum:
+            - simulated
+            - completed
+            - fallback
+            - blocked
+            - failed
+          example: simulated
+        dryRun:
+          type: boolean
+          example: true
+        mode:
+          type: string
+          example: sandbox
+        correlationId:
+          type: string
+          example: 3a9c26ff-e339-4c9d-aee4-113f5a6f4e3f
+        consent:
+          type: object
+          properties:
+            granted:
+              type: boolean
+              example: true
+            consentRef:
+              type: string
+              nullable: true
+              example: consent-citycare-20260402
+        abha:
+          $ref: "#/components/schemas/AbhaTransactionalAbhaState"
+        requestMeta:
+          $ref: "#/components/schemas/AbhaTransactionalRequestMeta"
+        result:
+          $ref: "#/components/schemas/AbhaTransactionalResult"
+        decision:
+          allOf:
+            - $ref: "#/components/schemas/AbhaFallbackDecisionEvent"
+          nullable: true
+        error:
+          type: string
+          nullable: true
+          example: ABHA_CONSENT_REQUIRED
+    AbhaTransactionEvidenceEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        recordedAt:
+          type: string
+          format: date-time
+        tenantKey:
+          type: string
+          example: citycare-hospital
+        operation:
+          type: string
+          enum:
+            - read
+            - write
+          example: read
+        status:
+          type: string
+          enum:
+            - simulated
+            - completed
+            - fallback
+            - blocked
+            - failed
+          example: completed
+        dryRun:
+          type: boolean
+          example: false
+        mode:
+          type: string
+          example: sandbox
+        consentGranted:
+          type: boolean
+          example: true
+        consentRef:
+          type: string
+          nullable: true
+          example: consent-citycare-20260402
+        fallbackUsed:
+          type: boolean
+          example: false
+        correlationId:
+          type: string
+          nullable: true
+          example: 3a9c26ff-e339-4c9d-aee4-113f5a6f4e3f
+        gatewayStatusCode:
+          type: integer
+          example: 200
+        requestMeta:
+          $ref: "#/components/schemas/AbhaTransactionalRequestMeta"
+        error:
+          type: string
+          nullable: true
+          example: ABHA_GATEWAY_TRANSACTION_FAILED
+    AbhaTransactionEvidenceSummary:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          example: 12
+        simulatedCount:
+          type: integer
+          example: 7
+        completedCount:
+          type: integer
+          example: 2
+        fallbackCount:
+          type: integer
+          example: 2
+        blockedCount:
+          type: integer
+          example: 1
+        failedCount:
+          type: integer
+          example: 0
+        readCount:
+          type: integer
+          example: 8
+        writeCount:
+          type: integer
+          example: 4
+        lastRecordedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AbhaTransactionEvidenceAutomation:
+      type: object
+      properties:
+        captureHint:
+          type: string
+          example: Attach consent-aware transaction evidence and fallback metadata to ABHA audit packets
+        relatedEndpoints:
+          type: object
+          properties:
+            read:
+              type: string
+              example: POST /api/v1/platform/abha/transactions/read
+            write:
+              type: string
+              example: POST /api/v1/platform/abha/transactions/write
+            fallbackTelemetry:
+              type: string
+              example: GET /api/v1/platform/abha/fallback-decision/telemetry
+    AbhaTransactionEvidenceResponse:
+      type: object
+      properties:
+        totalRecorded:
+          type: integer
+          example: 18
+        returned:
+          type: integer
+          example: 10
+        tenantKeyFilter:
+          type: string
+          example: all
+        operationFilter:
+          type: string
+          enum:
+            - all
+            - read
+            - write
+          example: all
+        statusFilter:
+          type: string
+          enum:
+            - all
+            - simulated
+            - completed
+            - fallback
+            - blocked
+            - failed
+          example: all
+        summary:
+          $ref: "#/components/schemas/AbhaTransactionEvidenceSummary"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbhaTransactionEvidenceEvent"
+        automation:
+          $ref: "#/components/schemas/AbhaTransactionEvidenceAutomation"
     AdminSettingsStorageResponse:
       type: object
       properties:

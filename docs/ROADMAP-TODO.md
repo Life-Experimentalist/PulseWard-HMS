@@ -340,3 +340,8 @@ Exit criteria:
 63. M5.19 completed: replay-attempt anomaly escalation now includes acknowledgement SLA tracking and dedicated escalation export automation for operator handoff.
 64. M5.19 evidence checkpoint: regression coverage now validates acknowledgement SLA fields, escalation export payloads (JSON/CSV), and invalid export-filter guardrails.
 65. Tooling reliability checkpoint completed: root `tsconfig.json` now powers `npm run build:types`, compose warning noise is removed, and demo scripts now fail-fast with Docker engine readiness guidance.
+66. M6.1 completed: operations-dashboard now consumes live connector reliability telemetry for retention saturation, anomaly trends, and escalation SLA breach exports.
+67. M6.1 evidence checkpoint: dashboard telemetry dependencies are locked by notification diagnostics regression invariants and local proxy/startup guidance in app docs.
+68. Module-5 review checkpoint: M5 scope is broad and valid, but reporting should be grouped as `M5-A` adapters, `M5-B` evidence trust chain, `M5-C` replay forensics telemetry, and `M5-D` anomaly/escalation/SLA handoff to avoid unnecessary micro-slice fragmentation.
+69. M5.20 completed: auth-service now provides consent-aware ABHA transactional read/write connector routes with dry-run defaults, optional live gateway mode, and deterministic fallback routing.
+70. M5.20 evidence checkpoint: regression and contract coverage now validate ABHA transaction consent blocking, fallback-path execution, simulated read/write behavior, and transactional evidence telemetry exports.

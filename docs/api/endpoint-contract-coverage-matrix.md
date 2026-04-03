@@ -247,6 +247,28 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Retention apply controls now accept escalation export policy updates (`escalationExportPolicy`) and report policy-change metadata in response payloads.
 - Regression tests cover SLA field presence, escalation export JSON/CSV behavior, and invalid export-filter guardrails.
 
+## M5.20 ABHA Transactional Connector Completion Coverage
+
+- Auth runtime now exposes `POST /platform/abha/transactions/read` and `POST /platform/abha/transactions/write` with consent-required guardrails and deterministic fallback behavior.
+- Transaction handlers now support safe dry-run defaults, optional live gateway execution (`dryRun=false`), and health-check-derived fallback routing for at-risk ABHA states.
+- Auth runtime now exposes `GET /platform/abha/transactions/evidence` for consent, fallback, and transactional-outcome audit telemetry.
+- Regression tests cover consent-required blocking, fallback-path behavior, simulated read/write paths, and transactional evidence query semantics.
+
+## M6.1 Operations Dashboard Connector Reliability Surface Coverage
+
+- Operations dashboard now consumes existing notification telemetry endpoints for retention saturation, anomaly trend state, and escalation SLA breach exports.
+- Frontend telemetry dependencies are protected by backend invariants in `tests/notification/webhook-delivery-diagnostics.test.js` to reduce UI contract drift risk.
+- Local developer flow now includes Vite proxy guidance and environment override documentation for live telemetry bootstrap.
+
+## M5 Reporting Consolidation Guidance
+
+- M5 delivery was broad and valid but became too granular in reporting.
+- Recommended grouped reporting labels:
+	- `M5-A` adapters and readiness (`M5.1-M5.4`)
+	- `M5-B` fault evidence trust chain (`M5.5-M5.9`)
+	- `M5-C` replay forensics and retention telemetry (`M5.10-M5.15`)
+	- `M5-D` anomaly lifecycle, escalation, SLA, and handoff export (`M5.16-M5.19`)
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -23,6 +23,25 @@ Required outcomes:
 - Unit and regression tests pass.
 - Contract parity reports no runtime/spec drift.
 
+## Gate Configuration Map
+
+| Gate Command                          | Primary Config Source                                            |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `npm run lint`                        | `.eslintrc*` in repo root (and service overrides where present)  |
+| `npm run format:check`                | `.prettierrc*` in repo root                                      |
+| `npm run test:routes`                 | Route module entrypoints loaded via `package.json` script        |
+| `npm run test`                        | `jest.config.cjs`                                                |
+| `npm run contracts:check -- --strict` | `scripts/check-contract-coverage.mjs` plus service OpenAPI specs |
+| `npm run build:types`                 | `tsconfig.json`                                                  |
+
+TypeScript config troubleshooting:
+
+```powershell
+npm run build:types:show-config
+```
+
+Use resolved config output to verify include/exclude behavior when local and CI typecheck results differ.
+
 ## Integration Gate (Required for Service-Integration Changes)
 
 ```powershell

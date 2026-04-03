@@ -2,6 +2,7 @@ const { WhatsAppCloudApiProvider } = require("./whatsapp-cloud-api");
 const { TelegramBotProvider } = require("./telegram-bot");
 const { GenericWebhookMessagingProvider } = require("./generic-webhook");
 const { EmailSmtpProvider } = require("./email-smtp");
+const { SmsGatewayProvider } = require("./sms-gateway");
 
 function createMessagingProvider(providerConfig) {
   switch (providerConfig.key) {
@@ -13,6 +14,8 @@ function createMessagingProvider(providerConfig) {
       return new GenericWebhookMessagingProvider(providerConfig);
     case "email-smtp":
       return new EmailSmtpProvider(providerConfig);
+    case "sms-gateway":
+      return new SmsGatewayProvider(providerConfig);
     default:
       throw new Error(`Unsupported messaging provider: ${providerConfig.key}`);
   }

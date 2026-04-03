@@ -846,6 +846,14 @@ components:
           type: string
           format: date-time
           example: "2026-04-02T09:30:00Z"
+        dryRun:
+          type: boolean
+          default: true
+          example: true
+        credentialsOverride:
+          type: object
+          nullable: true
+          additionalProperties: true
     CalendarProviderTestResponse:
       type: object
       properties:

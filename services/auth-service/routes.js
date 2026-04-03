@@ -22,6 +22,8 @@ var abhaHealthCheckEvents = [];
 var maxAbhaHealthCheckEvents = 200;
 var abhaFallbackDecisionEvents = [];
 var maxAbhaFallbackDecisionEvents = 200;
+var abhaTransactionEvents = [];
+var maxAbhaTransactionEvents = 300;
 var roles = ["admin", "doctor", "nurse", "patient", "frontdesk", "operations"];
 var workflowRoleMatrix = {
   "patient.profile.view": ["admin", "doctor", "nurse", "patient", "frontdesk"],
@@ -343,6 +345,526 @@ function summarizeAbhaFallbackDecisionEvents(events) {
     incidentCount: incidentCount,
     lastRecordedAt: events.length > 0 ? events[events.length - 1].recordedAt : null,
   };
+}
+
+function getAbhaGatewayPath(operation) {
+  if (operation === "write") {
+    return process.env.ABHA_TRANSACTION_WRITE_PATH || "/v1/records/write";
+  }
+
+  return process.env.ABHA_TRANSACTION_READ_PATH || "/v1/records/read";
+}
+
+function buildAbhaTransactionRequestMeta(payload) {
+  var resourceType = String(payload.resourceType || "health-record")
+    .trim()
+    .toLowerCase();
+  var resourceId = String(payload.resourceId || "").trim();
+  var bodyPayload = payload.payload;
+  var keys = [];
+
+  if (bodyPayload && typeof bodyPayload === "object" && !Array.isArray(bodyPayload)) {
+    keys = Object.keys(bodyPayload)
+      .filter(function (key) {
+        return Boolean(String(key || "").trim());
+      })
+      .sort();
+  }
+
+  return {
+    resourceType: resourceType || "health-record",
+    resourceId: resourceId || null,
+    dataKeyCount: keys.length,
+    dataKeys: keys.slice(0, 20),
+  };
+}
+
+function buildAbhaGatewayResponseSummary(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return {
+      received: Boolean(result),
+      responseType: typeof result,
+      keys: [],
+      acknowledgementId: null,
+      status: null,
+    };
+  }
+
+  var keys = Object.keys(result).sort();
+
+  return {
+    received: true,
+    responseType: "object",
+    keys: keys.slice(0, 20),
+    acknowledgementId: result.transactionId || result.ackId || result.requestId || null,
+    status: result.status || null,
+  };
+}
+
+function recordAbhaTransactionEvent(entry) {
+  var event = {
+    eventId: randomUUID(),
+    recordedAt: new Date().toISOString(),
+    tenantKey: entry.tenantKey || "default",
+    operation: entry.operation || "read",
+    status: entry.status || "simulated",
+    dryRun: Boolean(entry.dryRun),
+    mode: entry.mode || process.env.ABHA_ENVIRONMENT || "sandbox",
+    consentGranted: Boolean(entry.consentGranted),
+    consentRef: entry.consentRef || null,
+    fallbackUsed: Boolean(entry.fallbackUsed),
+    correlationId: entry.correlationId || null,
+    gatewayStatusCode: Number(entry.gatewayStatusCode) || 0,
+    requestMeta: entry.requestMeta || {
+      resourceType: "health-record",
+      resourceId: null,
+      dataKeyCount: 0,
+      dataKeys: [],
+    },
+    error: entry.error || null,
+  };
+
+  abhaTransactionEvents.push(event);
+  if (abhaTransactionEvents.length > maxAbhaTransactionEvents) {
+    abhaTransactionEvents.shift();
+  }
+
+  return event;
+}
+
+function summarizeAbhaTransactionEvents(events) {
+  var summary = {
+    totalCount: events.length,
+    simulatedCount: 0,
+    completedCount: 0,
+    fallbackCount: 0,
+    blockedCount: 0,
+    failedCount: 0,
+    readCount: 0,
+    writeCount: 0,
+    lastRecordedAt: events.length > 0 ? events[events.length - 1].recordedAt : null,
+  };
+
+  events.forEach(function (event) {
+    if (event.operation === "write") {
+      summary.writeCount += 1;
+    } else {
+      summary.readCount += 1;
+    }
+
+    if (event.status === "completed") {
+      summary.completedCount += 1;
+      return;
+    }
+
+    if (event.status === "fallback") {
+      summary.fallbackCount += 1;
+      return;
+    }
+
+    if (event.status === "blocked") {
+      summary.blockedCount += 1;
+      return;
+    }
+
+    if (event.status === "failed") {
+      summary.failedCount += 1;
+      return;
+    }
+
+    summary.simulatedCount += 1;
+  });
+
+  return summary;
+}
+
+async function executeAbhaTransaction(req, res, operation) {
+  var payload = req.body || {};
+  var tenantKey = String(payload.tenantKey || "default").trim() || "default";
+  var mode = process.env.ABHA_ENVIRONMENT || "sandbox";
+  var dryRun = payload.dryRun !== false;
+  var fallbackScenario = String(payload.fallbackScenario || "health-check-derived")
+    .trim()
+    .toLowerCase();
+  if (
+    ["health-check-derived", "gateway-timeout", "consent-denied", "happy-path"].indexOf(
+      fallbackScenario
+    ) < 0
+  ) {
+    fallbackScenario = "health-check-derived";
+  }
+
+  var consent = payload.consent || {};
+  var consentGranted = consent.granted === true;
+  var consentRef = String(consent.consentId || consent.referenceId || "").trim() || null;
+  var correlationId = String(payload.correlationId || "").trim() || randomUUID();
+  var requestMeta = buildAbhaTransactionRequestMeta(payload);
+  var enabled = process.env.ABHA_ENABLED === "true";
+  var configured =
+    hasRealConfigValue(process.env.ABHA_CLIENT_ID) &&
+    hasRealConfigValue(process.env.ABHA_CLIENT_SECRET) &&
+    hasRealConfigValue(process.env.ABHA_GATEWAY_BASE_URL);
+  var latestHealthEvent =
+    abhaHealthCheckEvents.length > 0
+      ? abhaHealthCheckEvents[abhaHealthCheckEvents.length - 1]
+      : null;
+
+  if (!consentGranted) {
+    var blockedEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "blocked",
+      dryRun: dryRun,
+      mode: mode,
+      consentGranted: false,
+      consentRef: consentRef,
+      fallbackUsed: true,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      error: "ABHA_CONSENT_REQUIRED",
+    });
+
+    res.status(403).json({
+      transactionId: blockedEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "blocked",
+      dryRun: dryRun,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: false,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: false,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "baseline-compliance",
+        reason: "ABHA consent must be granted before transactional operations",
+      },
+      error: "ABHA_CONSENT_REQUIRED",
+    });
+    return;
+  }
+
+  var decision = buildAbhaFallbackDecision(fallbackScenario, enabled, configured, latestHealthEvent);
+  if (decision.shouldFallback) {
+    var fallbackDecision = recordAbhaFallbackDecisionEvent({
+      tenantKey: tenantKey,
+      scenario: fallbackScenario,
+      decisionCode: decision.decisionCode,
+      shouldFallback: decision.shouldFallback,
+      reason: decision.reason,
+      action: decision.action,
+      latestHealthCheck: latestHealthEvent
+        ? {
+            checkId: latestHealthEvent.checkId,
+            checkedAt: latestHealthEvent.checkedAt,
+            reachable: latestHealthEvent.reachable,
+            statusCode: latestHealthEvent.statusCode,
+          }
+        : null,
+    });
+
+    var fallbackEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "fallback",
+      dryRun: dryRun,
+      mode: mode,
+      consentGranted: true,
+      consentRef: consentRef,
+      fallbackUsed: true,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      error: decision.decisionCode,
+    });
+
+    res.status(202).json({
+      transactionId: fallbackEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "fallback",
+      dryRun: dryRun,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: true,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: false,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "baseline-compliance",
+        reason: decision.reason,
+      },
+      decision: fallbackDecision,
+      error: decision.decisionCode,
+    });
+    return;
+  }
+
+  if (dryRun) {
+    var simulatedEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "simulated",
+      dryRun: true,
+      mode: mode,
+      consentGranted: true,
+      consentRef: consentRef,
+      fallbackUsed: false,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      gatewayStatusCode: 0,
+    });
+
+    res.json({
+      transactionId: simulatedEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "simulated",
+      dryRun: true,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: true,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: true,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "abha-dry-run",
+        reason: "Dry-run mode executed without live gateway write",
+      },
+      error: null,
+    });
+    return;
+  }
+
+  var gatewayBaseUrl = (process.env.ABHA_GATEWAY_BASE_URL || "").trim();
+  var gatewayPath = getAbhaGatewayPath(operation);
+  var gatewayUrl = "";
+  try {
+    gatewayUrl = new URL(gatewayPath, gatewayBaseUrl).toString();
+  } catch (_error) {
+    var gatewayUrlEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "failed",
+      dryRun: false,
+      mode: mode,
+      consentGranted: true,
+      consentRef: consentRef,
+      fallbackUsed: false,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      gatewayStatusCode: 0,
+      error: "ABHA_GATEWAY_URL_INVALID",
+    });
+
+    res.status(502).json({
+      transactionId: gatewayUrlEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "failed",
+      dryRun: false,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: true,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: true,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "abha-live",
+        reason: "ABHA gateway URL could not be resolved",
+      },
+      error: "ABHA_GATEWAY_URL_INVALID",
+    });
+    return;
+  }
+
+  try {
+    var response = await fetch(gatewayUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json,text/plain,*/*",
+        "x-abha-client-id": process.env.ABHA_CLIENT_ID || "",
+        "x-abha-client-secret": process.env.ABHA_CLIENT_SECRET || "",
+        "x-abha-correlation-id": correlationId,
+        "x-abha-environment": mode,
+      },
+      body: JSON.stringify({
+        tenantKey: tenantKey,
+        operation: operation,
+        consent: {
+          granted: true,
+          consentId: consentRef,
+          purpose: String(consent.purpose || "").trim() || null,
+        },
+        resourceType: requestMeta.resourceType,
+        resourceId: requestMeta.resourceId,
+        payload: payload.payload && typeof payload.payload === "object" ? payload.payload : {},
+      }),
+    });
+
+    var responseText = await response.text();
+    var gatewayResponse = null;
+    try {
+      gatewayResponse = responseText ? JSON.parse(responseText) : null;
+    } catch (_parseError) {
+      gatewayResponse = {
+        responseLength: responseText ? responseText.length : 0,
+      };
+    }
+    var gatewaySummary = buildAbhaGatewayResponseSummary(gatewayResponse);
+
+    if (!response.ok) {
+      var failedEvent = recordAbhaTransactionEvent({
+        tenantKey: tenantKey,
+        operation: operation,
+        status: "failed",
+        dryRun: false,
+        mode: mode,
+        consentGranted: true,
+        consentRef: consentRef,
+        fallbackUsed: false,
+        correlationId: correlationId,
+        requestMeta: requestMeta,
+        gatewayStatusCode: response.status,
+        error: "ABHA_GATEWAY_TRANSACTION_FAILED",
+      });
+
+      res.status(502).json({
+        transactionId: failedEvent.eventId,
+        tenantKey: tenantKey,
+        operation: operation,
+        status: "failed",
+        dryRun: false,
+        mode: mode,
+        correlationId: correlationId,
+        consent: {
+          granted: true,
+          consentRef: consentRef,
+        },
+        abha: {
+          enabled: enabled,
+          configured: configured,
+          primaryPathEligible: true,
+          gatewayStatusCode: response.status,
+        },
+        requestMeta: requestMeta,
+        result: {
+          path: "abha-live",
+          reason: "ABHA gateway transaction returned non-2xx response",
+          gateway: gatewaySummary,
+        },
+        error: "ABHA_GATEWAY_TRANSACTION_FAILED",
+      });
+      return;
+    }
+
+    var completedEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "completed",
+      dryRun: false,
+      mode: mode,
+      consentGranted: true,
+      consentRef: consentRef,
+      fallbackUsed: false,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      gatewayStatusCode: response.status,
+    });
+
+    res.json({
+      transactionId: completedEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "completed",
+      dryRun: false,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: true,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: true,
+        gatewayStatusCode: response.status,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "abha-live",
+        reason: "ABHA gateway transaction completed",
+        gateway: gatewaySummary,
+      },
+      error: null,
+    });
+  } catch (error) {
+    var errorEvent = recordAbhaTransactionEvent({
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "failed",
+      dryRun: false,
+      mode: mode,
+      consentGranted: true,
+      consentRef: consentRef,
+      fallbackUsed: false,
+      correlationId: correlationId,
+      requestMeta: requestMeta,
+      gatewayStatusCode: 0,
+      error: error && error.message ? error.message : "Unknown ABHA transaction error",
+    });
+
+    res.status(502).json({
+      transactionId: errorEvent.eventId,
+      tenantKey: tenantKey,
+      operation: operation,
+      status: "failed",
+      dryRun: false,
+      mode: mode,
+      correlationId: correlationId,
+      consent: {
+        granted: true,
+        consentRef: consentRef,
+      },
+      abha: {
+        enabled: enabled,
+        configured: configured,
+        primaryPathEligible: true,
+        gatewayStatusCode: 0,
+      },
+      requestMeta: requestMeta,
+      result: {
+        path: "abha-live",
+        reason: "ABHA gateway transaction request failed",
+      },
+      error: error && error.message ? error.message : "Unknown ABHA transaction error",
+    });
+  }
 }
 
 function getWorkflowAllowedRoles(workflowKey) {
@@ -1310,7 +1832,10 @@ router.get("/platform/abha/fallback-decision/telemetry", function (req, res) {
   var scenario = String(req.query.scenario || "health-check-derived")
     .trim()
     .toLowerCase();
-  if (["health-check-derived", "gateway-timeout", "consent-denied", "happy-path"].indexOf(scenario) < 0) {
+  if (
+    ["health-check-derived", "gateway-timeout", "consent-denied", "happy-path"].indexOf(scenario) <
+    0
+  ) {
     scenario = "health-check-derived";
   }
 
@@ -1320,7 +1845,9 @@ router.get("/platform/abha/fallback-decision/telemetry", function (req, res) {
     hasRealConfigValue(process.env.ABHA_CLIENT_SECRET) &&
     hasRealConfigValue(process.env.ABHA_GATEWAY_BASE_URL);
   var latestHealthEvent =
-    abhaHealthCheckEvents.length > 0 ? abhaHealthCheckEvents[abhaHealthCheckEvents.length - 1] : null;
+    abhaHealthCheckEvents.length > 0
+      ? abhaHealthCheckEvents[abhaHealthCheckEvents.length - 1]
+      : null;
   var decision = buildAbhaFallbackDecision(scenario, enabled, configured, latestHealthEvent);
   var recorded = recordAbhaFallbackDecisionEvent({
     tenantKey: tenantKey,
@@ -1411,6 +1938,71 @@ router.get("/platform/abha/operational-readiness", function (_req, res) {
         "Switch to baseline compliance workflow for impacted journeys",
         "Re-run ABHA config and gateway diagnostics after remediation",
       ],
+    },
+  });
+});
+
+router.post("/platform/abha/transactions/read", async function (req, res) {
+  await executeAbhaTransaction(req, res, "read");
+});
+
+router.post("/platform/abha/transactions/write", async function (req, res) {
+  await executeAbhaTransaction(req, res, "write");
+});
+
+router.get("/platform/abha/transactions/evidence", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var operation = String(req.query.operation || "all")
+    .trim()
+    .toLowerCase();
+  if (["all", "read", "write"].indexOf(operation) < 0) {
+    operation = "all";
+  }
+
+  var status = String(req.query.status || "all")
+    .trim()
+    .toLowerCase();
+  if (["all", "simulated", "completed", "fallback", "blocked", "failed"].indexOf(status) < 0) {
+    status = "all";
+  }
+
+  var limit = Number(req.query.limit || 20);
+  var boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 20;
+
+  var filtered = abhaTransactionEvents.filter(function (event) {
+    if (tenantKey && event.tenantKey !== tenantKey) {
+      return false;
+    }
+
+    if (operation !== "all" && event.operation !== operation) {
+      return false;
+    }
+
+    if (status !== "all" && event.status !== status) {
+      return false;
+    }
+
+    return true;
+  });
+
+  var items = filtered.slice(-boundedLimit).reverse();
+
+  res.json({
+    totalRecorded: abhaTransactionEvents.length,
+    returned: items.length,
+    tenantKeyFilter: tenantKey || "all",
+    operationFilter: operation,
+    statusFilter: status,
+    summary: summarizeAbhaTransactionEvents(filtered),
+    events: items,
+    automation: {
+      captureHint:
+        "Attach consent-aware transaction evidence and fallback metadata to ABHA audit packets",
+      relatedEndpoints: {
+        read: "POST /api/v1/platform/abha/transactions/read",
+        write: "POST /api/v1/platform/abha/transactions/write",
+        fallbackTelemetry: "GET /api/v1/platform/abha/fallback-decision/telemetry",
+      },
     },
   });
 });

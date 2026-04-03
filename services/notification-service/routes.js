@@ -1298,9 +1298,7 @@ function buildFaultManifestVerifyAnomalyEscalationAcknowledgementSla(instance, n
   var measuredFrom = new Date(measuredFromMs).toISOString();
   var acknowledged = Boolean(instance.triage && instance.triage.acknowledged);
   var acknowledgedAt = instance.triage ? instance.triage.acknowledgedAt : null;
-  var measuredUntilMs = acknowledged
-    ? Date.parse(acknowledgedAt || "") || nowMs
-    : nowMs;
+  var measuredUntilMs = acknowledged ? Date.parse(acknowledgedAt || "") || nowMs : nowMs;
   var measuredUntil = new Date(measuredUntilMs).toISOString();
   var elapsedSeconds = Math.max(0, Math.round((measuredUntilMs - measuredFromMs) / 1000));
   var breached = elapsedSeconds > targetSeconds;
@@ -3189,9 +3187,7 @@ router.get("/integrations/messaging/whatsapp/config-status", function (req, res)
     providerEnabled: Boolean(provider && provider.enabled),
     secretKey: secretStatus.secretKey,
     configured: Boolean(
-      secretStatus.parsed &&
-        secretStatus.parsed.accessToken &&
-        (secretStatus.parsed.phoneNumberId || secretStatus.parsed.senderNumber)
+      secretStatus.parsed && secretStatus.parsed.accessToken && secretStatus.parsed.phoneNumberId
     ),
     hasAccessToken: Boolean(secretStatus.parsed && secretStatus.parsed.accessToken),
     hasPhoneNumberId: Boolean(secretStatus.parsed && secretStatus.parsed.phoneNumberId),

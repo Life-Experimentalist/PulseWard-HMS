@@ -1531,6 +1531,13 @@ router.post("/integrations/calendars/test", function (req, res) {
   var payload = req.body || {};
   var tenantKey = payload.tenantKey || "default";
   var config = loadTenantIntegrationConfig(tenantKey);
+  var dryRun = true;
+
+  if (typeof payload.dryRun === "string") {
+    dryRun = payload.dryRun.toLowerCase() !== "false";
+  } else if (payload.dryRun === false) {
+    dryRun = false;
+  }
 
   bookAppointmentWithRouting(
     {
@@ -1541,6 +1548,8 @@ router.post("/integrations/calendars/test", function (req, res) {
       startTime: payload.startTime || new Date().toISOString(),
       endTime: payload.endTime || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       preferredProvider: payload.providerKey,
+      credentialsOverride: payload.credentialsOverride || null,
+      dryRun: dryRun,
     },
     config
   )

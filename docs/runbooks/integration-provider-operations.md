@@ -39,8 +39,18 @@
 ## Local tooling readiness
 
 - Run `npm run build:types` before milestone handoff; this now uses root `tsconfig.json` for deterministic local/CI behavior.
+- Run `npm run build:types:show-config` when local and CI typecheck scope appears inconsistent.
 - For demo stack commands (`pnpm demo:up`, `pnpm demo:down`), ensure Docker Desktop is running and Linux engine is available before execution.
 - Demo scripts now fail fast with explicit Docker engine guidance; resolve Docker connectivity first, then rerun.
+
+## Operations dashboard reliability view
+
+- Start dashboard in dev: `npm run start:operations:dev`.
+- The dashboard consumes:
+	- retention status telemetry
+	- saturation trend summaries
+	- escalation export breach feed
+- Default dev proxy routes `/api/v1` telemetry calls to notification-service on `http://127.0.0.1:8088`.
 
 ## Weekly checks
 
@@ -53,6 +63,9 @@
 	- `GET /api/v1/platform/abha/health-check/evidence`
 	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario=gateway-timeout`
 	- `GET /api/v1/platform/abha/fallback-decision/telemetry?scenario=health-check-derived&limit=10`
+	- `POST /api/v1/platform/abha/transactions/read` (`dryRun=true`, consent granted, `fallbackScenario=happy-path`)
+	- `POST /api/v1/platform/abha/transactions/write` (`dryRun=true`, consent granted, `fallbackScenario=happy-path`)
+	- `GET /api/v1/platform/abha/transactions/evidence?tenantKey={tenantKey}&limit=25`
 	- `GET /api/v1/platform/abha/operational-readiness`
 	- `GET /api/v1/integrations/messaging/fault-injection/simulate?tenantKey={tenantKey}&providerKey={providerKey}&scenario=network-timeout`
 	- `GET /api/v1/integrations/messaging/fault-injection/export?tenantKey={tenantKey}&providerKey={providerKey}&format=json&limit=50`
@@ -107,6 +120,9 @@
 	- `GET /api/v1/platform/abha/health-check/evidence`
 	- `GET /api/v1/platform/abha/consent-flow/simulation?scenario={scenario}`
 	- `GET /api/v1/platform/abha/fallback-decision/telemetry?scenario={scenario}`
+	- `POST /api/v1/platform/abha/transactions/read`
+	- `POST /api/v1/platform/abha/transactions/write`
+	- `GET /api/v1/platform/abha/transactions/evidence`
 - Calendar routing:
 	- `GET /api/v1/integrations/calendars/providers?tenantKey={tenantKey}`
 	- `GET /api/v1/integrations/calendars/interoperability/diagnostics?tenantKey={tenantKey}`

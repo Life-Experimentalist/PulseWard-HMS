@@ -221,6 +221,121 @@ describe("auth-service route surface coverage", () => {
       "GET /api/v1/platform/abha/consent-flow/simulation"
     );
 
+    const blockedTransaction = await requestJson("/api/v1/platform/abha/transactions/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenantKey: "citycare-hospital",
+        dryRun: true,
+        consent: {
+          granted: false,
+        },
+        resourceType: "health-record",
+        payload: {
+          summary: "No consent path",
+        },
+      }),
+    });
+
+    expect(blockedTransaction.status).toBe(403);
+    expect(blockedTransaction.body.status).toBe("blocked");
+    expect(blockedTransaction.body.error).toBe("ABHA_CONSENT_REQUIRED");
+
+    const fallbackTransaction = await requestJson("/api/v1/platform/abha/transactions/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenantKey: "citycare-hospital",
+        dryRun: true,
+        consent: {
+          granted: true,
+          consentId: "consent-citycare-fallback",
+        },
+        resourceType: "health-record",
+        payload: {
+          summary: "Fallback expected",
+        },
+      }),
+    });
+
+    expect(fallbackTransaction.status).toBe(202);
+    expect(fallbackTransaction.body.status).toBe("fallback");
+
+    process.env.ABHA_CLIENT_ID = "real-abha-client-id";
+    process.env.ABHA_CLIENT_SECRET = "real-abha-client-secret";
+    process.env.ABHA_GATEWAY_BASE_URL = "https://abha-gateway.citycare.internal";
+
+    const simulatedReadTransaction = await requestJson("/api/v1/platform/abha/transactions/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenantKey: "citycare-hospital",
+        dryRun: true,
+        fallbackScenario: "happy-path",
+        consent: {
+          granted: true,
+          consentId: "consent-citycare-read",
+          purpose: "opd-followup-review",
+        },
+        resourceType: "health-record",
+        resourceId: "hr-1001",
+        payload: {
+          summary: "Review blood pressure trend",
+          clinicianId: "cln-42",
+        },
+      }),
+    });
+
+    expect(simulatedReadTransaction.status).toBe(200);
+    expect(simulatedReadTransaction.body.status).toBe("simulated");
+    expect(simulatedReadTransaction.body.operation).toBe("read");
+    expect(simulatedReadTransaction.body.abha.primaryPathEligible).toBe(true);
+    expect(simulatedReadTransaction.body.requestMeta.dataKeyCount).toBeGreaterThan(0);
+
+    const simulatedWriteTransaction = await requestJson(
+      "/api/v1/platform/abha/transactions/write",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantKey: "citycare-hospital",
+          dryRun: true,
+          fallbackScenario: "happy-path",
+          consent: {
+            granted: true,
+            consentId: "consent-citycare-write",
+            purpose: "clinical-note-sync",
+          },
+          resourceType: "clinical-note",
+          resourceId: "note-77",
+          payload: {
+            noteCode: "NOTE-77",
+            updatedBy: "dr-rao",
+          },
+        }),
+      }
+    );
+
+    expect(simulatedWriteTransaction.status).toBe(200);
+    expect(simulatedWriteTransaction.body.status).toBe("simulated");
+    expect(simulatedWriteTransaction.body.operation).toBe("write");
+
+    const transactionEvidence = await requestJson(
+      "/api/v1/platform/abha/transactions/evidence?tenantKey=citycare-hospital&operation=read&status=simulated&limit=5",
+      {
+        method: "GET",
+      }
+    );
+
+    expect(transactionEvidence.status).toBe(200);
+    expect(transactionEvidence.body.operationFilter).toBe("read");
+    expect(transactionEvidence.body.statusFilter).toBe("simulated");
+    expect(Array.isArray(transactionEvidence.body.events)).toBe(true);
+    expect(transactionEvidence.body.summary.simulatedCount).toBeGreaterThan(0);
+    expect(transactionEvidence.body.automation.relatedEndpoints.read).toBe(
+      "POST /api/v1/platform/abha/transactions/read"
+    );
+
     const storageMeta = await requestJson("/api/v1/admin/settings/storage", {
       method: "GET",
     });

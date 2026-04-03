@@ -7,6 +7,12 @@ export default defineConfig({
     host: true,
     port: 4312,
     strictPort: false,
+    proxy: {
+      "/api/v1": {
+        target: process.env.VITE_NOTIFICATION_PROXY_TARGET || "http://127.0.0.1:8088",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: true,

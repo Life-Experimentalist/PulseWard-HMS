@@ -71,6 +71,27 @@ npm run build:apps
 npm run lint
 ```
 
+Typecheck runtime JS surface:
+
+```powershell
+npm run build:types
+```
+
+Inspect resolved TypeScript config:
+
+```powershell
+npm run build:types:show-config
+```
+
+Typecheck scope currently includes:
+
+- `services/**/*.js`
+- `tests/**/*.js`
+- `packages/**/*.js`
+- `apps/**/*.js`
+
+Typecheck excludes generated/runtime output folders such as `node_modules`, `coverage`, `dist`, and `build`.
+
 ## CI and Reliability
 
 - Workflows are configured for npm lockfile builds.

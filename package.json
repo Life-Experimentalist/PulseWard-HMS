@@ -39,6 +39,7 @@
     "contracts:check": "node ./scripts/check-contract-coverage.mjs",
     "build": "npm run build:apps",
     "build:types": "tsc --project tsconfig.json --noEmit",
+    "build:types:show-config": "tsc --project tsconfig.json --showConfig",
     "lint": "eslint . --ext .js,.mjs",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write \"**/*.{js,mjs,ts,json,md,yml,yaml,css,html}\"",

@@ -2,6 +2,7 @@ const { GoogleCalendarProvider } = require("./google-calendar");
 const { AppleCalendarProvider } = require("./apple-calendar");
 const { OutlookCalendarProvider } = require("./outlook-calendar");
 const { IcsCalendarProvider } = require("./ics-calendar");
+const { InternalCalendarProvider } = require("./internal-calendar");
 
 function createCalendarProvider(providerConfig) {
   switch (providerConfig.key) {
@@ -13,6 +14,8 @@ function createCalendarProvider(providerConfig) {
       return new OutlookCalendarProvider(providerConfig);
     case "ics-calendar":
       return new IcsCalendarProvider(providerConfig);
+    case "internal-calendar":
+      return new InternalCalendarProvider(providerConfig);
     default:
       throw new Error(`Unsupported calendar provider: ${providerConfig.key}`);
   }

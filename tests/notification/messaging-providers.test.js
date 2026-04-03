@@ -13,6 +13,9 @@ const {
   WhatsAppCloudApiProvider,
 } = require("../../services/notification-service/integrations/messaging/whatsapp-cloud-api");
 const {
+  SmsGatewayProvider,
+} = require("../../services/notification-service/integrations/messaging/sms-gateway");
+const {
   createMessagingProvider,
   findMessagingProviderConfig,
 } = require("../../services/notification-service/integrations/messaging");
@@ -51,6 +54,7 @@ describe("notification messaging provider adapters", () => {
     expect(createMessagingProvider({ key: "email-smtp" }).key).toBe("email-smtp");
     expect(createMessagingProvider({ key: "generic-webhook" }).key).toBe("generic-webhook");
     expect(createMessagingProvider({ key: "whatsapp-cloud-api" }).key).toBe("whatsapp-cloud-api");
+    expect(createMessagingProvider({ key: "sms-gateway" }).key).toBe("sms-gateway");
 
     expect(() => createMessagingProvider({ key: "unknown-provider" })).toThrow(
       "Unsupported messaging provider"
@@ -71,16 +75,78 @@ describe("notification messaging provider adapters", () => {
     const ready = await withEndpoint.send({ message: "hello" });
 
     expect(ready.accepted).toBe(true);
-    expect(ready.detail).toContain("routable");
+    expect(ready.detail).toContain("dry-run");
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => "ok",
+    });
+
+    const sent = await withEndpoint.send({
+      message: "hello",
+      tenantKey: "default",
+      dryRun: false,
+      credentialsOverride: { signingSecret: "hook-secret" },
+    });
+    expect(sent.accepted).toBe(true);
+    expect(sent.detail).toContain("successfully");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test("whatsapp cloud provider returns operational readiness payload", async () => {
+  test("whatsapp cloud provider handles dry-run and live delivery paths", async () => {
     const provider = new WhatsAppCloudApiProvider({ key: "whatsapp-cloud-api" });
+
     const result = await provider.send({ message: "hello" });
 
     expect(result.provider).toBe("whatsapp-cloud-api");
     expect(result.accepted).toBe(true);
-    expect(result.detail).toContain("paid provider onboarding");
+    expect(result.detail).toContain("dry-run");
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.123" }] }),
+    });
+
+    const live = await provider.send({
+      message: "hello",
+      recipient: "+15551230000",
+      dryRun: false,
+      credentialsOverride: {
+        accessToken: "wa-token",
+        phoneNumberId: "123456789",
+      },
+    });
+
+    expect(live.accepted).toBe(true);
+    expect(live.externalMessageId).toBe("wamid.123");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("sms gateway provider handles dry-run and live delivery", async () => {
+    const provider = new SmsGatewayProvider({ key: "sms-gateway" });
+
+    const dryRun = await provider.send({ message: "hello", recipient: "+15550000001" });
+    expect(dryRun.accepted).toBe(true);
+    expect(dryRun.detail).toContain("dry-run");
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messageId: "sms-123" }),
+    });
+
+    const live = await provider.send({
+      message: "hello",
+      recipient: "+15550000001",
+      dryRun: false,
+      credentialsOverride: {
+        endpoint: "https://sms.example.test/send",
+        apiKey: "sms-key",
+      },
+    });
+
+    expect(live.accepted).toBe(true);
+    expect(live.externalMessageId).toBe("sms-123");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test("telegram provider handles dry-run, missing chat id, failure, and success", async () => {

@@ -641,3 +641,9 @@ Exit criteria:
 316. M6.124 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-telemetry `pendingEscalations` schema-property type drifts from OpenAPI baseline.
 317. M6.125 completed: strict contract checker now enforces escalation-telemetry highest-escalation-severity anchor for `MessagingFaultManifestVerifyAttemptEscalationTelemetry.highestEscalationSeverity` string compatibility.
 318. M6.125 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-telemetry `highestEscalationSeverity` schema-property type drifts from OpenAPI baseline.
+319. M6.126 completed: strict contract checker now enforces escalation-acknowledgement-sla-summary tracked-count anchor for `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.trackedCount` integer compatibility.
+320. M6.126 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `trackedCount` schema-property type drifts from OpenAPI baseline.
+321. M6.127 completed: strict contract checker now enforces escalation-acknowledgement-sla-summary applicable-count anchor for `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.applicableCount` integer compatibility.
+322. M6.127 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `applicableCount` schema-property type drifts from OpenAPI baseline.
+323. M6.128 completed: strict contract checker now enforces escalation-acknowledgement-sla-summary within-sla-count anchor for `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.withinSlaCount` integer compatibility.
+324. M6.128 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `withinSlaCount` schema-property type drifts from OpenAPI baseline.

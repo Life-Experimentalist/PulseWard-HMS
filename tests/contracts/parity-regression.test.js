@@ -528,6 +528,15 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationTelemetry highestEscalationSeverity schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary trackedCount schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary applicableCount schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary withinSlaCount schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -3836,6 +3845,72 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptEscalationTelemetry.highestEscalationSeverity type expected string got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation acknowledgement SLA summary trackedCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary:[\s\S]*?trackedCount:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation acknowledgement SLA summary trackedCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary trackedCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.trackedCount type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation acknowledgement SLA summary applicableCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary:[\s\S]*?applicableCount:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "escalation acknowledgement SLA summary applicableCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary applicableCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.applicableCount type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation acknowledgement SLA summary withinSlaCount type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary:[\s\S]*?withinSlaCount:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "escalation acknowledgement SLA summary withinSlaCount type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary withinSlaCount schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.withinSlaCount type expected integer got string"
         );
       }
     );

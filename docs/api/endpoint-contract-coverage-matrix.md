@@ -1158,6 +1158,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationTelemetry.highestEscalationSeverity` type `string`
 - Mutation-based parity regressions now prove strict-check failure when escalation-telemetry `highestEscalationSeverity` property type drifts from OpenAPI baseline.
 
+## M6.126 Escalation-Acknowledgement-SLA-Summary Tracked-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary tracked-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.trackedCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `trackedCount` property type drifts from OpenAPI baseline.
+
+## M6.127 Escalation-Acknowledgement-SLA-Summary Applicable-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary applicable-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.applicableCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `applicableCount` property type drifts from OpenAPI baseline.
+
+## M6.128 Escalation-Acknowledgement-SLA-Summary Within-SLA-Count Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-acknowledgement-sla-summary within-sla-count anchors for telemetry payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationAcknowledgementSlaSummary.withinSlaCount` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when escalation-acknowledgement-sla-summary `withinSlaCount` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

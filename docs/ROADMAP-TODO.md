@@ -355,3 +355,5 @@ Exit criteria:
 78. M6.5 evidence checkpoint: targeted adapter tests now validate Apple/Outlook/ICS bridge edge paths, SMS non-OK/incomplete-credential handling, generic-webhook signed header emission, and bounded webhook failure payload behavior.
 79. M6.6 completed: strict contract checker now includes operations command-surface schema gates for retention status, saturation trend, escalation export, anomaly triage, and retention apply endpoints.
 80. M6.6 evidence checkpoint: parity regression assertions now verify PASS coverage for notification operations command endpoints, preventing silent OpenAPI schema drift for dashboard handoff controls.
+81. M6.7 completed: strict contract checker now enforces parameter-level command-surface guardrails for notification retention trend/export/triage workflows and retention apply request schema anchors.
+82. M6.7 evidence checkpoint: parity regression assertions now verify PASS output for critical parameter-contract checks, causing CI to fail fast on query/path parameter constraint drift.

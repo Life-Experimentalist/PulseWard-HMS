@@ -402,6 +402,128 @@ const criticalSchemaChecks = [
   },
 ];
 
+const criticalParameterContractChecks = [
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend parameters",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "windowMinutes",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 5,
+          maximum: 1440,
+          default: 60,
+        },
+      },
+      {
+        name: "limit",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 1,
+          maximum: 288,
+          default: 24,
+        },
+      },
+    ],
+  },
+  {
+    label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "format",
+        in: "query",
+        required: false,
+        schema: {
+          type: "string",
+          enumIncludes: ["json", "csv"],
+          default: "json",
+        },
+      },
+      {
+        name: "includeRecentlyClosed",
+        in: "query",
+        required: false,
+        schema: {
+          type: "boolean",
+          default: false,
+        },
+      },
+      {
+        name: "acknowledgementSlaStatus",
+        in: "query",
+        required: false,
+        schema: {
+          type: "string",
+        },
+      },
+      {
+        name: "limit",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 1,
+          maximum: 5000,
+          default: 500,
+        },
+      },
+    ],
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "anomalyInstanceId",
+        in: "path",
+        required: true,
+        schema: {
+          type: "string",
+          format: "uuid",
+        },
+      },
+    ],
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+      propertyName: "dryRun",
+      type: "boolean",
+      default: false,
+    },
+  },
+];
+
 const specLinesCache = new Map();
 
 function existsInRepo(relativePath) {
@@ -568,6 +690,215 @@ function hasJsonSchemaInSection(sectionLines) {
   return false;
 }
 
+function parseYamlScalar(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed === "true") {
+    return true;
+  }
+
+  if (trimmed === "false") {
+    return false;
+  }
+
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+function parseOperationParameters(operationLines) {
+  const parameterSection = extractIndentedSection(operationLines, "parameters", 6);
+  if (!parameterSection) {
+    return [];
+  }
+
+  const parameters = [];
+  let current = null;
+  let inSchemaBlock = false;
+  let inEnumBlock = false;
+
+  for (let index = 0; index < parameterSection.length; index += 1) {
+    const line = parameterSection[index];
+
+    const nameMatch = line.match(/^\s{8}-\s+name:\s*(.+)\s*$/);
+    if (nameMatch) {
+      if (current) {
+        parameters.push(current);
+      }
+
+      current = {
+        name: String(parseYamlScalar(nameMatch[1])),
+        in: null,
+        required: null,
+        schema: {},
+      };
+      inSchemaBlock = false;
+      inEnumBlock = false;
+      continue;
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    if (/^\s{10}schema:\s*$/.test(line)) {
+      inSchemaBlock = true;
+      inEnumBlock = false;
+      continue;
+    }
+
+    if (/^\s{10}(in|required):\s*(.+)\s*$/.test(line)) {
+      inSchemaBlock = false;
+      inEnumBlock = false;
+      const directMatch = line.match(/^\s{10}(in|required):\s*(.+)\s*$/);
+      if (directMatch[1] === "in") {
+        current.in = String(parseYamlScalar(directMatch[2]));
+      } else {
+        current.required = Boolean(parseYamlScalar(directMatch[2]));
+      }
+      continue;
+    }
+
+    if (!inSchemaBlock) {
+      continue;
+    }
+
+    const enumHeaderMatch = line.match(/^\s{12}enum:\s*$/);
+    if (enumHeaderMatch) {
+      inEnumBlock = true;
+      if (!Array.isArray(current.schema.enum)) {
+        current.schema.enum = [];
+      }
+      continue;
+    }
+
+    if (inEnumBlock) {
+      const enumValueMatch = line.match(/^\s{14}-\s*(.+)\s*$/);
+      if (enumValueMatch) {
+        current.schema.enum.push(String(parseYamlScalar(enumValueMatch[1])));
+        continue;
+      }
+
+      inEnumBlock = false;
+    }
+
+    const schemaKeyValueMatch = line.match(/^\s{12}(type|format|minimum|maximum|default):\s*(.+)\s*$/);
+    if (schemaKeyValueMatch) {
+      current.schema[schemaKeyValueMatch[1]] = parseYamlScalar(schemaKeyValueMatch[2]);
+    }
+  }
+
+  if (current) {
+    parameters.push(current);
+  }
+
+  return parameters;
+}
+
+function getOperationRequestBodyContract(operationLines) {
+  const requestBodySection = extractIndentedSection(operationLines, "requestBody", 6);
+  if (!requestBodySection) {
+    return {
+      exists: false,
+      required: false,
+      schemaRef: null,
+    };
+  }
+
+  const text = requestBodySection.join("\n");
+  const requiredMatch = text.match(/^\s+required:\s*(true|false)\s*$/m);
+  const refMatch = text.match(/\$ref:\s*["']?(#\/components\/schemas\/[^"'\s]+)["']?/m);
+
+  return {
+    exists: true,
+    required: requiredMatch ? requiredMatch[1] === "true" : false,
+    schemaRef: refMatch ? refMatch[1] : null,
+  };
+}
+
+function findSchemaPropertyContract(lines, schemaName, propertyName) {
+  const schemaPattern = new RegExp(`^\\s{4}${escapeRegExp(schemaName)}:\\s*$`);
+  let schemaStart = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (schemaPattern.test(lines[index])) {
+      schemaStart = index;
+      break;
+    }
+  }
+
+  if (schemaStart < 0) {
+    return null;
+  }
+
+  let schemaEnd = lines.length;
+  for (let cursor = schemaStart + 1; cursor < lines.length; cursor += 1) {
+    const candidate = lines[cursor];
+    if (!candidate.trim()) {
+      continue;
+    }
+
+    if (getLeadingIndent(candidate) <= 4) {
+      schemaEnd = cursor;
+      break;
+    }
+  }
+
+  const schemaBlock = lines.slice(schemaStart, schemaEnd);
+  const propertiesSection = extractIndentedSection(schemaBlock, "properties", 6);
+  if (!propertiesSection) {
+    return null;
+  }
+
+  const propertyPattern = new RegExp(`^\\s{8}${escapeRegExp(propertyName)}:\\s*$`);
+  let propertyStart = -1;
+  for (let index = 0; index < propertiesSection.length; index += 1) {
+    if (propertyPattern.test(propertiesSection[index])) {
+      propertyStart = index;
+      break;
+    }
+  }
+
+  if (propertyStart < 0) {
+    return null;
+  }
+
+  let propertyEnd = propertiesSection.length;
+  for (let cursor = propertyStart + 1; cursor < propertiesSection.length; cursor += 1) {
+    const candidate = propertiesSection[cursor];
+    if (!candidate.trim()) {
+      continue;
+    }
+
+    if (getLeadingIndent(candidate) <= 8) {
+      propertyEnd = cursor;
+      break;
+    }
+  }
+
+  const propertyBlock = propertiesSection.slice(propertyStart, propertyEnd);
+  const contract = {};
+  propertyBlock.forEach((line) => {
+    const match = line.match(/^\s{10}(type|default|format):\s*(.+)\s*$/);
+    if (match) {
+      contract[match[1]] = parseYamlScalar(match[2]);
+    }
+  });
+
+  return contract;
+}
+
 function evaluateCriticalSchemaChecks() {
   const results = criticalSchemaChecks.map((check) => {
     const label = `${check.service} ${check.method.toUpperCase()} ${check.path}`;
@@ -626,6 +957,191 @@ function evaluateCriticalSchemaChecks() {
     return {
       ...check,
       label,
+      pass: failures.length === 0,
+      failures,
+    };
+  });
+
+  const failedResults = results.filter((result) => !result.pass);
+  return { results, failedResults };
+}
+
+function evaluateCriticalParameterContractChecks() {
+  const results = criticalParameterContractChecks.map((check) => {
+    const failures = [];
+
+    if (!existsInRepo(check.specSource)) {
+      failures.push(`missing spec source: ${check.specSource}`);
+      return { ...check, pass: false, failures };
+    }
+
+    const lines = getSpecLines(check.specSource);
+    const operationLines = findOperationBlock(lines, check.path, check.method);
+
+    if (!operationLines) {
+      failures.push(`missing operation in spec: ${check.method.toUpperCase()} ${check.path}`);
+      return { ...check, pass: false, failures };
+    }
+
+    if (check.type === "parameters") {
+      const actualParameters = parseOperationParameters(operationLines);
+
+      (check.requiredParameters || []).forEach((expectedParameter) => {
+        const actualParameter = actualParameters.find(
+          (item) => item.name === expectedParameter.name && item.in === expectedParameter.in
+        );
+
+        if (!actualParameter) {
+          failures.push(
+            `missing parameter ${expectedParameter.in}:${expectedParameter.name}`
+          );
+          return;
+        }
+
+        if (
+          expectedParameter.required !== undefined &&
+          actualParameter.required !== expectedParameter.required
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} required expected ${String(
+              expectedParameter.required
+            )} got ${String(actualParameter.required)}`
+          );
+        }
+
+        const expectedSchema = expectedParameter.schema || {};
+        if (
+          expectedSchema.type !== undefined &&
+          actualParameter.schema.type !== expectedSchema.type
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} type expected ${expectedSchema.type} got ${String(
+              actualParameter.schema.type || ""
+            )}`
+          );
+        }
+
+        if (
+          expectedSchema.format !== undefined &&
+          actualParameter.schema.format !== expectedSchema.format
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} format expected ${expectedSchema.format} got ${String(
+              actualParameter.schema.format || ""
+            )}`
+          );
+        }
+
+        if (
+          expectedSchema.minimum !== undefined &&
+          actualParameter.schema.minimum !== expectedSchema.minimum
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} minimum expected ${String(
+              expectedSchema.minimum
+            )} got ${String(actualParameter.schema.minimum)}`
+          );
+        }
+
+        if (
+          expectedSchema.maximum !== undefined &&
+          actualParameter.schema.maximum !== expectedSchema.maximum
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} maximum expected ${String(
+              expectedSchema.maximum
+            )} got ${String(actualParameter.schema.maximum)}`
+          );
+        }
+
+        if (
+          expectedSchema.default !== undefined &&
+          actualParameter.schema.default !== expectedSchema.default
+        ) {
+          failures.push(
+            `parameter ${expectedParameter.in}:${expectedParameter.name} default expected ${String(
+              expectedSchema.default
+            )} got ${String(actualParameter.schema.default)}`
+          );
+        }
+
+        if (Array.isArray(expectedSchema.enumIncludes) && expectedSchema.enumIncludes.length > 0) {
+          const actualEnum = Array.isArray(actualParameter.schema.enum)
+            ? actualParameter.schema.enum
+            : [];
+          expectedSchema.enumIncludes.forEach((enumValue) => {
+            if (!actualEnum.includes(enumValue)) {
+              failures.push(
+                `parameter ${expectedParameter.in}:${expectedParameter.name} enum missing ${String(
+                  enumValue
+                )}`
+              );
+            }
+          });
+        }
+      });
+    } else if (check.type === "request-schema-property") {
+      const requestBodyContract = getOperationRequestBodyContract(operationLines);
+
+      if (!requestBodyContract.exists) {
+        failures.push("missing requestBody section");
+      }
+
+      if (!requestBodyContract.required) {
+        failures.push("requestBody.required is not true");
+      }
+
+      if (
+        check.expectedRequestBodySchemaRef &&
+        requestBodyContract.schemaRef !== check.expectedRequestBodySchemaRef
+      ) {
+        failures.push(
+          `requestBody schema ref expected ${check.expectedRequestBodySchemaRef} got ${String(
+            requestBodyContract.schemaRef || ""
+          )}`
+        );
+      }
+
+      const expectedProperty = check.expectedSchemaProperty;
+      if (expectedProperty) {
+        const propertyContract = findSchemaPropertyContract(
+          lines,
+          expectedProperty.schemaName,
+          expectedProperty.propertyName
+        );
+
+        if (!propertyContract) {
+          failures.push(
+            `missing schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName}`
+          );
+        } else {
+          if (
+            expectedProperty.type !== undefined &&
+            propertyContract.type !== expectedProperty.type
+          ) {
+            failures.push(
+              `schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName} type expected ${expectedProperty.type} got ${String(
+                propertyContract.type || ""
+              )}`
+            );
+          }
+
+          if (
+            expectedProperty.default !== undefined &&
+            propertyContract.default !== expectedProperty.default
+          ) {
+            failures.push(
+              `schema property ${expectedProperty.schemaName}.${expectedProperty.propertyName} default expected ${String(
+                expectedProperty.default
+              )} got ${String(propertyContract.default)}`
+            );
+          }
+        }
+      }
+    }
+
+    return {
+      ...check,
       pass: failures.length === 0,
       failures,
     };
@@ -981,6 +1497,7 @@ rows.forEach((row) => {
 });
 
 const schemaResults = evaluateCriticalSchemaChecks();
+const parameterContractResults = evaluateCriticalParameterContractChecks();
 
 console.log("\nCritical endpoint schema checks:");
 schemaResults.results.forEach((result) => {
@@ -995,11 +1512,30 @@ schemaResults.results.forEach((result) => {
   });
 });
 
+console.log("\nCritical parameter contract checks:");
+parameterContractResults.results.forEach((result) => {
+  if (result.pass) {
+    console.log(`- PASS: ${result.label}`);
+    return;
+  }
+
+  console.log(`- FAIL: ${result.label}`);
+  result.failures.forEach((failure) => {
+    console.log(`  - ${failure}`);
+  });
+});
+
 const failedPresenceRows = rows.filter((row) => row.presenceCheck === "FAIL");
 const failedParityRows = rows.filter((row) => row.parityCheck === "FAIL");
 const failedSchemaRows = schemaResults.failedResults;
+const failedParameterContractRows = parameterContractResults.failedResults;
 
-if (failedPresenceRows.length > 0 || failedParityRows.length > 0 || failedSchemaRows.length > 0) {
+if (
+  failedPresenceRows.length > 0 ||
+  failedParityRows.length > 0 ||
+  failedSchemaRows.length > 0 ||
+  failedParameterContractRows.length > 0
+) {
   console.error("\nContract check failed.");
 
   if (failedPresenceRows.length > 0) {
@@ -1019,6 +1555,13 @@ if (failedPresenceRows.length > 0 || failedParityRows.length > 0 || failedSchema
   if (failedSchemaRows.length > 0) {
     console.error(`Schema failures (${failedSchemaRows.length}):`);
     failedSchemaRows.forEach((result) => {
+      console.error(`- ${result.label}: ${result.failures.join("; ")}`);
+    });
+  }
+
+  if (failedParameterContractRows.length > 0) {
+    console.error(`Parameter contract failures (${failedParameterContractRows.length}):`);
+    failedParameterContractRows.forEach((result) => {
       console.error(`- ${result.label}: ${result.failures.join("; ")}`);
     });
   }

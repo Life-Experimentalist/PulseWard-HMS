@@ -93,5 +93,18 @@ describe("M1 parity regression guard", () => {
     expect(output).toContain("PASS: billing-service POST /billing/hooks/clinical-trigger");
     expect(output).toContain("PASS: auth-service POST /admin/settings/auth-policy/validate");
     expect(output).toContain("PASS: auth-service PUT /admin/settings");
+    expect(output).toContain("Critical parameter contract checks:");
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/saturation-trend parameters"
+    );
+    expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
+    );
   });
 });

@@ -294,6 +294,16 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply`
 - Parity regression tests now assert PASS output for each of these schema checks so command-surface contract drift fails fast in CI.
 
+## M6.7 Operations Command Parameter-Contract Coverage
+
+- Contract checker critical parameter assertions now validate query/path parameter constraints for notification command endpoints used by operations workflows.
+- Parameter contract checks now enforce:
+	- retention trend query bounds/defaults (`windowMinutes`, `limit`)
+	- escalation export parameter constraints (`format` enum, `includeRecentlyClosed`, `acknowledgementSlaStatus`, `limit` bounds/default)
+	- anomaly triage path parameter contract (`anomalyInstanceId` required with `uuid` format)
+	- retention apply request schema anchor for `dryRun` guardrail support
+- Parity regression tests now assert PASS output for parameter-contract checks, so CI fails fast when command endpoint parameter contracts drift.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

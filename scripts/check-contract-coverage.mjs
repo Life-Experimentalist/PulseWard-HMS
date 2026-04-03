@@ -504,6 +504,41 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export boolean filter parameter contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "GET",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export",
+    type: "parameters",
+    requiredParameters: [
+      {
+        name: "triageAcknowledged",
+        in: "query",
+        required: false,
+        schema: {
+          type: "boolean",
+        },
+      },
+      {
+        name: "actionRequired",
+        in: "query",
+        required: false,
+        schema: {
+          type: "boolean",
+        },
+      },
+      {
+        name: "breached",
+        in: "query",
+        required: false,
+        schema: {
+          type: "boolean",
+        },
+      },
+    ],
+  },
+  {
+    label:
       "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -558,6 +593,23 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema pruneNow anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+      propertyName: "pruneNow",
+      type: "boolean",
+      default: true,
+    },
+  },
+  {
+    label:
       "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",
@@ -571,6 +623,57 @@ const criticalParameterContractChecks = [
       propertyName: "dryRun",
       type: "boolean",
       default: false,
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy autoDeescalateOnMitigation anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationPolicy",
+      propertyName: "autoDeescalateOnMitigation",
+      type: "boolean",
+      default: true,
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy includeRecentlyClosedByDefault anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportPolicy",
+      propertyName: "includeRecentlyClosedByDefault",
+      type: "boolean",
+      default: false,
+    },
+  },
+  {
+    label:
+      "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy defaultFormat anchor",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    method: "POST",
+    path: "/integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply",
+    type: "request-schema-property",
+    expectedRequestBodySchemaRef:
+      "#/components/schemas/MessagingFaultManifestVerifyAttemptRetentionApplyRequest",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptEscalationExportPolicy",
+      propertyName: "defaultFormat",
+      type: "string",
+      default: "json",
     },
   },
   {

@@ -319,6 +319,21 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `mitigationApplied` property remains `boolean` with `default: false`
 - Mutation-based parity regressions now prove strict checker failure when triage request schema ref or default semantics drift, preventing silent dashboard command payload incompatibility.
 
+## M6.11 Notification Operations Policy-Anchor And Filter-Contract Coverage
+
+- Contract checker critical parameter assertions now include escalation export boolean filter contracts for triage/operator action workflows.
+- Parameter contract checks now enforce:
+	- `GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export`:
+		- `triageAcknowledged` boolean
+		- `actionRequired` boolean
+		- `breached` boolean
+- Contract checker request-schema-property assertions now include retention-apply policy default anchors:
+	- `MessagingFaultManifestVerifyAttemptRetentionApplyRequest.pruneNow` default `true`
+	- `MessagingFaultManifestVerifyAttemptEscalationPolicy.autoDeescalateOnMitigation` default `true`
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault` default `false`
+	- `MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat` default `json`
+- Mutation-based parity regressions now prove strict checker failure on boolean filter type drift and policy default drift, preventing silent dashboard command incompatibility.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

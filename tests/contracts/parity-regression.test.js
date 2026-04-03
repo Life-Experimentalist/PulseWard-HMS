@@ -141,6 +141,9 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export parameters"
     );
     expect(output).toContain(
+      "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export boolean filter parameter contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage path parameter contract"
     );
     expect(output).toContain(
@@ -150,7 +153,19 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/anomalies/{anomalyInstanceId}/triage request schema mitigationApplied anchor"
     );
     expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema pruneNow anchor"
+    );
+    expect(output).toContain(
       "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema dryRun anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy autoDeescalateOnMitigation anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy includeRecentlyClosedByDefault anchor"
+    );
+    expect(output).toContain(
+      "PASS: notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy defaultFormat anchor"
     );
     expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export response media-type contract"
@@ -300,6 +315,136 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptAnomalyTriageRequest.mitigationApplied default expected false got true"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export triageAcknowledged type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?- name: triageAcknowledged[\s\S]*?type:\s*)boolean/,
+          "$1string",
+          "escalation export triageAcknowledged type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export boolean filter parameter contract"
+        );
+        expect(output).toContain(
+          "parameter query:triageAcknowledged type expected boolean got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export breached type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(\/integrations\/messaging\/fault-injection\/manifest\/verify\/attempts\/retention\/escalations\/export:[\s\S]*?- name: breached[\s\S]*?type:\s*)boolean/,
+          "$1integer",
+          "escalation export breached type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention/escalations/export boolean filter parameter contract"
+        );
+        expect(output).toContain("parameter query:breached type expected boolean got integer");
+      }
+    );
+  });
+
+  test("fails strict check when retention apply pruneNow default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionApplyRequest:[\s\S]*?pruneNow:[\s\S]*?default:\s*)true/,
+          "$1false",
+          "retention apply pruneNow default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema pruneNow anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionApplyRequest.pruneNow default expected true got false"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation policy autoDeescalateOnMitigation default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationPolicy:[\s\S]*?autoDeescalateOnMitigation:[\s\S]*?default:\s*)true/,
+          "$1false",
+          "escalation policy autoDeescalateOnMitigation default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation policy autoDeescalateOnMitigation anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationPolicy.autoDeescalateOnMitigation default expected true got false"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy includeRecentlyClosedByDefault default drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?includeRecentlyClosedByDefault:[\s\S]*?default:\s*)false/,
+          "$1true",
+          "escalation export policy includeRecentlyClosedByDefault default"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy includeRecentlyClosedByDefault anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.includeRecentlyClosedByDefault default expected false got true"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when escalation export policy defaultFormat drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptEscalationExportPolicy:[\s\S]*?defaultFormat:[\s\S]*?default:\s*)json/,
+          "$1csv",
+          "escalation export policy defaultFormat"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service POST /integrations/messaging/fault-injection/manifest/verify/attempts/retention/apply request schema escalation export policy defaultFormat anchor"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptEscalationExportPolicy.defaultFormat default expected json got csv"
         );
       }
     );

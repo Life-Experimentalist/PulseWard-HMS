@@ -827,3 +827,13 @@ Exit criteria:
 502. M6.217 evidence checkpoint: mutation regressions now prove strict-check failure when escalation-policy `mitigationNoteTypes` schema-property type drifts from OpenAPI baseline.
 503. M6.218 completed: strict contract checker now enforces retention-saturation-trend-snapshot captured-at anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt` string compatibility.
 504. M6.218 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `capturedAt` schema-property type drifts from OpenAPI baseline.
+505. M6.219 completed: strict contract checker now enforces retention-saturation-trend-snapshot trigger anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.trigger` string compatibility.
+506. M6.219 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `trigger` schema-property type drifts from OpenAPI baseline.
+507. M6.220 completed: strict contract checker now enforces retention-saturation-trend-snapshot current-entries anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.currentEntries` integer compatibility.
+508. M6.220 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `currentEntries` schema-property type drifts from OpenAPI baseline.
+509. M6.221 completed: strict contract checker now enforces retention-saturation-trend-snapshot max-entries anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.maxEntries` integer compatibility.
+510. M6.221 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `maxEntries` schema-property type drifts from OpenAPI baseline.
+511. M6.222 completed: strict contract checker now enforces retention-saturation-trend-snapshot utilization-percent anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.utilizationPercent` number compatibility.
+512. M6.222 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `utilizationPercent` schema-property type drifts from OpenAPI baseline.
+513. M6.223 completed: strict contract checker now enforces retention-saturation-trend-snapshot remaining-entries anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.remainingEntries` integer compatibility.
+514. M6.223 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation-trend-snapshot `remainingEntries` schema-property type drifts from OpenAPI baseline.

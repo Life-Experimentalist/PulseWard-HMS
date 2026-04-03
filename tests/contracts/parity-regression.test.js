@@ -807,6 +807,21 @@ describe("M1 parity regression guard", () => {
       "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot capturedAt schema property contract"
     );
     expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot trigger schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot currentEntries schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot maxEntries schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot utilizationPercent schema property contract"
+    );
+    expect(output).toContain(
+      "PASS: notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot remainingEntries schema property contract"
+    );
+    expect(output).toContain(
       "PASS: notification-service GET /integrations/messaging/fault-injection/manifest/verify/attempts/retention response schema ref contract"
     );
     expect(output).toContain(
@@ -6161,6 +6176,116 @@ describe("M1 parity regression guard", () => {
         );
         expect(output).toContain(
           "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt type expected string got number"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot trigger type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?trigger:[\s\S]*?type:\s*)string/,
+          "$1boolean",
+          "retention saturation trend snapshot trigger type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot trigger schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.trigger type expected string got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot currentEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?currentEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention saturation trend snapshot currentEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot currentEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.currentEntries type expected integer got string"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot maxEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?maxEntries:[\s\S]*?type:\s*)integer/,
+          "$1boolean",
+          "retention saturation trend snapshot maxEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot maxEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.maxEntries type expected integer got boolean"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot utilizationPercent type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?utilizationPercent:[\s\S]*?type:\s*)number/,
+          "$1integer",
+          "retention saturation trend snapshot utilizationPercent type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot utilizationPercent schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.utilizationPercent type expected number got integer"
+        );
+      }
+    );
+  });
+
+  test("fails strict check when retention saturation trend snapshot remainingEntries type drifts", () => {
+    withMutatedNotificationSpec(
+      (source) =>
+        replaceOneOrThrow(
+          source,
+          /(MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot:[\s\S]*?remainingEntries:[\s\S]*?type:\s*)integer/,
+          "$1string",
+          "retention saturation trend snapshot remainingEntries type"
+        ),
+      (result, output) => {
+        expect(result.status).toBe(1);
+        expect(output).toContain("Parameter contract failures");
+        expect(output).toContain(
+          "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot remainingEntries schema property contract"
+        );
+        expect(output).toContain(
+          "schema property MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.remainingEntries type expected integer got string"
         );
       }
     );

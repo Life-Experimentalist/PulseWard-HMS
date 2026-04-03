@@ -1826,6 +1826,41 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.capturedAt` type `string`
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `capturedAt` property type drifts from OpenAPI baseline.
 
+## M6.219 Retention-Saturation-Trend-Snapshot Trigger Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot trigger anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.trigger` type `string`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `trigger` property type drifts from OpenAPI baseline.
+
+## M6.220 Retention-Saturation-Trend-Snapshot Current-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot current-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.currentEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `currentEntries` property type drifts from OpenAPI baseline.
+
+## M6.221 Retention-Saturation-Trend-Snapshot Max-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot max-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.maxEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `maxEntries` property type drifts from OpenAPI baseline.
+
+## M6.222 Retention-Saturation-Trend-Snapshot Utilization-Percent Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot utilization-percent anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.utilizationPercent` type `number`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `utilizationPercent` property type drifts from OpenAPI baseline.
+
+## M6.223 Retention-Saturation-Trend-Snapshot Remaining-Entries Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include retention-saturation-trend-snapshot remaining-entries anchors for response payload compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot.remainingEntries` type `integer`
+- Mutation-based parity regressions now prove strict-check failure when retention-saturation-trend-snapshot `remainingEntries` property type drifts from OpenAPI baseline.
+
 
 # M7 Security, Observability, and Operability
 

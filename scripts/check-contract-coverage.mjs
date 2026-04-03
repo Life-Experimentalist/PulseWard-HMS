@@ -3228,6 +3228,66 @@ const criticalParameterContractChecks = [
   },
   {
     label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot trigger schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "trigger",
+      type: "string",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot currentEntries schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "currentEntries",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot maxEntries schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "maxEntries",
+      type: "integer",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot utilizationPercent schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "utilizationPercent",
+      type: "number",
+    },
+  },
+  {
+    label:
+      "notification-service MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot remainingEntries schema property contract",
+    service: "notification-service",
+    specSource: "services/notification-service/openapi.yaml",
+    type: "schema-property-contract",
+    expectedSchemaProperty: {
+      schemaName: "MessagingFaultManifestVerifyAttemptRetentionSaturationTrendSnapshot",
+      propertyName: "remainingEntries",
+      type: "integer",
+    },
+  },
+  {
+    label:
       "notification-service MessagingFaultManifestVerifyAttemptAnomalyEscalationAcknowledgementSla targetSeconds schema property contract",
     service: "notification-service",
     specSource: "services/notification-service/openapi.yaml",

@@ -549,6 +549,27 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaRemainingSeconds` type `integer`
 - Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaRemainingSeconds` property type drifts from OpenAPI baseline.
 
+## M6.39 Escalation-Export Item Triage-Acknowledged-At Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item triage acknowledgement timestamp anchors for operator timeline compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.triageAcknowledgedAt` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `triageAcknowledgedAt` property type drifts from OpenAPI baseline.
+
+## M6.40 Escalation-Export Item Triage-Acknowledged-By Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item triage acknowledgement actor anchors for operator attribution compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.triageAcknowledgedBy` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `triageAcknowledgedBy` property type drifts from OpenAPI baseline.
+
+## M6.41 Escalation-Export Item Acknowledgement-SLA-Status Anchor Guardrail Coverage
+
+- Contract checker schema-property assertions now include escalation-export item acknowledgement SLA status anchors for handoff-state compatibility.
+- Schema property contract checks now enforce:
+	- `MessagingFaultManifestVerifyAttemptEscalationExportItem.acknowledgementSlaStatus` type `string`
+- Mutation-based parity regressions now prove strict-check failure when escalation-export item `acknowledgementSlaStatus` property type drifts from OpenAPI baseline.
+
 ## M5 Reporting Consolidation Guidance
 
 - M5 delivery was broad and valid but became too granular in reporting.

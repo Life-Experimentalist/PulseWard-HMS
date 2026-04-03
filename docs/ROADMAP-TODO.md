@@ -317,4 +317,6 @@ Exit criteria:
 40. M5.7 evidence checkpoint: regression coverage now validates manifest digest/signature output and handoff diagnostics links.
 41. M5.8 completed: connector diagnostics now include zero-trust manifest verification endpoint coverage for incident evidence acceptance workflows.
 42. M5.8 evidence checkpoint: regression coverage now validates manifest verification success, tampered-digest rejection, and required-digest guardrails.
-43. M5.9 active next slice: add signed handoff replay-defense controls (issued-at freshness and optional nonce correlation checks).
+43. M5.9 completed: signed handoff replay-defense controls now enforce issued-at freshness windows and optional nonce correlation checks.
+44. M5.9 evidence checkpoint: regression coverage now validates nonce-match rejection, stale-manifest freshness failure, and issuedAt guardrails for manifest verification.
+45. M5.10 active next slice: add replay-attempt duplicate suppression controls for repeated manifest verification submissions.

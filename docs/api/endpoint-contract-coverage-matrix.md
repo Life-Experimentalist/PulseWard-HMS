@@ -169,6 +169,13 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Manifest digest computation now uses deterministic canonical evidence fields to avoid timestamp-induced verification drift.
 - Regression tests cover verification success, tampered digest rejection, and required-digest guardrail behavior.
 
+## M5.9 Manifest Replay-Defense Coverage
+
+- Fault manifest generation now includes replay-defense metadata (`issuedAt`, optional `nonce`) and signs those fields into the canonical digest payload.
+- Manifest verification now enforces `issuedAt` presence, bounded freshness windows, and optional nonce correlation (`nonce` vs `expectedNonce`) checks.
+- Verification responses now include replay-defense diagnostics (`ageSeconds`, `maxAgeSeconds`, `freshnessMatch`, `nonceMatch`) for incident triage.
+- Regression tests cover stale issued-at rejection, nonce mismatch rejection, and missing-issuedAt guardrail behavior.
+
 ## Current Allowlisted Drifts
 
 - None. M1.3 reconciled previous allowlisted drift for `api-gateway`, `ehr-service`, `lab-service`, and `billing-service`.

@@ -1,5 +1,5 @@
 const express = require("express");
-const { createHmac } = require("crypto");
+const { createHash, createHmac } = require("crypto");
 
 const notificationRoutes = require("../../services/notification-service/routes");
 
@@ -297,6 +297,7 @@ describe("notification webhook delivery diagnostics", () => {
 
   test("builds signed fault-injection evidence manifest for incident handoff", async () => {
     process.env.INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET = "m5-7-evidence-signing-secret";
+    const manifestNonce = "incident-2026-04-03";
 
     await requestJson(
       "/api/v1/integrations/messaging/fault-injection/simulate?tenantKey=default&providerKey=generic-webhook&scenario=provider-5xx",
@@ -306,7 +307,9 @@ describe("notification webhook delivery diagnostics", () => {
     );
 
     const manifest = await requestJson(
-      "/api/v1/integrations/messaging/fault-injection/manifest?tenantKey=default&providerKey=generic-webhook&limit=10&includeEvents=true",
+      `/api/v1/integrations/messaging/fault-injection/manifest?tenantKey=default&providerKey=generic-webhook&limit=10&includeEvents=true&nonce=${encodeURIComponent(
+        manifestNonce
+      )}`,
       {
         method: "GET",
       }
@@ -318,6 +321,10 @@ describe("notification webhook delivery diagnostics", () => {
     expect(manifest.body.signer.secretSource).toBe("INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET");
     expect(manifest.body.digest.algorithm).toBe("sha256");
     expect(manifest.body.digest.value).toHaveLength(64);
+    expect(manifest.body.manifestVersion).toBe("m5.9.v1");
+    expect(manifest.body.replayDefense.issuedAt).toBe(manifest.body.generatedAt);
+    expect(manifest.body.replayDefense.nonce).toBe(manifestNonce);
+    expect(manifest.body.replayDefense.maxAgeSeconds).toBeGreaterThan(0);
     expect(manifest.body.signature).toContain("sha256=");
     expect(manifest.body.evidence.returned).toBeGreaterThan(0);
     expect(Array.isArray(manifest.body.evidence.eventIds)).toBe(true);
@@ -331,7 +338,7 @@ describe("notification webhook delivery diagnostics", () => {
       .update(manifest.body.digest.value, "utf8")
       .digest("hex")}`;
     expect(manifest.body.signature).toBe(expectedSignature);
-    
+
     const verified = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify",
       {
@@ -344,6 +351,9 @@ describe("notification webhook delivery diagnostics", () => {
           providerKey: "generic-webhook",
           limit: 10,
           manifestVersion: manifest.body.manifestVersion,
+          issuedAt: manifest.body.replayDefense.issuedAt,
+          nonce: manifest.body.replayDefense.nonce,
+          expectedNonce: manifestNonce,
           digest: manifest.body.digest.value,
           signature: manifest.body.signature,
         }),
@@ -356,6 +366,8 @@ describe("notification webhook delivery diagnostics", () => {
     expect(verified.body.checks.digestMatch).toBe(true);
     expect(verified.body.checks.signatureMatch).toBe(true);
     expect(verified.body.checks.signingConfigured).toBe(true);
+    expect(verified.body.checks.freshnessMatch).toBe(true);
+    expect(verified.body.checks.nonceMatch).toBe(true);
     expect(verified.body.diagnostics.manifestEndpoint).toBe(
       "GET /api/v1/integrations/messaging/fault-injection/manifest"
     );
@@ -372,6 +384,9 @@ describe("notification webhook delivery diagnostics", () => {
           providerKey: "generic-webhook",
           limit: 10,
           manifestVersion: manifest.body.manifestVersion,
+          issuedAt: manifest.body.replayDefense.issuedAt,
+          nonce: manifest.body.replayDefense.nonce,
+          expectedNonce: manifestNonce,
           digest: "sha256=0000000000000000000000000000000000000000000000000000000000000000",
           signature: manifest.body.signature,
         }),
@@ -382,6 +397,96 @@ describe("notification webhook delivery diagnostics", () => {
     expect(tampered.body.valid).toBe(false);
     expect(tampered.body.checks.digestMatch).toBe(false);
 
+    const nonceMismatch = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          issuedAt: manifest.body.replayDefense.issuedAt,
+          nonce: manifest.body.replayDefense.nonce,
+          expectedNonce: "incident-2026-04-03-mismatch",
+          digest: manifest.body.digest.value,
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(nonceMismatch.status).toBe(200);
+    expect(nonceMismatch.body.valid).toBe(false);
+    expect(nonceMismatch.body.checks.nonceMatch).toBe(false);
+
+    const staleIssuedAt = new Date(Date.now() - 3600 * 1000).toISOString();
+    const staleDigestPayload = {
+      filters: manifest.body.evidence.filters,
+      totalMatched: manifest.body.evidence.totalMatched,
+      returned: manifest.body.evidence.returned,
+      summary: manifest.body.evidence.summary,
+      retention: manifest.body.evidence.retention,
+      eventDigests: manifest.body.eventDigests,
+      replayDefense: {
+        issuedAt: staleIssuedAt,
+        nonce: manifestNonce,
+      },
+    };
+    const staleDigest = createHash("sha256")
+      .update(JSON.stringify(staleDigestPayload), "utf8")
+      .digest("hex");
+    const staleSignature = `sha256=${createHmac("sha256", "m5-7-evidence-signing-secret")
+      .update(staleDigest, "utf8")
+      .digest("hex")}`;
+
+    const stale = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantKey: "default",
+          providerKey: "generic-webhook",
+          limit: 10,
+          manifestVersion: manifest.body.manifestVersion,
+          issuedAt: staleIssuedAt,
+          maxAgeSeconds: 300,
+          nonce: manifestNonce,
+          expectedNonce: manifestNonce,
+          digest: staleDigest,
+          signature: staleSignature,
+        }),
+      }
+    );
+
+    expect(stale.status).toBe(200);
+    expect(stale.body.valid).toBe(false);
+    expect(stale.body.checks.digestMatch).toBe(true);
+    expect(stale.body.checks.signatureMatch).toBe(true);
+    expect(stale.body.checks.freshnessMatch).toBe(false);
+
+    const missingIssuedAt = await requestJson(
+      "/api/v1/integrations/messaging/fault-injection/manifest/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          digest: manifest.body.digest.value,
+          signature: manifest.body.signature,
+        }),
+      }
+    );
+
+    expect(missingIssuedAt.status).toBe(400);
+    expect(missingIssuedAt.body.code).toBe("NOTIFICATION_FAULT_MANIFEST_ISSUED_AT_REQUIRED");
+
     const missingDigest = await requestJson(
       "/api/v1/integrations/messaging/fault-injection/manifest/verify",
       {
@@ -390,6 +495,7 @@ describe("notification webhook delivery diagnostics", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          issuedAt: manifest.body.replayDefense.issuedAt,
           signature: manifest.body.signature,
         }),
       }

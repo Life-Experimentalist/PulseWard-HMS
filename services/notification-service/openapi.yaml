@@ -1239,7 +1239,37 @@ components:
           example: POST /api/v1/integrations/messaging/fault-injection/manifest/verify
         handoffGuide:
           type: string
-          example: Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance
+          example: Share manifest signature, digest, issuedAt, and optional nonce with incident stakeholders; verify signature and replay defense checks before acceptance
+    MessagingFaultManifestReplayDefense:
+      type: object
+      properties:
+        issuedAt:
+          type: string
+          format: date-time
+        nonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
+        expectedNonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
+        nonceMatch:
+          type: boolean
+          example: true
+        maxAgeSeconds:
+          type: integer
+          example: 900
+        allowedClockSkewSeconds:
+          type: integer
+          example: 60
+        ageSeconds:
+          type: integer
+          nullable: true
+          example: 12
+        freshnessMatch:
+          type: boolean
+          example: true
     MessagingFaultManifestVerificationChecks:
       type: object
       properties:
@@ -1262,6 +1292,31 @@ components:
           type: string
           nullable: true
           example: INTEGRATION_FAULT_EVIDENCE_SIGNING_SECRET
+        issuedAtProvided:
+          type: boolean
+          example: true
+        issuedAtValidFormat:
+          type: boolean
+          example: true
+        freshnessMatch:
+          type: boolean
+          example: true
+        ageSeconds:
+          type: integer
+          nullable: true
+          example: 12
+        maxAgeSeconds:
+          type: integer
+          example: 900
+        nonceProvided:
+          type: boolean
+          example: true
+        expectedNonceProvided:
+          type: boolean
+          example: true
+        nonceMatch:
+          type: boolean
+          example: true
     MessagingFaultManifestVerificationComputed:
       type: object
       properties:
@@ -1284,6 +1339,17 @@ components:
           type: string
           nullable: true
           example: sha256=6f7f2e8bd4fe2cf45ce09e86f1308ccf4f95ba4a77e64b7e0276312ecacda5f4
+        issuedAt:
+          type: string
+          format: date-time
+        nonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
+        expectedNonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
     MessagingFaultManifestVerificationDiagnostics:
       type: object
       properties:
@@ -1298,10 +1364,11 @@ components:
           example: GET /api/v1/integrations/messaging/fault-injection/retention
         handoffGuide:
           type: string
-          example: Recompute digest and signature with shared secret before accepting external manifest evidence
+          example: Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence
     MessagingFaultInjectionManifestVerifyRequest:
       type: object
       required:
+        - issuedAt
         - digest
       properties:
         tenantKey:
@@ -1320,7 +1387,23 @@ components:
           default: 100
         manifestVersion:
           type: string
-          example: m5.7.v1
+          example: m5.9.v1
+        issuedAt:
+          type: string
+          format: date-time
+        maxAgeSeconds:
+          type: integer
+          minimum: 30
+          maximum: 86400
+          default: 900
+        nonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
+        expectedNonce:
+          type: string
+          nullable: true
+          example: incident-2026-04-03
         digest:
           type: string
           example: 091465fceec94e6f8f7f8ddbf6f6f13dca3f5a2498b8455eb72e4f08fd60f3a4
@@ -1349,6 +1432,8 @@ components:
           $ref: "#/components/schemas/MessagingFaultManifestVerificationProvided"
         computed:
           $ref: "#/components/schemas/MessagingFaultManifestVerificationComputed"
+        replayDefense:
+          $ref: "#/components/schemas/MessagingFaultManifestReplayDefense"
         evidence:
           $ref: "#/components/schemas/MessagingFaultManifestEvidence"
         diagnostics:
@@ -1361,10 +1446,12 @@ components:
           format: uuid
         manifestVersion:
           type: string
-          example: m5.7.v1
+          example: m5.9.v1
         generatedAt:
           type: string
           format: date-time
+        replayDefense:
+          $ref: "#/components/schemas/MessagingFaultManifestReplayDefense"
         signatureStatus:
           type: string
           enum:

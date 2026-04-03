@@ -22,6 +22,19 @@ var messagingFaultRetentionSource = String(
 ).trim()
   ? "env"
   : "default";
+var faultManifestVersion = "m5.9.v1";
+var defaultFaultManifestMaxAgeSeconds = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_MAX_AGE_SECONDS,
+  900,
+  30,
+  86400
+);
+var faultManifestAllowedClockSkewSeconds = parseRetryInt(
+  process.env.INTEGRATION_FAULT_MANIFEST_CLOCK_SKEW_SECONDS,
+  60,
+  0,
+  300
+);
 
 var supportedAppointmentEventTypes = [
   "appointment.created",
@@ -474,7 +487,75 @@ function buildFaultManifestPayload(filters, events, totalMatched) {
   };
 }
 
-function buildFaultManifestDigestPayload(manifestPayload) {
+function normalizeFaultManifestNonce(value) {
+  return String(value || "").trim();
+}
+
+function parseFaultManifestIssuedAt(issuedAt) {
+  var normalized = String(issuedAt || "").trim();
+  if (!normalized) {
+    return null;
+  }
+
+  var timestampMs = Date.parse(normalized);
+  if (!Number.isFinite(timestampMs)) {
+    return null;
+  }
+
+  return {
+    raw: normalized,
+    timestampMs: timestampMs,
+  };
+}
+
+function evaluateFaultManifestFreshness(issuedAt, maxAgeSeconds) {
+  var parsed = parseFaultManifestIssuedAt(issuedAt);
+  if (!parsed) {
+    return {
+      provided: false,
+      validFormat: false,
+      freshnessMatch: false,
+      issuedAt: null,
+      ageSeconds: null,
+      maxAgeSeconds: maxAgeSeconds,
+    };
+  }
+
+  var ageSeconds = Math.floor((Date.now() - parsed.timestampMs) / 1000);
+  var freshnessMatch =
+    ageSeconds <= maxAgeSeconds && ageSeconds >= 0 - faultManifestAllowedClockSkewSeconds;
+
+  return {
+    provided: true,
+    validFormat: true,
+    freshnessMatch: freshnessMatch,
+    issuedAt: parsed.raw,
+    ageSeconds: ageSeconds,
+    maxAgeSeconds: maxAgeSeconds,
+  };
+}
+
+function areOpaqueTokensEqual(actualToken, expectedToken) {
+  var actual = String(actualToken || "");
+  var expected = String(expectedToken || "");
+
+  if (!actual || !expected) {
+    return false;
+  }
+
+  var actualBuffer = Buffer.from(actual, "utf8");
+  var expectedBuffer = Buffer.from(expected, "utf8");
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function buildFaultManifestDigestPayload(manifestPayload, replayDefense) {
+  var issuedAt = replayDefense && replayDefense.issuedAt ? String(replayDefense.issuedAt) : null;
+  var nonce = replayDefense && replayDefense.nonce ? normalizeFaultManifestNonce(replayDefense.nonce) : null;
+
   return {
     filters: manifestPayload.filters,
     totalMatched: manifestPayload.totalMatched,
@@ -482,6 +563,10 @@ function buildFaultManifestDigestPayload(manifestPayload) {
     summary: manifestPayload.summary,
     retention: manifestPayload.retention,
     eventDigests: manifestPayload.eventDigests,
+    replayDefense: {
+      issuedAt: issuedAt,
+      nonce: nonce || null,
+    },
   };
 }
 
@@ -1170,6 +1255,7 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
     .toLowerCase();
   var limit = parseRetryInt(req.query.limit, 100, 1, 1000);
   var includeEvents = parseRetryBool(req.query.includeEvents, false);
+  var nonce = normalizeFaultManifestNonce(req.query.nonce);
 
   var filtered = collectFaultInjectionEvents(tenantKey, providerKey, scenario);
   var items = filtered.slice(-limit);
@@ -1183,7 +1269,11 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
     items,
     filtered.length
   );
-  var serializedPayload = JSON.stringify(buildFaultManifestDigestPayload(payload));
+  var replayDefense = {
+    issuedAt: payload.generatedAt,
+    nonce: nonce || null,
+  };
+  var serializedPayload = JSON.stringify(buildFaultManifestDigestPayload(payload, replayDefense));
   var digestHex = crypto.createHash("sha256").update(serializedPayload, "utf8").digest("hex");
   var signing = getFaultEvidenceSigningMaterial();
 
@@ -1197,8 +1287,14 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
   res.set("Cache-Control", "no-store");
   res.json({
     manifestId: randomUUID(),
-    manifestVersion: "m5.7.v1",
+    manifestVersion: faultManifestVersion,
     generatedAt: payload.generatedAt,
+    replayDefense: {
+      issuedAt: replayDefense.issuedAt,
+      nonce: replayDefense.nonce,
+      maxAgeSeconds: defaultFaultManifestMaxAgeSeconds,
+      allowedClockSkewSeconds: faultManifestAllowedClockSkewSeconds,
+    },
     signatureStatus: signing.configured ? "signed" : "unsigned",
     signature: signature,
     digest: {
@@ -1228,7 +1324,7 @@ router.get("/integrations/messaging/fault-injection/manifest", function (req, re
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       verifyEndpoint: "POST /api/v1/integrations/messaging/fault-injection/manifest/verify",
       handoffGuide:
-        "Share manifest signature, digest, and filters with incident stakeholders; verify signature with shared secret before acceptance",
+        "Share manifest signature, digest, issuedAt, and optional nonce with incident stakeholders; verify signature and replay defense checks before acceptance",
     },
   });
 });
@@ -1243,10 +1339,22 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
     .trim()
     .toLowerCase();
   var limit = parseRetryInt(payload.limit, 100, 1, 1000);
-  var expectedManifestVersion = "m5.7.v1";
+  var expectedManifestVersion = faultManifestVersion;
   var manifestVersion = String(payload.manifestVersion || expectedManifestVersion).trim();
+  var issuedAt = String(payload.issuedAt || "").trim();
+  var nonce = normalizeFaultManifestNonce(payload.nonce);
+  var expectedNonce = normalizeFaultManifestNonce(payload.expectedNonce);
+  var maxAgeSeconds = parseRetryInt(payload.maxAgeSeconds, defaultFaultManifestMaxAgeSeconds, 30, 86400);
   var providedDigest = normalizeManifestDigestInput(payload.digest);
   var providedSignature = String(payload.signature || "").trim();
+
+  if (!issuedAt) {
+    res.status(400).json({
+      message: "issuedAt is required",
+      code: "NOTIFICATION_FAULT_MANIFEST_ISSUED_AT_REQUIRED",
+    });
+    return;
+  }
 
   if (!providedDigest) {
     res.status(400).json({
@@ -1268,7 +1376,13 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
     items,
     filtered.length
   );
-  var serializedPayload = JSON.stringify(buildFaultManifestDigestPayload(manifestPayload));
+  var freshness = evaluateFaultManifestFreshness(issuedAt, maxAgeSeconds);
+  var serializedPayload = JSON.stringify(
+    buildFaultManifestDigestPayload(manifestPayload, {
+      issuedAt: issuedAt,
+      nonce: nonce || null,
+    })
+  );
   var computedDigest = crypto.createHash("sha256").update(serializedPayload, "utf8").digest("hex");
   var signing = getFaultEvidenceSigningMaterial();
   var expectedSignature = signing.configured
@@ -1277,11 +1391,22 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
     : null;
   var digestMatch = areFaultManifestDigestsEqual(providedDigest, computedDigest);
   var signatureProvided = Boolean(providedSignature);
+  var nonceProvided = Boolean(nonce);
+  var expectedNonceProvided = Boolean(expectedNonce);
+  var nonceMatch = expectedNonceProvided
+    ? nonceProvided && areOpaqueTokensEqual(nonce, expectedNonce)
+    : true;
   var signatureMatch = signing.configured
     ? signatureProvided && areWebhookSignaturesEqual(providedSignature, expectedSignature)
     : !signatureProvided;
   var versionMatch = manifestVersion === expectedManifestVersion;
-  var valid = versionMatch && digestMatch && signatureMatch && signing.configured;
+  var valid =
+    versionMatch &&
+    digestMatch &&
+    signatureMatch &&
+    signing.configured &&
+    freshness.freshnessMatch &&
+    nonceMatch;
 
   res.json({
     verifiedAt: new Date().toISOString(),
@@ -1295,10 +1420,21 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       signingConfigured: signing.configured,
       signatureProvided: signatureProvided,
       signingSecretSource: signing.source,
+      issuedAtProvided: freshness.provided,
+      issuedAtValidFormat: freshness.validFormat,
+      freshnessMatch: freshness.freshnessMatch,
+      ageSeconds: freshness.ageSeconds,
+      maxAgeSeconds: freshness.maxAgeSeconds,
+      nonceProvided: nonceProvided,
+      expectedNonceProvided: expectedNonceProvided,
+      nonceMatch: nonceMatch,
     },
     provided: {
       digest: providedDigest,
       signature: signatureProvided ? providedSignature : null,
+      issuedAt: issuedAt,
+      nonce: nonceProvided ? nonce : null,
+      expectedNonce: expectedNonceProvided ? expectedNonce : null,
     },
     computed: {
       digest: {
@@ -1308,6 +1444,16 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       },
       signature: expectedSignature,
       signatureAlgorithm: signing.configured ? "hmac-sha256" : "unsigned",
+    },
+    replayDefense: {
+      issuedAt: freshness.issuedAt,
+      ageSeconds: freshness.ageSeconds,
+      maxAgeSeconds: freshness.maxAgeSeconds,
+      allowedClockSkewSeconds: faultManifestAllowedClockSkewSeconds,
+      freshnessMatch: freshness.freshnessMatch,
+      nonce: nonceProvided ? nonce : null,
+      expectedNonce: expectedNonceProvided ? expectedNonce : null,
+      nonceMatch: nonceMatch,
     },
     evidence: {
       filters: manifestPayload.filters,
@@ -1324,7 +1470,7 @@ router.post("/integrations/messaging/fault-injection/manifest/verify", function 
       exportEndpoint: "GET /api/v1/integrations/messaging/fault-injection/export",
       retentionEndpoint: "GET /api/v1/integrations/messaging/fault-injection/retention",
       handoffGuide:
-        "Recompute digest and signature with shared secret before accepting external manifest evidence",
+        "Recompute digest/signature and enforce issuedAt freshness plus optional nonce correlation before accepting external manifest evidence",
     },
   });
 });

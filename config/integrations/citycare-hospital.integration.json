@@ -1,5 +1,9 @@
 {
     "tenantKey": "citycare-hospital",
+    "telegramDefaults": {
+        "timeZone": "Asia/Kolkata",
+        "locale": "en-IN"
+    },
     "messagingProviders": [
         {
             "key": "whatsapp-cloud-api",

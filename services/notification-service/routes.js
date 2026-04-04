@@ -26,6 +26,10 @@ var TELEGRAM_DEFAULT_POLL_LIMIT = 25;
 var TELEGRAM_MAX_POLL_LIMIT = 100;
 var TELEGRAM_DEFAULT_DOCTOR_ALARM_UTC = "07:30";
 var APPOINTMENT_SERVICE_BASE_URL_DEFAULT = "http://127.0.0.1:5103";
+var TELEGRAM_TENANT_DEFAULT_TIMEZONE = "UTC";
+var TELEGRAM_TENANT_DEFAULT_LOCALE = "en-IN";
+var TELEGRAM_PUBLIC_NOTIFICATION_BASE_URL_DEFAULT = "http://localhost:5102";
+var TELEGRAM_PUBLIC_AUTH_BASE_URL_DEFAULT = "http://localhost:5101";
 var messagingFaultInjectionEvents = [];
 var maxMessagingFaultInjectionEvents = parseRetryInt(
   process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
@@ -549,6 +553,274 @@ function getAppointmentServiceBaseUrl() {
     .replace(/\/+$/, "");
 }
 
+function normalizePublicBaseUrl(value, fallbackValue) {
+  var candidate = String(value || "").trim();
+  if (!candidate) {
+    candidate = String(fallbackValue || "").trim();
+  }
+
+  if (!candidate) {
+    return "";
+  }
+
+  if (!/^https?:\/\//i.test(candidate)) {
+    candidate = "http://" + candidate;
+  }
+
+  return candidate.replace(/\/+$/, "");
+}
+
+function buildAbsoluteApiUrl(baseUrl, apiPath) {
+  return normalizePublicBaseUrl(baseUrl, "") + String(apiPath || "");
+}
+
+function getTelegramPublicNotificationBaseUrl() {
+  return normalizePublicBaseUrl(
+    process.env.INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL ||
+      process.env.PULSEWARD_PUBLIC_NOTIFICATION_BASE_URL,
+    TELEGRAM_PUBLIC_NOTIFICATION_BASE_URL_DEFAULT
+  );
+}
+
+function getTelegramPublicAuthBaseUrl() {
+  return normalizePublicBaseUrl(
+    process.env.INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL ||
+      process.env.PULSEWARD_PUBLIC_AUTH_BASE_URL,
+    TELEGRAM_PUBLIC_AUTH_BASE_URL_DEFAULT
+  );
+}
+
+function toTenantEnvKeySuffix(tenantKey) {
+  return normalizeTenantKey(tenantKey, "default")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase();
+}
+
+function normalizeTenantTimeZone(value) {
+  var candidate = String(value || "").trim();
+  if (!candidate) {
+    return "";
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: candidate,
+    }).format(new Date());
+    return candidate;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function getDateTokenForTimeZone(value, timeZone) {
+  var date = value instanceof Date ? value : new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  var safeTimeZone = normalizeTenantTimeZone(timeZone) || TELEGRAM_TENANT_DEFAULT_TIMEZONE;
+
+  try {
+    var parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: safeTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    var year = "";
+    var month = "";
+    var day = "";
+    parts.forEach(function (part) {
+      if (part.type === "year") {
+        year = part.value;
+      } else if (part.type === "month") {
+        month = part.value;
+      } else if (part.type === "day") {
+        day = part.value;
+      }
+    });
+
+    if (!year || !month || !day) {
+      return "";
+    }
+
+    return year + "-" + month + "-" + day;
+  } catch (_error) {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+function formatDateTimeForTenant(value, tenantPrefs) {
+  var date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) {
+    return "n/a";
+  }
+
+  var prefs = tenantPrefs || {};
+  var timeZone = normalizeTenantTimeZone(prefs.timeZone) || TELEGRAM_TENANT_DEFAULT_TIMEZONE;
+  var locale = String(prefs.locale || TELEGRAM_TENANT_DEFAULT_LOCALE).trim() || "en-IN";
+
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      timeZone: timeZone,
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "short",
+    }).format(date);
+  } catch (_error) {
+    return date.toISOString().replace(".000", "");
+  }
+}
+
+function getTenantTelegramPreferences(tenantKey) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var config = loadTenantIntegrationConfig(normalizedTenant) || {};
+  var defaults =
+    (config && config.telegramDefaults && typeof config.telegramDefaults === "object"
+      ? config.telegramDefaults
+      : {}) || {};
+  var tenantSuffix = toTenantEnvKeySuffix(normalizedTenant);
+
+  var timeZone =
+    normalizeTenantTimeZone(
+      process.env["INTEGRATION_TELEGRAM_TENANT_TIMEZONE_" + tenantSuffix] ||
+        process.env.INTEGRATION_TELEGRAM_DEFAULT_TIMEZONE ||
+        defaults.timeZone ||
+        defaults.timezone
+    ) || TELEGRAM_TENANT_DEFAULT_TIMEZONE;
+
+  var locale =
+    String(
+      process.env["INTEGRATION_TELEGRAM_TENANT_LOCALE_" + tenantSuffix] ||
+        process.env.INTEGRATION_TELEGRAM_DEFAULT_LOCALE ||
+        defaults.locale ||
+        TELEGRAM_TENANT_DEFAULT_LOCALE
+    ).trim() || TELEGRAM_TENANT_DEFAULT_LOCALE;
+
+  return {
+    tenantKey: normalizedTenant,
+    timeZone: timeZone,
+    locale: locale,
+  };
+}
+
+function toDisplayNameFromIdentifier(value) {
+  var raw = String(value || "").trim();
+  if (!raw) {
+    return "Unknown patient";
+  }
+
+  var token = raw;
+  if (token.indexOf("@") >= 0) {
+    token = token.split("@")[0] || token;
+  }
+
+  return token
+    .split(/[._\-\s]+/)
+    .filter(function (part) {
+      return Boolean(part);
+    })
+    .map(function (part) {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ");
+}
+
+function resolvePatientDescriptor(item) {
+  var record = item || {};
+  var patientId = String(record.patientId || "").trim();
+  var patientName =
+    String(
+      record.patientName ||
+        record.patientDisplayName ||
+        record.patientFullName ||
+        record.name ||
+        ""
+    ).trim() || toDisplayNameFromIdentifier(patientId);
+
+  var ageCandidate =
+    record.patientAge !== undefined
+      ? record.patientAge
+      : record.age !== undefined
+        ? record.age
+        : record.patient && record.patient.age !== undefined
+          ? record.patient.age
+          : "";
+  var numericAge = Number(ageCandidate);
+  var ageText = Number.isFinite(numericAge) && numericAge > 0 ? String(Math.floor(numericAge)) : "";
+
+  return {
+    id: patientId,
+    name: patientName || "Unknown patient",
+    ageText: ageText,
+  };
+}
+
+function buildTelegramOnboardingEndpoints(tenantKey, chatId) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var normalizedChatId = String(chatId || "").trim();
+  var notificationBaseUrl = getTelegramPublicNotificationBaseUrl();
+  var authBaseUrl = getTelegramPublicAuthBaseUrl();
+
+  return {
+    notificationBaseUrl: notificationBaseUrl,
+    authBaseUrl: authBaseUrl,
+    loginUrl: buildAbsoluteApiUrl(authBaseUrl, "/api/v1/auth/login"),
+    linkUrl: buildAbsoluteApiUrl(notificationBaseUrl, "/api/v1/integrations/messaging/telegram/link"),
+    commandSetupUrl: buildAbsoluteApiUrl(
+      notificationBaseUrl,
+      "/api/v1/integrations/messaging/telegram/commands/setup"
+    ),
+    bootstrapUrl:
+      buildAbsoluteApiUrl(
+        notificationBaseUrl,
+        "/api/v1/integrations/messaging/telegram/link/bootstrap"
+      ) +
+      "?tenantKey=" +
+      encodeURIComponent(normalizedTenant) +
+      "&chatId=" +
+      encodeURIComponent(normalizedChatId),
+  };
+}
+
+function getTelegramCommandSetupFingerprint(botToken) {
+  return crypto
+    .createHash("sha256")
+    .update(String(botToken || ""))
+    .digest("hex")
+    .slice(0, 16);
+}
+
+async function ensureTelegramCommandsConfigured(tenantKey, botToken) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var tokenFingerprint = getTelegramCommandSetupFingerprint(botToken);
+  var existing = telegramCommandSetupApplied.get(normalizedTenant);
+
+  if (existing && typeof existing === "object" && existing.tokenFingerprint === tokenFingerprint) {
+    return {
+      applied: false,
+      reason: "already-configured",
+    };
+  }
+
+  await setTelegramCommands(botToken, buildTelegramCommandDefinitions());
+  telegramCommandSetupApplied.set(normalizedTenant, {
+    tokenFingerprint: tokenFingerprint,
+    updatedAt: new Date().toISOString(),
+    commandCount: buildTelegramCommandDefinitions().length,
+  });
+
+  return {
+    applied: true,
+    reason: "configured",
+  };
+}
+
 function buildTelegramCommandDefinitions() {
   return [
     { command: "start", description: "Show command menu" },
@@ -654,7 +926,11 @@ function buildTelegramHelpMessageForRole(role) {
     alarm: "/alarm <HH:MM>|off|status - doctor daily reminder (UTC)",
   };
 
-  var lines = ["PulseWard Telegram Commands", "/help - show this menu"];
+  var lines = [
+    "PulseWard Telegram Commands",
+    "/start - show onboarding and command menu",
+    "/help - show command menu",
+  ];
   commands.forEach(function (item) {
     var commandName = normalizeTelegramCommandName(item && item.command);
     if (!commandName || commandName === "start" || commandName === "help") {
@@ -671,6 +947,7 @@ function buildTelegramLinkedStartMessage(binding) {
   var tenantKey = normalizeTenantKey(binding && binding.tenantKey, "default");
   var subject = String((binding && binding.subject) || "").trim() || "unknown";
   var role = normalizeTelegramRole((binding && binding.role) || "patient");
+  var tenantPrefs = getTenantTelegramPreferences(tenantKey);
 
   return [
     "Welcome to PulseWard Telegram Assistant.",
@@ -678,6 +955,7 @@ function buildTelegramLinkedStartMessage(binding) {
     "tenant: " + tenantKey,
     "subject: " + subject,
     "role: " + role,
+    "timezone: " + tenantPrefs.timeZone,
     "",
     buildTelegramHelpMessageForRole(role),
   ].join("\n");
@@ -687,6 +965,7 @@ function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
   var normalizedTenant = normalizeTenantKey(tenantKey, "default");
   var normalizedChatId = String(chatId || "").trim() || "<chat_id>";
   var normalizedCommand = normalizeTelegramCommandName(commandName);
+  var endpoints = buildTelegramOnboardingEndpoints(normalizedTenant, normalizedChatId);
   var lines = [
     "Welcome to PulseWard Telegram Assistant.",
     "This chat is not linked to an account yet.",
@@ -702,20 +981,20 @@ function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
   }
 
   lines.push("Link flow:");
-  lines.push("1) Login to PulseWard and copy your Bearer token.");
+  lines.push("1) Login and copy your Bearer token:");
+  lines.push(endpoints.loginUrl);
   lines.push("2) Link this chat from your authenticated session:");
-  lines.push("POST /api/v1/integrations/messaging/telegram/link");
-  lines.push(
-    "Body: {\"tenantKey\":\"" +
-      normalizedTenant +
-      "\",\"chatId\":\"" +
-      normalizedChatId +
-      "\"}"
-  );
+  lines.push(endpoints.linkUrl);
+  lines.push('Body: {"tenantKey":"' + normalizedTenant + '","chatId":"' + normalizedChatId + '"}');
+  lines.push("");
+  lines.push("Quick setup JSON guide URL:");
+  lines.push(endpoints.bootstrapUrl);
   lines.push("");
   lines.push("PowerShell example:");
   lines.push(
-    "Invoke-RestMethod -Method Post -Uri 'http://<laptop-ip>:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
+    "Invoke-RestMethod -Method Post -Uri '" +
+      endpoints.linkUrl +
+      "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
       normalizedTenant +
       "'; chatId='" +
       normalizedChatId +
@@ -723,7 +1002,7 @@ function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
   );
   lines.push("");
   lines.push("If command menu is missing after linking, ask admin to run:");
-  lines.push("POST /api/v1/integrations/messaging/telegram/commands/setup");
+  lines.push(endpoints.commandSetupUrl);
   lines.push("Then use /help for your command menu.");
 
   return lines.join("\n");
@@ -840,19 +1119,38 @@ function formatStatusCounts(counts) {
   return parts.join(", ");
 }
 
-function formatAppointmentForTelegram(item) {
-  var when = new Date(String((item && item.appointmentDate) || ""));
-  var whenText = Number.isNaN(when.getTime()) ? "n/a" : when.toISOString().replace(".000", "");
-  return (
-    "- " +
-    String((item && item.id) || "n/a") +
-    " | " +
-    whenText +
-    " | patient=" +
-    String((item && item.patientId) || "n/a") +
-    " | status=" +
-    String((item && item.status) || "unknown")
-  );
+function formatAppointmentForTelegram(item, tenantPrefs, index) {
+  var appointment = item || {};
+  var whenText = formatDateTimeForTenant(appointment.appointmentDate, tenantPrefs);
+  var patient = resolvePatientDescriptor(appointment);
+  var status =
+    String(appointment.status || "unknown")
+      .trim()
+      .toLowerCase() || "unknown";
+  var triage =
+    String(appointment.triageLevel || "")
+      .trim()
+      .toLowerCase() || "";
+  var duration = Number(appointment.durationMinutes || 0);
+  var ageSegment = patient.ageText ? " (age " + patient.ageText + ")" : "";
+  var numberedPrefix = Number.isFinite(index) ? String(index + 1) + ". " : "- ";
+
+  var segments = [
+    numberedPrefix + whenText,
+    patient.name + ageSegment,
+    "status=" + status,
+    "id=" + String(appointment.id || "n/a"),
+  ];
+
+  if (triage) {
+    segments.push("triage=" + triage);
+  }
+
+  if (Number.isFinite(duration) && duration > 0) {
+    segments.push("duration=" + String(Math.floor(duration)) + "m");
+  }
+
+  return segments.join(" | ");
 }
 
 function buildGoogleCalendarDateToken(value) {
@@ -1210,11 +1508,13 @@ function parseAgendaCommandArgs(args, defaultSubject) {
   return result;
 }
 
-function filterAppointmentsByUtcDay(items, dateToken) {
+function filterAppointmentsByUtcDay(items, dateToken, tenantPrefs) {
+  var prefs = tenantPrefs || {};
+  var timeZone = normalizeTenantTimeZone(prefs.timeZone) || TELEGRAM_TENANT_DEFAULT_TIMEZONE;
   var normalizedDateToken = String(dateToken || "today").trim();
   var expectedToken =
     normalizedDateToken.toLowerCase() === "today"
-      ? new Date().toISOString().slice(0, 10)
+      ? getDateTokenForTimeZone(new Date(), timeZone)
       : normalizedDateToken;
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(expectedToken)) {
@@ -1226,7 +1526,7 @@ function filterAppointmentsByUtcDay(items, dateToken) {
   }
 
   var filtered = (Array.isArray(items) ? items : []).filter(function (item) {
-    return toUtcDayToken(item && item.appointmentDate) === expectedToken;
+    return getDateTokenForTimeZone(item && item.appointmentDate, timeZone) === expectedToken;
   });
 
   return {
@@ -1250,6 +1550,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
   var tenantKey = normalizeTenantKey(binding && binding.tenantKey, "default");
   var subject = String((binding && binding.subject) || "").trim();
   var role = normalizeTelegramRole((binding && binding.role) || "patient");
+  var tenantPrefs = getTenantTelegramPreferences(tenantKey);
   var command = parsedCommand && parsedCommand.command ? parsedCommand.command : "";
   var args = parsedCommand && Array.isArray(parsedCommand.args) ? parsedCommand.args : [];
 
@@ -1268,6 +1569,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       "subject: " + subject,
       "role: " + role,
       "chatId: " + String((binding && binding.chatId) || ""),
+      "timezone: " + tenantPrefs.timeZone,
     ].join("\n");
   }
 
@@ -1280,7 +1582,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     var agendaAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
       clinicianId: agendaArgs.clinicianId,
     });
-    var agendaDay = filterAppointmentsByUtcDay(agendaAppointments, agendaArgs.dateToken);
+    var agendaDay = filterAppointmentsByUtcDay(agendaAppointments, agendaArgs.dateToken, tenantPrefs);
     if (!agendaDay.valid) {
       return "Invalid date format. Use YYYY-MM-DD or omit for today.";
     }
@@ -1292,10 +1594,24 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       );
     });
     var counts = collectStatusCounts(sortedAgenda);
+    var uniquePatients = {};
+    sortedAgenda.forEach(function (item) {
+      var descriptor = resolvePatientDescriptor(item);
+      var key = descriptor.id || descriptor.name;
+      if (key) {
+        uniquePatients[key] = true;
+      }
+    });
+
     var lines = [
-      "Agenda for " + agendaArgs.clinicianId + " on " + agendaDay.dateToken,
-      "total: " + sortedAgenda.length,
+      "Agenda Summary",
+      "doctor: " + agendaArgs.clinicianId,
+      "date: " + agendaDay.dateToken + " (" + tenantPrefs.timeZone + ")",
+      "appointments: " + sortedAgenda.length,
+      "unique patients: " + Object.keys(uniquePatients).length,
       "status: " + (formatStatusCounts(counts) || "n/a"),
+      "",
+      "Appointments:",
     ];
 
     if (sortedAgenda.length === 0) {
@@ -1303,13 +1619,13 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       return lines.join("\n");
     }
 
-    limitArray(sortedAgenda, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (item) {
-      lines.push(formatAppointmentForTelegram(item));
+    limitArray(sortedAgenda, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (item, index) {
+      lines.push(formatAppointmentForTelegram(item, tenantPrefs, index));
     });
 
     if (sortedAgenda.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
       lines.push(
-        "Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " items. Use API for full list."
+        "Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " appointments."
       );
     }
 
@@ -1325,31 +1641,45 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     var patientAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
       clinicianId: patientArgs.clinicianId,
     });
-    var patientDay = filterAppointmentsByUtcDay(patientAppointments, patientArgs.dateToken);
+    var patientDay = filterAppointmentsByUtcDay(patientAppointments, patientArgs.dateToken, tenantPrefs);
     if (!patientDay.valid) {
       return "Invalid date format. Use YYYY-MM-DD or omit for today.";
     }
 
     var uniquePatients = {};
     patientDay.items.forEach(function (item) {
-      var patientId = String((item && item.patientId) || "").trim();
-      if (patientId) {
-        uniquePatients[patientId] = true;
+      var descriptor = resolvePatientDescriptor(item);
+      var key = descriptor.id || descriptor.name;
+      if (!key) {
+        return;
+      }
+
+      if (!uniquePatients[key]) {
+        uniquePatients[key] = descriptor;
       }
     });
 
-    var patientIds = Object.keys(uniquePatients).sort();
+    var patientEntries = Object.keys(uniquePatients)
+      .sort()
+      .map(function (key) {
+        return uniquePatients[key];
+      });
     var responseLines = [
-      "Patients for " + patientArgs.clinicianId + " on " + patientDay.dateToken,
+      "Patient Summary",
+      "doctor: " + patientArgs.clinicianId,
+      "date: " + patientDay.dateToken + " (" + tenantPrefs.timeZone + ")",
       "appointments: " + patientDay.items.length,
-      "unique patients: " + patientIds.length,
+      "unique patients: " + patientEntries.length,
+      "",
+      "Patients:",
     ];
 
-    limitArray(patientIds, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (patientId) {
-      responseLines.push("- " + patientId);
+    limitArray(patientEntries, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (entry, index) {
+      var ageText = entry && entry.ageText ? " (age " + entry.ageText + ")" : "";
+      responseLines.push(String(index + 1) + ". " + String((entry && entry.name) || "Unknown") + ageText);
     });
 
-    if (patientIds.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
+    if (patientEntries.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
       responseLines.push("Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " patients.");
     }
 
@@ -1368,10 +1698,10 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
 
     var myDateToken = args[0] ? String(args[0]).trim() : "";
     var filteredMyAppointments = myAppointments;
-    var subtitle = "all upcoming contexts";
+    var subtitle = "all available dates";
 
     if (myDateToken) {
-      var myDay = filterAppointmentsByUtcDay(myAppointments, myDateToken);
+      var myDay = filterAppointmentsByUtcDay(myAppointments, myDateToken, tenantPrefs);
       if (!myDay.valid) {
         return "Invalid date format. Use YYYY-MM-DD or omit for all appointments.";
       }
@@ -1390,6 +1720,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     var myCounts = collectStatusCounts(filteredMyAppointments);
     var myLines = [
       "My appointments " + subtitle,
+      "timezone: " + tenantPrefs.timeZone,
       "total: " + filteredMyAppointments.length,
       "status: " + (formatStatusCounts(myCounts) || "n/a"),
     ];
@@ -1399,10 +1730,8 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       return myLines.join("\n");
     }
 
-    limitArray(filteredMyAppointments, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (
-      item
-    ) {
-      myLines.push(formatAppointmentForTelegram(item));
+    limitArray(filteredMyAppointments, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (item, index) {
+      myLines.push(formatAppointmentForTelegram(item, tenantPrefs, index));
     });
 
     if (filteredMyAppointments.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
@@ -1505,7 +1834,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       "id: " + String(created.id || "n/a"),
       "status: " + String(created.status || "n/a"),
       "doctor: " + String(created.clinicianId || "n/a"),
-      "time: " + String(created.appointmentDate || "n/a"),
+      "time: " + formatDateTimeForTenant(created.appointmentDate, tenantPrefs),
       "Use /calendar " + String(created.id || "") + " after acceptance.",
     ].join("\n");
   }
@@ -1539,8 +1868,8 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       "Appointment accepted.",
       "id: " + String(updated.id || appointmentId),
       "status: " + String(updated.status || "scheduled"),
-      "patient: " + String(updated.patientId || "n/a"),
-      "time: " + String(updated.appointmentDate || "n/a"),
+      "patient: " + resolvePatientDescriptor(updated).name,
+      "time: " + formatDateTimeForTenant(updated.appointmentDate, tenantPrefs),
     ].join("\n");
   }
 
@@ -1743,9 +2072,8 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
     };
   }
 
-  if (options.ensureCommands && !telegramCommandSetupApplied.get(normalizedTenant)) {
-    await setTelegramCommands(botToken, buildTelegramCommandDefinitions());
-    telegramCommandSetupApplied.set(normalizedTenant, true);
+  if (options.ensureCommands) {
+    await ensureTelegramCommandsConfigured(normalizedTenant, botToken);
   }
 
   var offset = Number(telegramCommandOffsets.get(normalizedTenant) || 0);
@@ -4823,6 +5151,43 @@ router.post("/integrations/messaging/test", function (req, res) {
     });
 });
 
+router.get("/integrations/messaging/telegram/link/bootstrap", function (req, res) {
+  var tenantKey = normalizeTenantKey(req.query.tenantKey || "default", "default");
+  var chatId = String(req.query.chatId || "").trim();
+  var endpoints = buildTelegramOnboardingEndpoints(tenantKey, chatId);
+
+  res.json({
+    accepted: true,
+    tenantKey: tenantKey,
+    chatId: chatId || "<chat_id>",
+    endpoints: endpoints,
+    steps: [
+      "Call login endpoint and obtain bearer token for same tenant and user role",
+      "Call link endpoint with bearer token and chatId from Telegram",
+      "Admin/operations can publish command menu using commands/setup endpoint",
+      "Use /start or /help in Telegram after linking",
+    ],
+    examples: {
+      powershell:
+        "Invoke-RestMethod -Method Post -Uri '" +
+        endpoints.linkUrl +
+        "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
+        tenantKey +
+        "'; chatId='" +
+        (chatId || "<chat_id>") +
+        "' } | ConvertTo-Json)",
+      bash:
+        "curl -X POST '" +
+        endpoints.linkUrl +
+        "' -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{\"tenantKey\":\"" +
+        tenantKey +
+        "\",\"chatId\":\"" +
+        (chatId || "<chat_id>") +
+        "\"}'",
+    },
+  });
+});
+
 router.post("/integrations/messaging/telegram/link", async function (req, res) {
   var authSession = requireAuthenticatedSession(req, res);
   if (!authSession) {
@@ -5065,6 +5430,9 @@ router.get("/integrations/messaging/telegram/setup", function (req, res) {
       "Open Telegram and start BotFather",
       "Create a bot and save bot token in secret manager",
       "Set INTEGRATION_TELEGRAM_CREDENTIALS reference",
+      "Optional: set INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL and INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL for onboarding links",
+      "Optional: set tenant timezone in config.integrations.<tenant>.telegramDefaults.timeZone",
+      "Use GET /api/v1/integrations/messaging/telegram/link/bootstrap?tenantKey=<tenant>&chatId=<chatId> for guided link URLs",
       "Call POST /api/v1/integrations/messaging/telegram/commands/setup to publish bot commands",
       "Link each user via POST /api/v1/integrations/messaging/telegram/link",
       "Notification service auto-polls commands when running (manual poll endpoint remains available)",
@@ -5129,7 +5497,11 @@ router.post("/integrations/messaging/telegram/commands/setup", async function (r
 
   try {
     await setTelegramCommands(botToken, commands);
-    telegramCommandSetupApplied.set(tenantKey, true);
+    telegramCommandSetupApplied.set(normalizeTenantKey(tenantKey, "default"), {
+      tokenFingerprint: getTelegramCommandSetupFingerprint(botToken),
+      updatedAt: new Date().toISOString(),
+      commandCount: commands.length,
+    });
     res.json({
       accepted: true,
       tenantKey: tenantKey,

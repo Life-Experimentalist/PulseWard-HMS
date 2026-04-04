@@ -34,8 +34,7 @@ Notifications.setNotificationHandler({
 
 function getApiBaseUrl() {
   var explicitApiUrl =
-    process.env.EXPO_PUBLIC_PULSEWARD_API_BASE_URL ||
-    process.env.EXPO_PUBLIC_API_BASE_URL;
+    process.env.EXPO_PUBLIC_PULSEWARD_API_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL;
 
   if (explicitApiUrl) {
     return explicitApiUrl;
@@ -105,8 +104,7 @@ function resolveExpoRuntimeHost() {
 }
 
 function resolveNetworkHost() {
-  var explicitHost =
-    process.env.EXPO_PUBLIC_PULSEWARD_HOST || process.env.EXPO_PUBLIC_LAPTOP_HOST;
+  var explicitHost = process.env.EXPO_PUBLIC_PULSEWARD_HOST || process.env.EXPO_PUBLIC_LAPTOP_HOST;
   var envHost = normalizeHostFromAddress(explicitHost);
   if (envHost) {
     return envHost;
@@ -570,7 +568,9 @@ function App() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.meta}>{authStatus || "Login required for events and push flows."}</Text>
+          <Text style={styles.meta}>
+            {authStatus || "Login required for events and push flows."}
+          </Text>
           {authToken ? (
             <Text style={styles.tokenPreview}>Token: {authToken.slice(0, 24)}...</Text>
           ) : null}
@@ -686,7 +686,10 @@ function App() {
           ) : null}
 
           {events.map(function (item, index) {
-            var key = item && (item.id || item.correlationId) ? item.id || item.correlationId : String(index);
+            var key =
+              item && (item.id || item.correlationId)
+                ? item.id || item.correlationId
+                : String(index);
 
             return (
               <View key={key} style={styles.card}>

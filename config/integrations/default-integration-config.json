@@ -1,5 +1,9 @@
 {
   "tenantKey": "default",
+  "telegramDefaults": {
+    "timeZone": "UTC",
+    "locale": "en-IN"
+  },
   "messagingProviders": [
     {
       "key": "whatsapp-cloud-api",

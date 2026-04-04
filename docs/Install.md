@@ -665,6 +665,12 @@ $token = (Invoke-RestMethod -Method Post -Uri 'http://localhost:5101/api/v1/auth
 Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; chatId='8654870262' } | ConvertTo-Json)
 ```
 
+Optional guided onboarding URL (useful from `/start` output):
+
+```powershell
+Invoke-RestMethod -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link/bootstrap?tenantKey=citycare-hospital&chatId=8654870262'
+```
+
 Full endpoint URL:
 
 1. `http://localhost:5102/api/v1/integrations/messaging/telegram/link`
@@ -674,6 +680,26 @@ What this does:
 1. Links current authenticated user to provided Telegram `chatId` for the same tenant.
 2. Pushes role-based command menu to that chat.
 3. Doctors will not see `/book` in menu anymore.
+
+Tenant time defaults for Telegram summaries:
+
+1. Admin can set timezone/locale in `config/integrations/<tenant>.integration.json` under `telegramDefaults`.
+2. Example:
+
+```json
+"telegramDefaults": {
+	"timeZone": "Asia/Kolkata",
+	"locale": "en-IN"
+}
+```
+
+3. `/agenda`, `/patients`, and `/myappointments` use this tenant timezone for date grouping and display.
+
+Public URL settings for Telegram onboarding messages:
+
+1. `INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL` (example: `https://api.yourdomain.com`)
+2. `INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL` (example: `https://auth.yourdomain.com`)
+3. If unset, local defaults are used (`http://localhost:5102` and `http://localhost:5101`).
 
 7. Publish Telegram bot commands (admin or operations token):
 
@@ -712,9 +738,14 @@ Patient chat menu:
 Unlinked chat onboarding behavior:
 
 1. `/start` returns an onboarding intro with tenant and detected `chatId`.
-2. The message includes the exact link endpoint:
-	`POST /api/v1/integrations/messaging/telegram/link`.
+2. The message includes concrete login + link URLs and a bootstrap guide URL.
 3. After linking, run `/help` to see role-specific commands.
+
+Cross-platform note (Windows, Docker, Linux):
+
+1. PowerShell commands are Windows-host examples only.
+2. The same API endpoints work from Linux/macOS/Bash (`curl`) and from Docker containers.
+3. Nothing in Telegram flow is PowerShell-only; only command syntax differs.
 
 9. Send tenant and user-scoped Telegram test:
 

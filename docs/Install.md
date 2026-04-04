@@ -81,6 +81,13 @@ npm install -g pnpm@9.15.0
 pnpm -v
 ```
 
+If pnpm shows an upgrade banner (for example `9.x -> 10.x`), this repository should still use the version pinned by `packageManager` unless the repo is intentionally upgraded.
+
+Practical rule:
+
+1. You can keep your global pnpm newer.
+2. For this repo workflow, run `corepack prepare pnpm@9.15.0 --activate` when needed.
+
 Bash:
 
 ```bash
@@ -193,16 +200,21 @@ Generate a secure JWT secret:
 pnpm run jwt:generate
 ```
 
+Interactive behavior:
+
+1. Prints generated secret.
+2. Asks: replace `JWT_SECRET` in `.env` now? `yes/no`.
+
+Direct replace without prompt:
+
+```bash
+pnpm run jwt:generate -- --apply
+```
+
 Optional custom format/length:
 
 ```bash
 pnpm run jwt:generate -- --bytes 64 --format hex
-```
-
-Then put it in `.env`:
-
-```dotenv
-JWT_SECRET=<generated-value>
 ```
 
 What this does:
@@ -355,7 +367,9 @@ INTEGRATION_EMAIL_SMTP_CREDENTIALS={"host":"smtp.example.com","port":587,"secure
 ### 11.3 Generic Webhook
 
 1. Cost/ease: free if you own the endpoint.
-2. Env value:
+2. Optional unless webhook provider/routes are enabled.
+3. Purpose: validates HMAC signatures on incoming webhook payloads so random external calls cannot spoof trusted events.
+4. Env value:
 
 ```dotenv
 INTEGRATION_WEBHOOK_SIGNING_SECRET={"signingSecret":"<hmac_secret>"}
@@ -456,10 +470,12 @@ What it does:
 2. Generates and writes `JWT_SECRET`.
 3. Writes DB local defaults.
 4. Sets strict tenant keys.
-5. Lets you enter connector JSON values one-by-one.
-6. Creates tenant integration file automatically.
-7. Runs validation.
-8. Runs setup compose workflow.
+5. Prompts Telegram bot token separately and tries to auto-detect `chatId` via `getUpdates`.
+6. Shows required vs optional connector prompts with expected JSON examples.
+7. Lets you keep existing values by pressing Enter.
+8. Creates tenant integration file automatically.
+9. Runs validation.
+10. Runs setup compose workflow in `local-core` mode (Postgres + Mongo), avoiding full Docker image build failures when service Dockerfiles are absent.
 
 ## Step 14: One-command installer (`iex` style)
 

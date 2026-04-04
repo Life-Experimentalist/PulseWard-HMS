@@ -2,7 +2,8 @@
     [Alias('SkipNpmInstall')]
     [switch]$SkipInstall,
     [switch]$NoBuild,
-    [switch]$SkipComposeUp
+    [switch]$SkipComposeUp,
+    [switch]$ComposeAllServices
 )
 
 $ErrorActionPreference = 'Stop'
@@ -72,19 +73,32 @@ try {
     }
 
     if (-not $SkipComposeUp) {
-        if ($NoBuild) {
-            Invoke-CheckedCommand -Description 'docker compose up -d' -Command {
-                docker compose up -d
+        if ($ComposeAllServices) {
+            Write-Host 'Compose mode: full stack (all services)'
+            if ($NoBuild) {
+                Invoke-CheckedCommand -Description 'docker compose up -d' -Command {
+                    docker compose up -d
+                }
+            }
+            else {
+                Invoke-CheckedCommand -Description 'docker compose up --build -d' -Command {
+                    docker compose up --build -d
+                }
+            }
+
+            Invoke-CheckedCommand -Description 'docker compose ps' -Command {
+                docker compose ps
             }
         }
         else {
-            Invoke-CheckedCommand -Description 'docker compose up --build -d' -Command {
-                docker compose up --build -d
+            Write-Host 'Compose mode: local-core (Postgres + Mongo only)'
+            Invoke-CheckedCommand -Description 'docker compose up -d pulseward-postgres pulseward-mongo' -Command {
+                docker compose up -d pulseward-postgres pulseward-mongo
             }
-        }
-
-        Invoke-CheckedCommand -Description 'docker compose ps' -Command {
-            docker compose ps
+            Invoke-CheckedCommand -Description 'docker compose ps pulseward-postgres pulseward-mongo' -Command {
+                docker compose ps pulseward-postgres pulseward-mongo
+            }
+            Write-Host 'Tip: Use -ComposeAllServices only when Dockerfiles exist for every service in docker-compose.yml.'
         }
     }
     else {

@@ -26,25 +26,27 @@ Yes, use BotFather.
 1. Open Telegram and chat with `@BotFather`.
 2. Run `/newbot` and finish bot creation.
 3. Copy bot token.
-4. Get your chat id:
+   Expected format: `123456789:AA...`
+4. Fast path (recommended): run `pnpm run setup:bootstrap` and provide only bot token; script will auto-detect `chatId` from Telegram updates.
+5. Get your chat id:
    Send a message to your bot, then open:
    `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-5. Find `message.chat.id` from response.
+6. Find `message.chat.id` from response.
    Do not use `https://web.telegram.org/a/#...` as the source of truth for bot delivery.
    That URL is a Telegram Web route, not the API contract used by the bot adapter.
-6. Put credentials in `.env`:
+7. Put credentials in `.env`:
 
 ```dotenv
 INTEGRATION_TELEGRAM_CREDENTIALS={"botToken":"<YOUR_BOT_TOKEN>","chatId":"<YOUR_CHAT_ID>"}
 ```
 
-7. Check status:
+8. Check status:
 
 ```powershell
 Invoke-RestMethod "http://localhost:5102/api/v1/integrations/messaging/telegram/config-status?tenantKey=citycare-hospital"
 ```
 
-8. Register user once, then login and get JWT for tenant-scoped testing:
+9. Register user once, then login and get JWT for tenant-scoped testing:
 
 ```powershell
 $registerBody = @{
@@ -68,7 +70,7 @@ $loginBody = @{
 $authToken = (Invoke-RestMethod -Method Post -Uri "http://localhost:5101/api/v1/auth/login" -ContentType "application/json" -Body $loginBody).token
 ```
 
-9. Send Telegram test message through notification service:
+10. Send Telegram test message through notification service:
 
 ```powershell
 $payload = @{
@@ -80,9 +82,24 @@ $payload = @{
 Invoke-RestMethod -Method Post -Uri "http://localhost:5102/api/v1/integrations/messaging/test" -Headers @{ Authorization = "Bearer $authToken" } -ContentType "application/json" -Body $payload
 ```
 
-10. Security note:
+11. Security note:
 Only the bot token holder can call Telegram bot APIs (`getUpdates`, `sendMessage`).
 If token leaks, rotate from BotFather immediately.
+
+## 3.1 Webhook signing secret (optional)
+
+`INTEGRATION_WEBHOOK_SIGNING_SECRET` is optional unless webhook routing is enabled.
+
+Purpose:
+
+1. Creates an HMAC signature check.
+2. Prevents unauthenticated external callers from spoofing trusted webhook events.
+
+Expected value:
+
+```dotenv
+INTEGRATION_WEBHOOK_SIGNING_SECRET={"signingSecret":"your-long-random-secret"}
+```
 
 ## 4. Android push notification setup (SDK 53)
 

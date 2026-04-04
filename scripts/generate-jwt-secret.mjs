@@ -95,7 +95,9 @@ async function shouldApplyToEnv(args) {
   const rl = createInterface({ input, output });
   try {
     const answer = await rl.question("Replace JWT_SECRET in .env now? [y/N]: ");
-    const normalized = String(answer || "").trim().toLowerCase();
+    const normalized = String(answer || "")
+      .trim()
+      .toLowerCase();
     return normalized === "y" || normalized === "yes";
   } finally {
     rl.close();
@@ -124,7 +126,6 @@ try {
   } else {
     console.log("Skipped .env update");
   }
-
 } catch (error) {
   console.error(error.message);
   process.exit(1);

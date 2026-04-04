@@ -12,6 +12,7 @@ var router = express.Router();
 var notifications = [];
 var appointmentEventReceipts = [];
 var mobilePushRegistrations = new Map();
+var telegramUserChatBindings = new Map();
 var messagingFaultInjectionEvents = [];
 var maxMessagingFaultInjectionEvents = parseRetryInt(
   process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
@@ -453,6 +454,16 @@ function toPushRegistrationKey(tenantKey, subject) {
   );
 }
 
+function toTelegramBindingKey(tenantKey, subject) {
+  return (
+    String(tenantKey || "").trim() +
+    "::" +
+    String(subject || "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
 function maskPushToken(pushToken) {
   var token = String(pushToken || "");
   if (token.length <= 16) {
@@ -460,6 +471,63 @@ function maskPushToken(pushToken) {
   }
 
   return token.slice(0, 12) + "..." + token.slice(-4);
+}
+
+function getTelegramBotToken(config) {
+  var provider = findMessagingProvider(config, "telegram-bot");
+  var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_TELEGRAM_CREDENTIALS");
+  if (!secretStatus || !secretStatus.parsed || !secretStatus.parsed.botToken) {
+    return "";
+  }
+
+  return String(secretStatus.parsed.botToken).trim();
+}
+
+async function fetchTelegramChatCandidates(botToken) {
+  var response = await fetch(
+    "https://api.telegram.org/bot" + String(botToken).trim() + "/getUpdates"
+  );
+  var payload = await response.json().catch(function () {
+    return null;
+  });
+  if (!response.ok || !payload || payload.ok !== true || !Array.isArray(payload.result)) {
+    return [];
+  }
+
+  var candidates = [];
+  var seen = {};
+
+  payload.result.forEach(function (update) {
+    var chat = null;
+    if (update && update.message && update.message.chat) {
+      chat = update.message.chat;
+    } else if (update && update.channel_post && update.channel_post.chat) {
+      chat = update.channel_post.chat;
+    } else if (update && update.my_chat_member && update.my_chat_member.chat) {
+      chat = update.my_chat_member.chat;
+    }
+
+    if (!chat || !chat.id) {
+      return;
+    }
+
+    var chatId = String(chat.id);
+    if (seen[chatId]) {
+      return;
+    }
+
+    seen[chatId] = true;
+    candidates.push({
+      chatId: chatId,
+      type: String(chat.type || ""),
+      title: String(chat.title || ""),
+      username: String(chat.username || ""),
+      firstName: String(chat.first_name || ""),
+      lastName: String(chat.last_name || ""),
+    });
+  });
+
+  return candidates;
 }
 
 function parseRetryInt(value, fallback, minimum, maximum) {
@@ -3274,6 +3342,14 @@ router.post("/integrations/messaging/test", function (req, res) {
   var dryRun = true;
   var recipient = String(payload.recipient || "").trim();
 
+  if (!recipient && payload.providerKey === "telegram-bot") {
+    var bindingKey = toTelegramBindingKey(tenantKey, authSession.subject);
+    var binding = telegramUserChatBindings.get(bindingKey);
+    if (binding && binding.chatId) {
+      recipient = String(binding.chatId);
+    }
+  }
+
   if (typeof payload.dryRun === "string") {
     dryRun = payload.dryRun.toLowerCase() !== "false";
   } else if (payload.dryRun === false) {
@@ -3301,6 +3377,76 @@ router.post("/integrations/messaging/test", function (req, res) {
         detail: error.message,
       });
     });
+});
+
+router.post("/integrations/messaging/telegram/link", async function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  var payload = req.body || {};
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var chatId = String(payload.chatId || "").trim();
+  var config = loadTenantIntegrationConfig(tenantKey);
+
+  if (!chatId) {
+    var botToken = getTelegramBotToken(config);
+    if (!botToken) {
+      res.status(400).json({
+        accepted: false,
+        code: "TELEGRAM_BOT_TOKEN_MISSING",
+        message: "Telegram bot token is not configured for this tenant",
+      });
+      return;
+    }
+
+    try {
+      var candidates = await fetchTelegramChatCandidates(botToken);
+      if (candidates.length === 1) {
+        chatId = candidates[0].chatId;
+      } else {
+        res.status(409).json({
+          accepted: false,
+          code: "TELEGRAM_CHAT_SELECTION_REQUIRED",
+          message: "Provide chatId explicitly or ensure only one candidate chat exists",
+          candidates: candidates,
+        });
+        return;
+      }
+    } catch (error) {
+      res.status(502).json({
+        accepted: false,
+        code: "TELEGRAM_UPDATES_FETCH_FAILED",
+        message: "Unable to fetch Telegram updates",
+        detail: error && error.message ? error.message : "Unknown error",
+      });
+      return;
+    }
+  }
+
+  var key = toTelegramBindingKey(tenantKey, authSession.subject);
+  var bindingRecord = {
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    chatId: chatId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  telegramUserChatBindings.set(key, bindingRecord);
+
+  res.status(201).json({
+    accepted: true,
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    chatId: chatId,
+    updatedAt: bindingRecord.updatedAt,
+    detail: "Telegram chat linked for authenticated user",
+  });
 });
 
 router.post("/integrations/mobile/push/register", function (req, res) {

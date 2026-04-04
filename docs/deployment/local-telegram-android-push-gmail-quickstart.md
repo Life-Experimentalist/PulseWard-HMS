@@ -82,7 +82,13 @@ $payload = @{
 Invoke-RestMethod -Method Post -Uri "http://localhost:5102/api/v1/integrations/messaging/test" -Headers @{ Authorization = "Bearer $authToken" } -ContentType "application/json" -Body $payload
 ```
 
-11. Security note:
+11. Optional but recommended: link this authenticated user to a specific Telegram chat id.
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:5102/api/v1/integrations/messaging/telegram/link" -Headers @{ Authorization = "Bearer $authToken" } -ContentType "application/json" -Body (@{ tenantKey = "citycare-hospital"; chatId = "8654870262" } | ConvertTo-Json)
+```
+
+12. Security note:
 Only the bot token holder can call Telegram bot APIs (`getUpdates`, `sendMessage`).
 If token leaks, rotate from BotFather immediately.
 
@@ -142,6 +148,30 @@ eas credentials -p android
 
 ### 4.3 Build APK and install on phone
 
+Two valid APK build paths:
+
+Path A (local build on this machine):
+
+1. Install Java 17 and set `JAVA_HOME`.
+2. Install Android SDK and platform tools.
+3. Run:
+
+```powershell
+Set-Location apps/mobile-notifications
+pnpm run prebuild:android
+Set-Location android
+.\gradlew.bat assembleDebug
+```
+
+APK output:
+
+`apps/mobile-notifications/android/app/build/outputs/apk/debug/app-debug.apk`
+
+Path B (EAS cloud build):
+
+1. Run `eas login` (or set `EXPO_TOKEN`).
+2. Run:
+
 ```powershell
 pnpm --dir apps/mobile-notifications build:android:apk
 ```
@@ -160,7 +190,7 @@ pnpm --dir apps/mobile-notifications start:lan
 3. Login inside app first (same tenant/email/role).
 4. Tap `Enable push and get token` (this now registers token against logged-in user).
 5. Tap `Send test push` (backend sends only to that authenticated user's registered device).
-5. Or send from terminal:
+6. Or send from terminal:
 
 ```powershell
 pnpm run push:expo:test -- --token "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" --title "PulseWard" --body "Push from localhost"

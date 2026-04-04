@@ -610,6 +610,123 @@ For deeper rollout details, also see:
 2. `docs/deployment/deploy-and-domain-migration.md`
 3. `docs/deployment/local-telegram-android-push-gmail-quickstart.md`
 
+## Step 19: Local Deploy - Exact Step-By-Step
+
+Use this when running on your current machine for first demo.
+
+1. Install dependencies:
+
+```powershell
+pnpm install --frozen-lockfile
+```
+
+2. Generate JWT and apply to env:
+
+```powershell
+pnpm run jwt:generate -- --apply
+```
+
+3. Run strict bootstrap:
+
+```powershell
+pnpm run setup:bootstrap
+```
+
+4. Start backend services (separate terminals):
+
+```powershell
+pnpm run start:auth
+pnpm run start:notification
+pnpm run start:appointment
+```
+
+5. Register and login test user:
+
+```powershell
+$register = @{ tenantKey='citycare-hospital'; email='doctor@citycare.example.com'; password='demo-password'; role='doctor' } | ConvertTo-Json
+try { Invoke-RestMethod -Method Post -Uri 'http://localhost:5101/api/v1/auth/register' -ContentType 'application/json' -Body $register | Out-Null } catch {}
+$token = (Invoke-RestMethod -Method Post -Uri 'http://localhost:5101/api/v1/auth/login' -ContentType 'application/json' -Body $register).token
+```
+
+6. Link Telegram chat to this authenticated user (doctor):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; chatId='8654870262' } | ConvertTo-Json)
+```
+
+7. Send tenant and user-scoped Telegram test:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/test' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; providerKey='telegram-bot'; message='Doctor scoped notification test'; dryRun=$false } | ConvertTo-Json)
+```
+
+8. Start mobile app and test push registration/send as same user context:
+
+```powershell
+pnpm --dir apps/mobile-notifications start:lan
+```
+
+In app:
+
+1. Login with same tenant/email/role.
+2. Enable push and get token.
+3. Send test push.
+
+9. If you want an installable APK, choose one path:
+
+Path A (local build on this machine):
+
+1. Install Java 17 and set `JAVA_HOME`.
+2. Install Android SDK + platform tools.
+3. From `apps/mobile-notifications/android`, run `gradlew.bat assembleDebug`.
+4. APK output path: `apps/mobile-notifications/android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Path B (EAS cloud build):
+
+1. Run `eas login` (or set `EXPO_TOKEN`).
+2. Run `pnpm --dir apps/mobile-notifications build:android:apk`.
+3. Download APK from Expo build URL.
+
+## Step 20: How Server Routes Telegram and Mobile Notifications Per User
+
+The server uses authenticated identity context, not random broadcast.
+
+1. Login token from auth-service includes user subject (`sub`) and `tenantKey`.
+2. Telegram mapping is created by `POST /api/v1/integrations/messaging/telegram/link`.
+3. Mapping key is `(tenantKey + subject)` and value is `chatId`.
+4. Mobile mapping is created by `POST /api/v1/integrations/mobile/push/register`.
+5. Mapping key is `(tenantKey + subject)` and value is Expo push token.
+6. `POST /api/v1/integrations/messaging/test` and `POST /api/v1/integrations/mobile/push/test` use the authenticated subject to resolve destination.
+7. Tenant mismatch is blocked with `403`.
+
+Current demo note:
+
+1. User-link mappings are in-memory in notification-service for demo speed.
+2. For production, persist mappings in durable storage and add rotation/revocation flows.
+
+## Step 21: Cloud Deploy - Exact Step-By-Step
+
+Use this for first production-like rollout.
+
+1. Provision VM (Lightsail/EC2) with Docker, Node 22, pnpm.
+2. Clone repo and run `pnpm install --frozen-lockfile`.
+3. Copy env and set production secrets:
+	`JWT_SECRET`, SMTP credentials, Telegram credentials, optional OAuth/ABHA keys.
+4. Set tenant routing keys:
+	`PLATFORM_DEFAULT_TENANT_KEY`, `PULSEWARD_STRICT_TENANT_KEY`.
+5. Run bootstrap once for strict config and validation:
+
+```bash
+pnpm run setup:bootstrap
+```
+
+6. Start infrastructure and backend process manager stack (pm2/systemd/docker compose as chosen).
+7. Put reverse proxy (Nginx/Caddy) with TLS in front of API and app origins.
+8. Configure Cloudflare DNS and proxy, then enforce HTTPS.
+9. Run probe checks from Step 16 and confirm:
+	Telegram configured, email configured, calendar diagnostics pass, auth health-check pass.
+10. Execute smoke tests and rollout to pilot users.
+
 ## Shutdown
 
 ```bash

@@ -22,6 +22,36 @@ function Invoke-CheckedCommand {
     }
 }
 
+function Test-ContainerExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $result = docker ps -a --filter "name=^/$Name$" --format '{{.Names}}'
+    return -not [string]::IsNullOrWhiteSpace($result)
+}
+
+function Ensure-ContainerRunning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$RunIfMissing
+    )
+
+    if (Test-ContainerExists -Name $Name) {
+        docker start $Name | Out-Null
+        Write-Host "Using existing container: $Name"
+        return
+    }
+
+    & $RunIfMissing
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create container: $Name"
+    }
+}
+
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $projectRoot
 
@@ -92,12 +122,30 @@ try {
         }
         else {
             Write-Host 'Compose mode: local-core (Postgres + Mongo only)'
-            Invoke-CheckedCommand -Description 'docker compose up -d pulseward-postgres pulseward-mongo' -Command {
-                docker compose up -d pulseward-postgres pulseward-mongo
+            try {
+                Invoke-CheckedCommand -Description 'docker compose up -d pulseward-postgres pulseward-mongo' -Command {
+                    docker compose up -d pulseward-postgres pulseward-mongo
+                }
+                Invoke-CheckedCommand -Description 'docker compose ps pulseward-postgres pulseward-mongo' -Command {
+                    docker compose ps pulseward-postgres pulseward-mongo
+                }
             }
-            Invoke-CheckedCommand -Description 'docker compose ps pulseward-postgres pulseward-mongo' -Command {
-                docker compose ps pulseward-postgres pulseward-mongo
+            catch {
+                Write-Warning 'docker compose local-core startup failed. Attempting fallback using existing/manual containers.'
+
+                Ensure-ContainerRunning -Name 'pulseward-postgres' -RunIfMissing {
+                    docker run -d --name pulseward-postgres -p 5432:5432 -e POSTGRES_DB=pulseward -e POSTGRES_USER=pulseward_local -e POSTGRES_PASSWORD=change_me_local_only postgres:16
+                }
+
+                Ensure-ContainerRunning -Name 'pulseward-mongo' -RunIfMissing {
+                    docker run -d --name pulseward-mongo -p 27017:27017 mongo:7
+                }
+
+                Invoke-CheckedCommand -Description 'docker ps local-core verification' -Command {
+                    docker ps --filter name=pulseward-postgres --filter name=pulseward-mongo
+                }
             }
+
             Write-Host 'Tip: Use -ComposeAllServices only when Dockerfiles exist for every service in docker-compose.yml.'
         }
     }

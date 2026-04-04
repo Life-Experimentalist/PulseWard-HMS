@@ -58,21 +58,17 @@ app.options("*", cors(corsOptions));
 app.use("/api/v1", routes);
 app.use("/api", routes);
 
-function startWithFallback(port, retriesLeft) {
-  const server = app.listen(port, () => {
-    console.log(`Auth Service running on port ${port}`);
-  });
+const server = app.listen(PORT, () => {
+  console.log(`Auth Service running on port ${PORT}`);
+});
 
-  server.on("error", (error) => {
-    if (error.code === "EADDRINUSE" && retriesLeft > 0) {
-      const nextPort = port + 1;
-      console.log(`Auth Service port ${port} in use, retrying on ${nextPort}`);
-      startWithFallback(nextPort, retriesLeft - 1);
-      return;
-    }
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(
+      `Auth Service cannot start because port ${PORT} is already in use. Stop the existing process and retry.`
+    );
+    process.exit(1);
+  }
 
-    throw error;
-  });
-}
-
-startWithFallback(PORT, 20);
+  throw error;
+});

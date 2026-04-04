@@ -8,6 +8,7 @@ var loadTenantIntegrationConfig =
 var router = express.Router();
 var appointments = [];
 var opdEntries = [];
+var clinicianAvailabilityBlocks = [];
 var notificationDispatchEvents = [];
 var notificationDeadLetterEvents = [];
 
@@ -37,6 +38,7 @@ var appointmentAccessMatrix = {
   "appointment.update": ["admin", "frontdesk", "doctor", "nurse", "operations"],
   "appointment.cancel": ["admin", "frontdesk", "operations"],
   "opd.entry.create": ["admin", "frontdesk", "doctor", "nurse"],
+  "clinician.availability.block": ["admin", "frontdesk", "doctor", "nurse", "operations"],
 };
 
 var MIN_DURATION_MINUTES = 5;
@@ -155,6 +157,142 @@ function getAppointmentWindowRange(appointmentDate, durationMinutes) {
     startMs: startMs,
     endMs: endMs,
   };
+}
+
+function toUtcDateToken(value) {
+  var date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function isValidDateToken(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
+
+function resolveAvailabilityWindow(payload) {
+  var blockDate = String((payload && payload.blockDate) || "").trim();
+  if (blockDate) {
+    if (!isValidDateToken(blockDate)) {
+      return {
+        ok: false,
+        message: "blockDate must be in YYYY-MM-DD format",
+      };
+    }
+
+    var startIso = blockDate + "T00:00:00.000Z";
+    var startMs = Date.parse(startIso);
+    if (!Number.isFinite(startMs)) {
+      return {
+        ok: false,
+        message: "blockDate could not be parsed as UTC date",
+      };
+    }
+
+    var endMs = startMs + 24 * 60 * 60 * 1000;
+    return {
+      ok: true,
+      scope: "day",
+      blockDate: blockDate,
+      startDateTime: new Date(startMs).toISOString(),
+      endDateTime: new Date(endMs).toISOString(),
+    };
+  }
+
+  var startDateTime = String((payload && payload.startDateTime) || "").trim();
+  var endDateTime = String((payload && payload.endDateTime) || "").trim();
+
+  if (!startDateTime || !endDateTime) {
+    return {
+      ok: false,
+      message: "Provide blockDate or both startDateTime and endDateTime",
+    };
+  }
+
+  if (!isValidIsoDateTime(startDateTime) || !isValidIsoDateTime(endDateTime)) {
+    return {
+      ok: false,
+      message: "startDateTime and endDateTime must be valid ISO date-times",
+    };
+  }
+
+  var startMsWindow = Date.parse(startDateTime);
+  var endMsWindow = Date.parse(endDateTime);
+  if (
+    !Number.isFinite(startMsWindow) ||
+    !Number.isFinite(endMsWindow) ||
+    endMsWindow <= startMsWindow
+  ) {
+    return {
+      ok: false,
+      message: "endDateTime must be greater than startDateTime",
+    };
+  }
+
+  return {
+    ok: true,
+    scope: "window",
+    blockDate: "",
+    startDateTime: new Date(startMsWindow).toISOString(),
+    endDateTime: new Date(endMsWindow).toISOString(),
+  };
+}
+
+function getAvailabilityBlockWindowRange(block) {
+  if (!block) {
+    return null;
+  }
+
+  var startMs = Date.parse(String(block.startDateTime || ""));
+  var endMs = Date.parse(String(block.endDateTime || ""));
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return null;
+  }
+
+  return {
+    startMs: startMs,
+    endMs: endMs,
+  };
+}
+
+function findClinicianAvailabilityBlockConflict(
+  tenantKey,
+  clinicianId,
+  appointmentDate,
+  durationMinutes
+) {
+  if (!tenantKey || !clinicianId) {
+    return null;
+  }
+
+  var appointmentWindow = getAppointmentWindowRange(appointmentDate, durationMinutes);
+  if (!appointmentWindow) {
+    return null;
+  }
+
+  for (var index = 0; index < clinicianAvailabilityBlocks.length; index += 1) {
+    var block = clinicianAvailabilityBlocks[index];
+    if (!block) {
+      continue;
+    }
+
+    if (block.tenantKey !== tenantKey || block.clinicianId !== clinicianId) {
+      continue;
+    }
+
+    var blockWindow = getAvailabilityBlockWindowRange(block);
+    if (!blockWindow) {
+      continue;
+    }
+
+    if (windowsOverlap(appointmentWindow, blockWindow)) {
+      return block;
+    }
+  }
+
+  return null;
 }
 
 function windowsOverlap(first, second) {
@@ -903,6 +1041,33 @@ router.post("/appointments", async function (req, res) {
     return;
   }
 
+  if (isSlotOccupancyStatus(normalizedStatus)) {
+    var blockedDuringCreate = findClinicianAvailabilityBlockConflict(
+      tenantKey,
+      payload.clinicianId || "",
+      payload.appointmentDate,
+      durationMinutes
+    );
+
+    if (blockedDuringCreate) {
+      res.status(409).json({
+        message: "Clinician is unavailable for the requested date-time",
+        code: "APPOINTMENT_CLINICIAN_UNAVAILABLE",
+        details: {
+          availabilityBlockId: blockedDuringCreate.id,
+          clinicianId: blockedDuringCreate.clinicianId,
+          tenantKey: blockedDuringCreate.tenantKey,
+          blockScope: blockedDuringCreate.scope,
+          blockDate: blockedDuringCreate.blockDate || null,
+          startDateTime: blockedDuringCreate.startDateTime,
+          endDateTime: blockedDuringCreate.endDateTime,
+          reason: blockedDuringCreate.reason || "",
+        },
+      });
+      return;
+    }
+  }
+
   var item = {
     id: payload.id || randomUUID(),
     tenantKey: tenantKey,
@@ -1075,6 +1240,31 @@ router.put("/appointments/:id", async function (req, res) {
           conflictingAppointmentId: conflict.appointment.id,
           clinicianId: conflict.appointment.clinicianId,
           tenantKey: conflict.appointment.tenantKey,
+        },
+      });
+      return;
+    }
+
+    var blockedDuringUpdate = findClinicianAvailabilityBlockConflict(
+      appointments[index].tenantKey,
+      nextClinicianId,
+      nextAppointmentDate,
+      nextDurationMinutes
+    );
+
+    if (blockedDuringUpdate) {
+      res.status(409).json({
+        message: "Clinician is unavailable for the requested date-time",
+        code: "APPOINTMENT_CLINICIAN_UNAVAILABLE",
+        details: {
+          availabilityBlockId: blockedDuringUpdate.id,
+          clinicianId: blockedDuringUpdate.clinicianId,
+          tenantKey: blockedDuringUpdate.tenantKey,
+          blockScope: blockedDuringUpdate.scope,
+          blockDate: blockedDuringUpdate.blockDate || null,
+          startDateTime: blockedDuringUpdate.startDateTime,
+          endDateTime: blockedDuringUpdate.endDateTime,
+          reason: blockedDuringUpdate.reason || "",
         },
       });
       return;
@@ -1424,6 +1614,138 @@ router.get("/opd/entries", function (req, res) {
     returned: result.length,
     limit: boundedLimit,
   });
+});
+
+router.get("/clinicians/:clinicianId/availability/blocks", function (req, res) {
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var clinicianId = String(req.params.clinicianId || "").trim();
+  var date = String(req.query.date || "").trim();
+
+  if (!tenantKey) {
+    res.status(400).json({
+      message: "tenantKey is required",
+      code: "CLINICIAN_AVAILABILITY_TENANT_REQUIRED",
+    });
+    return;
+  }
+
+  if (!clinicianId) {
+    res.status(400).json({
+      message: "clinicianId is required",
+      code: "CLINICIAN_AVAILABILITY_CLINICIAN_REQUIRED",
+    });
+    return;
+  }
+
+  var filtered = clinicianAvailabilityBlocks.filter(function (block) {
+    if (block.tenantKey !== tenantKey || block.clinicianId !== clinicianId) {
+      return false;
+    }
+
+    if (date && isValidDateToken(date)) {
+      var dayToken = toUtcDateToken(block.startDateTime);
+      if (dayToken !== date) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  filtered.sort(function (left, right) {
+    return (
+      Date.parse(String(left.startDateTime || "")) - Date.parse(String(right.startDateTime || ""))
+    );
+  });
+
+  res.json({
+    tenantKey: tenantKey,
+    clinicianId: clinicianId,
+    blocks: filtered,
+    total: filtered.length,
+  });
+});
+
+router.post("/clinicians/:clinicianId/availability/blocks", function (req, res) {
+  var payload = req.body || {};
+  var access = requireAccessForAction(req, res, payload, "clinician.availability.block");
+  if (!access) {
+    return;
+  }
+
+  var tenantKey = getTenantKey(req, payload);
+  var clinicianId = String(req.params.clinicianId || payload.clinicianId || "").trim();
+  if (!clinicianId) {
+    res.status(400).json({
+      message: "clinicianId is required",
+      code: "CLINICIAN_AVAILABILITY_CLINICIAN_REQUIRED",
+    });
+    return;
+  }
+
+  var window = resolveAvailabilityWindow(payload);
+  if (!window.ok) {
+    res.status(400).json({
+      message: window.message,
+      code: "CLINICIAN_AVAILABILITY_PAYLOAD_INVALID",
+    });
+    return;
+  }
+
+  var reason = String(payload.reason || "").trim();
+  var block = {
+    id: payload.id || randomUUID(),
+    tenantKey: tenantKey,
+    clinicianId: clinicianId,
+    scope: window.scope,
+    blockDate: window.blockDate,
+    startDateTime: window.startDateTime,
+    endDateTime: window.endDateTime,
+    reason: reason,
+    createdAt: new Date().toISOString(),
+    createdByRole: access.actorRole,
+    createdBy: String(payload.createdBy || "").trim() || null,
+  };
+
+  clinicianAvailabilityBlocks.push(block);
+
+  res.status(201).json(block);
+});
+
+router.delete("/clinicians/:clinicianId/availability/blocks/:blockId", function (req, res) {
+  var access = requireAccessForAction(req, res, {}, "clinician.availability.block");
+  if (!access) {
+    return;
+  }
+
+  var tenantKey = String(req.query.tenantKey || "").trim();
+  var clinicianId = String(req.params.clinicianId || "").trim();
+  var blockId = String(req.params.blockId || "").trim();
+
+  if (!tenantKey) {
+    res.status(400).json({
+      message: "tenantKey is required",
+      code: "CLINICIAN_AVAILABILITY_TENANT_REQUIRED",
+    });
+    return;
+  }
+
+  var index = clinicianAvailabilityBlocks.findIndex(function (block) {
+    return (
+      block.id === blockId && block.tenantKey === tenantKey && block.clinicianId === clinicianId
+    );
+  });
+
+  if (index < 0) {
+    res.status(404).json({
+      message: "Availability block not found",
+      code: "CLINICIAN_AVAILABILITY_BLOCK_NOT_FOUND",
+    });
+    return;
+  }
+
+  clinicianAvailabilityBlocks.splice(index, 1);
+  res.status(204).send();
 });
 
 router.post("/opd/entries", function (req, res) {

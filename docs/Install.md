@@ -640,6 +640,17 @@ pnpm run start:notification
 pnpm run start:appointment
 ```
 
+Startup behavior note:
+
+1. Services now bind to their expected default ports and fail fast on conflicts.
+2. They do not auto-shift to other ports anymore.
+3. If you rerun a start command and see `port <x> is already in use`, it means an instance is already active on the correct port.
+
+Demo messaging note:
+
+1. For `citycare-hospital`, SMTP email is intentionally disabled for now.
+2. Telegram is the active default messaging provider for demo notifications.
+
 5. Register and login test user:
 
 ```powershell
@@ -654,13 +665,57 @@ $token = (Invoke-RestMethod -Method Post -Uri 'http://localhost:5101/api/v1/auth
 Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; chatId='8654870262' } | ConvertTo-Json)
 ```
 
-7. Send tenant and user-scoped Telegram test:
+Full endpoint URL:
+
+1. `http://localhost:5102/api/v1/integrations/messaging/telegram/link`
+
+What this does:
+
+1. Links current authenticated user to provided Telegram `chatId` for the same tenant.
+2. Pushes role-based command menu to that chat.
+3. Doctors will not see `/book` in menu anymore.
+
+7. Publish Telegram bot commands (admin or operations token):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/commands/setup' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital' } | ConvertTo-Json)
+```
+
+8. Poll Telegram updates manually only if needed (service auto-polls while running):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/commands/poll' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; limit=25 } | ConvertTo-Json)
+```
+
+Supported Telegram commands:
+
+Doctor chat menu:
+
+1. `/help`
+2. `/whoami`
+3. `/agenda [YYYY-MM-DD]`
+4. `/patients [YYYY-MM-DD]`
+5. `/myappointments [YYYY-MM-DD]`
+6. `/accept <appointmentId>`
+7. `/calendar <appointmentId>`
+8. `/alarm <HH:MM>` (UTC daily reminder)
+9. `/alarm off`
+
+Patient chat menu:
+
+1. `/help`
+2. `/whoami`
+3. `/myappointments [YYYY-MM-DD]`
+4. `/book <doctorId> <YYYY-MM-DDTHH:mm:ssZ> [minutes]`
+5. `/calendar <appointmentId>`
+
+9. Send tenant and user-scoped Telegram test:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/test' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; providerKey='telegram-bot'; message='Doctor scoped notification test'; dryRun=$false } | ConvertTo-Json)
 ```
 
-8. Start mobile app and test push registration/send as same user context:
+10. Start mobile app and test push registration/send as same user context:
 
 ```powershell
 pnpm --dir apps/mobile-notifications start:lan
@@ -672,7 +727,7 @@ In app:
 2. Enable push and get token.
 3. Send test push.
 
-9. If you want an installable APK, choose one path:
+11. If you want an installable APK, choose one path:
 
 Path A (local build on this machine):
 
@@ -681,11 +736,45 @@ Path A (local build on this machine):
 3. From `apps/mobile-notifications/android`, run `gradlew.bat assembleDebug`.
 4. APK output path: `apps/mobile-notifications/android/app/build/outputs/apk/debug/app-debug.apk`.
 
+If the APK path does not exist yet, build first:
+
+```powershell
+Set-Location apps/mobile-notifications/android
+.\gradlew.bat assembleDebug
+Set-Location ..\..\..
+```
+
 Path B (EAS cloud build):
 
 1. Run `eas login` (or set `EXPO_TOKEN`).
 2. Run `pnpm --dir apps/mobile-notifications build:android:apk`.
 3. Download APK from Expo build URL.
+
+## Step 19A: Doctor-Day Simulation (5 patients + Telegram + blocked day)
+
+Run this after auth, notification, and appointment services are up.
+
+```powershell
+pnpm run simulate:doctor-day -- --tenant citycare-hospital --doctor doctor@citycare.example.com --chat 8654870262
+```
+
+What this simulation does:
+
+1. Registers/logs in admin and doctor users.
+2. Publishes Telegram command menu.
+3. Links doctor to Telegram chat.
+4. Creates 5 random patient users and 5 appointments for that doctor.
+5. Creates a blocked day for the doctor.
+6. Attempts one more appointment in blocked day window and confirms rejection by backend logic.
+7. Triggers `/agenda` command via Telegram webhook payload so doctor can see agenda in Telegram.
+
+Doctor unavailability backend API (platform-independent):
+
+1. `POST /api/v1/clinicians/{clinicianId}/availability/blocks`
+2. `GET /api/v1/clinicians/{clinicianId}/availability/blocks`
+3. `DELETE /api/v1/clinicians/{clinicianId}/availability/blocks/{blockId}`
+
+This logic is backend-native, so it works consistently for Telegram, web, and mobile interfaces.
 
 ## Step 20: How Server Routes Telegram and Mobile Notifications Per User
 

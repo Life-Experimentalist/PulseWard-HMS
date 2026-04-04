@@ -60,17 +60,19 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use("/api", routes);
 
-function startWithFallback(port, retriesLeft) {
-  var server = app.listen(port, function () {
-    console.log("Lab service running on port " + port);
+function start() {
+  var server = app.listen(PORT, function () {
+    console.log("Lab service running on port " + PORT);
   });
 
   server.on("error", function (error) {
-    if (error.code === "EADDRINUSE" && retriesLeft > 0) {
-      var nextPort = port + 1;
-      console.log("Lab service port " + port + " in use, retrying on " + nextPort);
-      startWithFallback(nextPort, retriesLeft - 1);
-      return;
+    if (error.code === "EADDRINUSE") {
+      console.error(
+        "Lab service cannot start because port " +
+          PORT +
+          " is already in use. Stop the existing process and retry."
+      );
+      process.exit(1);
     }
 
     throw error;
@@ -78,7 +80,7 @@ function startWithFallback(port, retriesLeft) {
 }
 
 if (require.main === module) {
-  startWithFallback(PORT, 20);
+  start();
 }
 
 module.exports = app;

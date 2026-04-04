@@ -13,6 +13,19 @@ var notifications = [];
 var appointmentEventReceipts = [];
 var mobilePushRegistrations = new Map();
 var telegramUserChatBindings = new Map();
+var telegramCommandOffsets = new Map();
+var telegramCommandSetupApplied = new Map();
+var telegramDoctorDailyAlarmSettings = new Map();
+var telegramAutoPollTimer = null;
+var telegramAutoPollInFlight = false;
+var telegramAutoPollLastRunAt = "";
+var telegramAutoPollLastError = "";
+var telegramAutoPollLastSummary = [];
+var TELEGRAM_COMMAND_MAX_RESPONSE_LINES = 8;
+var TELEGRAM_DEFAULT_POLL_LIMIT = 25;
+var TELEGRAM_MAX_POLL_LIMIT = 100;
+var TELEGRAM_DEFAULT_DOCTOR_ALARM_UTC = "07:30";
+var APPOINTMENT_SERVICE_BASE_URL_DEFAULT = "http://127.0.0.1:5103";
 var messagingFaultInjectionEvents = [];
 var maxMessagingFaultInjectionEvents = parseRetryInt(
   process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
@@ -528,6 +541,1373 @@ async function fetchTelegramChatCandidates(botToken) {
   });
 
   return candidates;
+}
+
+function getAppointmentServiceBaseUrl() {
+  return String(process.env.APPOINTMENT_SERVICE_BASE_URL || APPOINTMENT_SERVICE_BASE_URL_DEFAULT)
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+function buildTelegramCommandDefinitions() {
+  return [
+    { command: "start", description: "Show command menu" },
+    { command: "help", description: "Show command menu" },
+    { command: "whoami", description: "Show linked account" },
+    { command: "agenda", description: "Doctor agenda for today" },
+    { command: "patients", description: "Count todays patients" },
+    { command: "myappointments", description: "List your appointments" },
+    { command: "book", description: "Book: /book <doctor> <iso-date-time> [minutes]" },
+    { command: "accept", description: "Accept: /accept <appointmentId>" },
+    { command: "calendar", description: "Calendar links for appointment" },
+    { command: "alarm", description: "Doctor daily reminder: /alarm HH:MM" },
+  ];
+}
+
+function normalizeTelegramRole(role) {
+  return String(role || "patient")
+    .trim()
+    .toLowerCase();
+}
+
+function buildTelegramCommandDefinitionsForRole(role) {
+  var normalizedRole = normalizeTelegramRole(role);
+  var commands = [
+    { command: "start", description: "Show command menu" },
+    { command: "help", description: "Show command menu" },
+    { command: "whoami", description: "Show linked account" },
+  ];
+
+  if (["doctor", "nurse", "admin", "frontdesk", "operations"].indexOf(normalizedRole) >= 0) {
+    commands.push({ command: "agenda", description: "Doctor agenda for today" });
+    commands.push({ command: "patients", description: "Count todays patients" });
+  }
+
+  commands.push({ command: "myappointments", description: "List your appointments" });
+
+  if (["patient", "frontdesk", "admin"].indexOf(normalizedRole) >= 0) {
+    commands.push({
+      command: "book",
+      description: "Book: /book <doctor> <iso-date-time> [minutes]",
+    });
+  }
+
+  if (["doctor", "nurse", "admin"].indexOf(normalizedRole) >= 0) {
+    commands.push({ command: "accept", description: "Accept: /accept <appointmentId>" });
+  }
+
+  commands.push({ command: "calendar", description: "Calendar links for appointment" });
+
+  if (normalizedRole === "doctor") {
+    commands.push({ command: "alarm", description: "Daily reminder: /alarm HH:MM UTC" });
+  }
+
+  return commands;
+}
+
+function parseUtcTimeToMinutes(value) {
+  var match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(value || "").trim());
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function normalizeDoctorAlarmTimeUtc(value) {
+  var normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  if (!Number.isFinite(parseUtcTimeToMinutes(normalized))) {
+    return "";
+  }
+
+  return normalized;
+}
+
+function toDoctorAlarmKey(tenantKey, subject) {
+  return toTelegramBindingKey(tenantKey, subject);
+}
+
+function buildDoctorAlarmSummaryLines(setting) {
+  var safeSetting = setting || {};
+  return [
+    "Doctor daily reminder",
+    "enabled: " + (safeSetting.enabled ? "yes" : "no"),
+    "time (UTC): " + String(safeSetting.timeUtc || TELEGRAM_DEFAULT_DOCTOR_ALARM_UTC),
+    "last sent day: " + String(safeSetting.lastSentDateToken || "never"),
+  ];
+}
+
+function buildTelegramHelpMessageForRole(role) {
+  var commands = buildTelegramCommandDefinitionsForRole(role);
+  var usageMap = {
+    whoami: "/whoami - show linked tenant/account",
+    agenda: "/agenda [YYYY-MM-DD] - doctor agenda",
+    patients: "/patients [YYYY-MM-DD] - patient count for agenda",
+    myappointments: "/myappointments [YYYY-MM-DD] - your appointment list",
+    book: "/book <doctorId> <YYYY-MM-DDTHH:mm:ssZ> [minutes] - request booking",
+    accept: "/accept <appointmentId> - accept request (doctor/nurse/admin)",
+    calendar: "/calendar <appointmentId> - calendar links",
+    alarm: "/alarm <HH:MM>|off|status - doctor daily reminder (UTC)",
+  };
+
+  var lines = ["PulseWard Telegram Commands", "/help - show this menu"];
+  commands.forEach(function (item) {
+    var commandName = normalizeTelegramCommandName(item && item.command);
+    if (!commandName || commandName === "start" || commandName === "help") {
+      return;
+    }
+
+    lines.push(usageMap[commandName] || "/" + commandName + " - " + String(item.description || ""));
+  });
+
+  return lines.join("\n");
+}
+
+function normalizeTelegramCommandName(rawName) {
+  var withoutSlash = String(rawName || "")
+    .trim()
+    .replace(/^\/+/, "");
+  if (!withoutSlash) {
+    return "";
+  }
+
+  var atIndex = withoutSlash.indexOf("@");
+  var command = atIndex >= 0 ? withoutSlash.slice(0, atIndex) : withoutSlash;
+  return command.trim().toLowerCase();
+}
+
+function parseTelegramCommandInput(text) {
+  var normalized = String(text || "").trim();
+  if (!normalized || normalized.charAt(0) !== "/") {
+    return null;
+  }
+
+  var tokens = normalized.split(/\s+/);
+  var command = normalizeTelegramCommandName(tokens[0]);
+  if (!command) {
+    return null;
+  }
+
+  return {
+    raw: normalized,
+    command: command,
+    args: tokens.slice(1),
+  };
+}
+
+function findTelegramBindingByChatId(tenantKey, chatId) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var normalizedChatId = String(chatId || "").trim();
+  if (!normalizedChatId) {
+    return null;
+  }
+
+  var iterator = telegramUserChatBindings.values();
+  for (var item = iterator.next(); item && item.done !== true; item = iterator.next()) {
+    var binding = item.value;
+    if (!binding) {
+      continue;
+    }
+
+    if (
+      normalizeTenantKey(binding.tenantKey, "default") === normalizedTenant &&
+      String(binding.chatId || "").trim() === normalizedChatId
+    ) {
+      return binding;
+    }
+  }
+
+  return null;
+}
+
+function getTenantTelegramBindingCount(tenantKey) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var count = 0;
+  var iterator = telegramUserChatBindings.values();
+  for (var item = iterator.next(); item && item.done !== true; item = iterator.next()) {
+    var binding = item.value;
+    if (!binding) {
+      continue;
+    }
+
+    if (normalizeTenantKey(binding.tenantKey, "default") === normalizedTenant) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function toUtcDayToken(isoValue) {
+  var date = new Date(String(isoValue || ""));
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function collectStatusCounts(items) {
+  var counts = {};
+  (Array.isArray(items) ? items : []).forEach(function (item) {
+    var status = String((item && item.status) || "unknown")
+      .trim()
+      .toLowerCase();
+    if (!counts[status]) {
+      counts[status] = 0;
+    }
+
+    counts[status] += 1;
+  });
+
+  return counts;
+}
+
+function formatStatusCounts(counts) {
+  var parts = [];
+  Object.keys(counts || {})
+    .sort()
+    .forEach(function (status) {
+      parts.push(status + ": " + counts[status]);
+    });
+
+  return parts.join(", ");
+}
+
+function formatAppointmentForTelegram(item) {
+  var when = new Date(String((item && item.appointmentDate) || ""));
+  var whenText = Number.isNaN(when.getTime()) ? "n/a" : when.toISOString().replace(".000", "");
+  return (
+    "- " +
+    String((item && item.id) || "n/a") +
+    " | " +
+    whenText +
+    " | patient=" +
+    String((item && item.patientId) || "n/a") +
+    " | status=" +
+    String((item && item.status) || "unknown")
+  );
+}
+
+function buildGoogleCalendarDateToken(value) {
+  return String(value || "")
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
+}
+
+function buildCalendarLinksForAppointment(appointment) {
+  var startDate = new Date(String((appointment && appointment.appointmentDate) || ""));
+  if (Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+
+  var durationMinutes = Number((appointment && appointment.durationMinutes) || 30);
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    durationMinutes = 30;
+  }
+
+  var endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+  var title = "PulseWard Appointment";
+  var details =
+    "appointmentId=" +
+    String((appointment && appointment.id) || "") +
+    " patientId=" +
+    String((appointment && appointment.patientId) || "") +
+    " clinicianId=" +
+    String((appointment && appointment.clinicianId) || "");
+
+  var googleUrl =
+    "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" +
+    encodeURIComponent(title) +
+    "&dates=" +
+    buildGoogleCalendarDateToken(startDate.toISOString()) +
+    "/" +
+    buildGoogleCalendarDateToken(endDate.toISOString()) +
+    "&details=" +
+    encodeURIComponent(details);
+
+  var outlookUrl =
+    "https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent" +
+    "&subject=" +
+    encodeURIComponent(title) +
+    "&startdt=" +
+    encodeURIComponent(startDate.toISOString()) +
+    "&enddt=" +
+    encodeURIComponent(endDate.toISOString()) +
+    "&body=" +
+    encodeURIComponent(details);
+
+  return {
+    startIso: startDate.toISOString(),
+    endIso: endDate.toISOString(),
+    googleUrl: googleUrl,
+    outlookUrl: outlookUrl,
+  };
+}
+
+async function telegramApiPostJson(botToken, methodName, payload) {
+  var endpoint =
+    "https://api.telegram.org/bot" + String(botToken || "").trim() + "/" + String(methodName || "");
+  var response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  var body = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !body || body.ok !== true) {
+    var detail =
+      (body && body.description) ||
+      (body && body.error_code ? "Telegram API error " + body.error_code : "Telegram API error");
+    throw new Error(detail);
+  }
+
+  return body;
+}
+
+async function sendTelegramTextMessage(botToken, chatId, text) {
+  return telegramApiPostJson(botToken, "sendMessage", {
+    chat_id: String(chatId || "").trim(),
+    text: String(text || "").slice(0, 4096),
+    disable_web_page_preview: true,
+  });
+}
+
+async function fetchTelegramUpdates(botToken, offset, limit) {
+  var params = new URLSearchParams();
+  if (Number.isFinite(offset) && offset > 0) {
+    params.set("offset", String(Math.floor(offset)));
+  }
+
+  var boundedLimit = TELEGRAM_DEFAULT_POLL_LIMIT;
+  if (Number.isFinite(limit)) {
+    boundedLimit = Math.max(1, Math.min(TELEGRAM_MAX_POLL_LIMIT, Math.floor(limit)));
+  }
+  params.set("limit", String(boundedLimit));
+  params.set("timeout", "0");
+
+  var endpoint =
+    "https://api.telegram.org/bot" +
+    String(botToken || "").trim() +
+    "/getUpdates?" +
+    params.toString();
+  var response = await fetch(endpoint);
+  var payload = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !payload || payload.ok !== true || !Array.isArray(payload.result)) {
+    throw new Error("Unable to fetch Telegram updates");
+  }
+
+  return payload.result;
+}
+
+async function setTelegramCommands(botToken, commandDefinitions, scope) {
+  var payload = {
+    commands: commandDefinitions,
+  };
+
+  if (scope && typeof scope === "object") {
+    payload.scope = scope;
+  }
+
+  return telegramApiPostJson(botToken, "setMyCommands", payload);
+}
+
+async function syncTelegramCommandsForRoleChat(botToken, role, chatId) {
+  var normalizedChatId = String(chatId || "").trim();
+  if (!normalizedChatId) {
+    return {
+      accepted: false,
+      reason: "chat-id-missing",
+    };
+  }
+
+  await setTelegramCommands(botToken, buildTelegramCommandDefinitionsForRole(role), {
+    type: "chat",
+    chat_id: normalizedChatId,
+  });
+
+  return {
+    accepted: true,
+    role: normalizeTelegramRole(role),
+    chatId: normalizedChatId,
+    commandCount: buildTelegramCommandDefinitionsForRole(role).length,
+  };
+}
+
+async function dispatchDoctorDailyAlarmsForTenant(tenantKey, botToken) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var now = new Date();
+  var dateToken = now.toISOString().slice(0, 10);
+  var nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  var summary = {
+    evaluated: 0,
+    sent: 0,
+    skipped: 0,
+    errors: 0,
+  };
+
+  var iterator = telegramUserChatBindings.values();
+  for (var item = iterator.next(); item && item.done !== true; item = iterator.next()) {
+    var binding = item.value;
+    if (!binding) {
+      continue;
+    }
+
+    if (normalizeTenantKey(binding.tenantKey, "default") !== normalizedTenant) {
+      continue;
+    }
+
+    if (normalizeTelegramRole(binding.role) !== "doctor") {
+      continue;
+    }
+
+    summary.evaluated += 1;
+    var alarmKey = toDoctorAlarmKey(binding.tenantKey, binding.subject);
+    var setting = telegramDoctorDailyAlarmSettings.get(alarmKey);
+    if (!setting || !setting.enabled) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    var alarmMinutes = parseUtcTimeToMinutes(setting.timeUtc);
+    if (!Number.isFinite(alarmMinutes) || nowMinutes < alarmMinutes) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    if (setting.lastSentDateToken === dateToken) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      var appointments = await fetchAppointmentCollectionForCommand(normalizedTenant, {
+        clinicianId: binding.subject,
+      });
+      var todayAgenda = filterAppointmentsByUtcDay(appointments, dateToken);
+      var statusCounts = collectStatusCounts(todayAgenda.items);
+      var uniquePatients = {};
+      todayAgenda.items.forEach(function (record) {
+        var patientId = String((record && record.patientId) || "").trim();
+        if (patientId) {
+          uniquePatients[patientId] = true;
+        }
+      });
+
+      var reminderLines = [
+        "Daily appointments reminder",
+        "doctor: " + String(binding.subject || ""),
+        "date (UTC): " + dateToken,
+        "appointments: " + todayAgenda.items.length,
+        "unique patients: " + Object.keys(uniquePatients).length,
+        "status: " + (formatStatusCounts(statusCounts) || "n/a"),
+        "Tip: use /agenda " + dateToken + " for details.",
+      ];
+
+      await sendTelegramTextMessage(botToken, binding.chatId, reminderLines.join("\n"));
+      setting.lastSentDateToken = dateToken;
+      setting.lastSentAt = now.toISOString();
+      setting.chatId = String(binding.chatId || "").trim();
+      telegramDoctorDailyAlarmSettings.set(alarmKey, setting);
+      summary.sent += 1;
+    } catch (_error) {
+      summary.errors += 1;
+    }
+  }
+
+  return summary;
+}
+
+async function fetchAppointmentCollectionForCommand(tenantKey, queryParams) {
+  var baseUrl = getAppointmentServiceBaseUrl();
+  var params = new URLSearchParams();
+  params.set("tenantKey", normalizeTenantKey(tenantKey, "default"));
+
+  Object.keys(queryParams || {}).forEach(function (key) {
+    var value = queryParams[key];
+    if (value === undefined || value === null || String(value).trim() === "") {
+      return;
+    }
+
+    params.set(key, String(value));
+  });
+
+  var response = await fetch(baseUrl + "/api/v1/appointments?" + params.toString());
+  var payload = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !Array.isArray(payload)) {
+    throw new Error("Appointment service list endpoint returned an unexpected response");
+  }
+
+  return payload;
+}
+
+async function fetchAppointmentByIdForCommand(appointmentId) {
+  var baseUrl = getAppointmentServiceBaseUrl();
+  var response = await fetch(
+    baseUrl + "/api/v1/appointments/" + encodeURIComponent(String(appointmentId || ""))
+  );
+  var payload = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !payload || typeof payload !== "object") {
+    throw new Error("Appointment not found");
+  }
+
+  return payload;
+}
+
+async function createAppointmentForCommand(payload) {
+  var baseUrl = getAppointmentServiceBaseUrl();
+  var response = await fetch(baseUrl + "/api/v1/appointments", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  var responseBody = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !responseBody || typeof responseBody !== "object") {
+    throw new Error(
+      (responseBody && responseBody.message) || "Appointment creation failed from Telegram command"
+    );
+  }
+
+  return responseBody;
+}
+
+async function updateAppointmentForCommand(appointmentId, payload) {
+  var baseUrl = getAppointmentServiceBaseUrl();
+  var response = await fetch(
+    baseUrl + "/api/v1/appointments/" + encodeURIComponent(String(appointmentId || "")),
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload || {}),
+    }
+  );
+  var responseBody = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok || !responseBody || typeof responseBody !== "object") {
+    throw new Error(
+      (responseBody && responseBody.message) || "Appointment update failed from Telegram command"
+    );
+  }
+
+  return responseBody;
+}
+
+function buildTelegramHelpMessage() {
+  return buildTelegramHelpMessageForRole("patient");
+}
+
+function parseAgendaCommandArgs(args, defaultSubject) {
+  var safeArgs = Array.isArray(args) ? args : [];
+  var result = {
+    clinicianId: String(defaultSubject || "").trim(),
+    dateToken: "today",
+  };
+
+  if (safeArgs.length === 0) {
+    return result;
+  }
+
+  var firstArg = String(safeArgs[0] || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(firstArg)) {
+    result.dateToken = firstArg;
+    return result;
+  }
+
+  result.clinicianId = firstArg || result.clinicianId;
+  if (safeArgs[1] && /^\d{4}-\d{2}-\d{2}$/.test(String(safeArgs[1]).trim())) {
+    result.dateToken = String(safeArgs[1]).trim();
+  }
+
+  return result;
+}
+
+function filterAppointmentsByUtcDay(items, dateToken) {
+  var normalizedDateToken = String(dateToken || "today").trim();
+  var expectedToken =
+    normalizedDateToken.toLowerCase() === "today"
+      ? new Date().toISOString().slice(0, 10)
+      : normalizedDateToken;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expectedToken)) {
+    return {
+      dateToken: "",
+      items: [],
+      valid: false,
+    };
+  }
+
+  var filtered = (Array.isArray(items) ? items : []).filter(function (item) {
+    return toUtcDayToken(item && item.appointmentDate) === expectedToken;
+  });
+
+  return {
+    dateToken: expectedToken,
+    items: filtered,
+    valid: true,
+  };
+}
+
+function limitArray(items, maxItems) {
+  var safeItems = Array.isArray(items) ? items : [];
+  var boundedMax = Number.isFinite(maxItems) ? Math.max(1, Math.floor(maxItems)) : 5;
+  if (safeItems.length <= boundedMax) {
+    return safeItems;
+  }
+
+  return safeItems.slice(0, boundedMax);
+}
+
+async function executeTelegramCommandForBinding(binding, parsedCommand) {
+  var tenantKey = normalizeTenantKey(binding && binding.tenantKey, "default");
+  var subject = String((binding && binding.subject) || "").trim();
+  var role = normalizeTelegramRole((binding && binding.role) || "patient");
+  var command = parsedCommand && parsedCommand.command ? parsedCommand.command : "";
+  var args = parsedCommand && Array.isArray(parsedCommand.args) ? parsedCommand.args : [];
+
+  if (command === "start" || command === "help") {
+    return buildTelegramHelpMessageForRole(role);
+  }
+
+  if (command === "whoami") {
+    return [
+      "PulseWard account linkage",
+      "tenant: " + tenantKey,
+      "subject: " + subject,
+      "role: " + role,
+      "chatId: " + String((binding && binding.chatId) || ""),
+    ].join("\n");
+  }
+
+  if (command === "agenda") {
+    if (["doctor", "nurse", "admin", "frontdesk", "operations"].indexOf(role) < 0) {
+      return "Access denied for /agenda. Allowed roles: doctor, nurse, admin, frontdesk, operations.";
+    }
+
+    var agendaArgs = parseAgendaCommandArgs(args, subject);
+    var agendaAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
+      clinicianId: agendaArgs.clinicianId,
+    });
+    var agendaDay = filterAppointmentsByUtcDay(agendaAppointments, agendaArgs.dateToken);
+    if (!agendaDay.valid) {
+      return "Invalid date format. Use YYYY-MM-DD or omit for today.";
+    }
+
+    var sortedAgenda = agendaDay.items.slice().sort(function (left, right) {
+      return (
+        Date.parse(String(left.appointmentDate || "")) -
+        Date.parse(String(right.appointmentDate || ""))
+      );
+    });
+    var counts = collectStatusCounts(sortedAgenda);
+    var lines = [
+      "Agenda for " + agendaArgs.clinicianId + " on " + agendaDay.dateToken,
+      "total: " + sortedAgenda.length,
+      "status: " + (formatStatusCounts(counts) || "n/a"),
+    ];
+
+    if (sortedAgenda.length === 0) {
+      lines.push("No appointments found.");
+      return lines.join("\n");
+    }
+
+    limitArray(sortedAgenda, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (item) {
+      lines.push(formatAppointmentForTelegram(item));
+    });
+
+    if (sortedAgenda.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
+      lines.push(
+        "Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " items. Use API for full list."
+      );
+    }
+
+    return lines.join("\n");
+  }
+
+  if (command === "patients") {
+    if (["doctor", "nurse", "admin", "frontdesk", "operations"].indexOf(role) < 0) {
+      return "Access denied for /patients. Allowed roles: doctor, nurse, admin, frontdesk, operations.";
+    }
+
+    var patientArgs = parseAgendaCommandArgs(args, subject);
+    var patientAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
+      clinicianId: patientArgs.clinicianId,
+    });
+    var patientDay = filterAppointmentsByUtcDay(patientAppointments, patientArgs.dateToken);
+    if (!patientDay.valid) {
+      return "Invalid date format. Use YYYY-MM-DD or omit for today.";
+    }
+
+    var uniquePatients = {};
+    patientDay.items.forEach(function (item) {
+      var patientId = String((item && item.patientId) || "").trim();
+      if (patientId) {
+        uniquePatients[patientId] = true;
+      }
+    });
+
+    var patientIds = Object.keys(uniquePatients).sort();
+    var responseLines = [
+      "Patients for " + patientArgs.clinicianId + " on " + patientDay.dateToken,
+      "appointments: " + patientDay.items.length,
+      "unique patients: " + patientIds.length,
+    ];
+
+    limitArray(patientIds, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (patientId) {
+      responseLines.push("- " + patientId);
+    });
+
+    if (patientIds.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
+      responseLines.push("Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " patients.");
+    }
+
+    return responseLines.join("\n");
+  }
+
+  if (command === "myappointments") {
+    var myQuery = {};
+    if (["doctor", "nurse"].indexOf(role) >= 0) {
+      myQuery.clinicianId = subject;
+    } else {
+      myQuery.patientId = subject;
+    }
+
+    var myAppointments = await fetchAppointmentCollectionForCommand(tenantKey, myQuery);
+
+    var myDateToken = args[0] ? String(args[0]).trim() : "";
+    var filteredMyAppointments = myAppointments;
+    var subtitle = "all upcoming contexts";
+
+    if (myDateToken) {
+      var myDay = filterAppointmentsByUtcDay(myAppointments, myDateToken);
+      if (!myDay.valid) {
+        return "Invalid date format. Use YYYY-MM-DD or omit for all appointments.";
+      }
+
+      filteredMyAppointments = myDay.items;
+      subtitle = "on " + myDay.dateToken;
+    }
+
+    filteredMyAppointments.sort(function (left, right) {
+      return (
+        Date.parse(String(left.appointmentDate || "")) -
+        Date.parse(String(right.appointmentDate || ""))
+      );
+    });
+
+    var myCounts = collectStatusCounts(filteredMyAppointments);
+    var myLines = [
+      "My appointments " + subtitle,
+      "total: " + filteredMyAppointments.length,
+      "status: " + (formatStatusCounts(myCounts) || "n/a"),
+    ];
+
+    if (filteredMyAppointments.length === 0) {
+      myLines.push("No appointments found.");
+      return myLines.join("\n");
+    }
+
+    limitArray(filteredMyAppointments, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (
+      item
+    ) {
+      myLines.push(formatAppointmentForTelegram(item));
+    });
+
+    if (filteredMyAppointments.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
+      myLines.push("Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " items.");
+    }
+
+    return myLines.join("\n");
+  }
+
+  if (command === "alarm") {
+    if (role !== "doctor") {
+      return "Access denied for /alarm. Allowed roles: doctor.";
+    }
+
+    var alarmKey = toDoctorAlarmKey(tenantKey, subject);
+    var existingAlarm = telegramDoctorDailyAlarmSettings.get(alarmKey) || {
+      tenantKey: tenantKey,
+      subject: subject,
+      role: role,
+      chatId: String((binding && binding.chatId) || "").trim(),
+      enabled: false,
+      timeUtc: TELEGRAM_DEFAULT_DOCTOR_ALARM_UTC,
+      lastSentDateToken: "",
+      lastSentAt: "",
+      updatedAt: "",
+    };
+
+    var action = String(args[0] || "status")
+      .trim()
+      .toLowerCase();
+    if (!action || action === "status") {
+      var statusLines = buildDoctorAlarmSummaryLines(existingAlarm);
+      statusLines.push("Usage: /alarm <HH:MM> or /alarm off");
+      return statusLines.join("\n");
+    }
+
+    if (["off", "disable", "stop"].indexOf(action) >= 0) {
+      existingAlarm.enabled = false;
+      existingAlarm.updatedAt = new Date().toISOString();
+      existingAlarm.chatId = String((binding && binding.chatId) || "").trim();
+      telegramDoctorDailyAlarmSettings.set(alarmKey, existingAlarm);
+      return buildDoctorAlarmSummaryLines(existingAlarm).join("\n");
+    }
+
+    var timeArg = action;
+    if (["on", "set"].indexOf(action) >= 0) {
+      timeArg = String(args[1] || TELEGRAM_DEFAULT_DOCTOR_ALARM_UTC).trim();
+    }
+
+    var normalizedTime = normalizeDoctorAlarmTimeUtc(timeArg);
+    if (!normalizedTime) {
+      return "Invalid alarm time. Use HH:MM in UTC, example: /alarm 07:30";
+    }
+
+    existingAlarm.enabled = true;
+    existingAlarm.timeUtc = normalizedTime;
+    existingAlarm.chatId = String((binding && binding.chatId) || "").trim();
+    existingAlarm.updatedAt = new Date().toISOString();
+    telegramDoctorDailyAlarmSettings.set(alarmKey, existingAlarm);
+
+    var alarmLines = buildDoctorAlarmSummaryLines(existingAlarm);
+    alarmLines.push("Reminder fires once per UTC day after the configured time.");
+    return alarmLines.join("\n");
+  }
+
+  if (command === "book") {
+    if (["patient", "frontdesk", "admin"].indexOf(role) < 0) {
+      return "Access denied for /book. Allowed roles: patient, frontdesk, admin.";
+    }
+
+    if (args.length < 2) {
+      return "Usage: /book <doctorId> <YYYY-MM-DDTHH:mm:ssZ> [minutes]";
+    }
+
+    var clinicianId = String(args[0] || "").trim();
+    var appointmentDate = String(args[1] || "").trim();
+    if (!clinicianId || !appointmentDate || !Number.isFinite(Date.parse(appointmentDate))) {
+      return "Invalid booking input. doctorId and valid ISO date-time are required.";
+    }
+
+    var duration = Number(args[2] || 30);
+    if (!Number.isFinite(duration) || duration < 5 || duration > 240) {
+      duration = 30;
+    }
+
+    var created = await createAppointmentForCommand({
+      tenantKey: tenantKey,
+      patientId: subject,
+      clinicianId: clinicianId,
+      appointmentDate: appointmentDate,
+      durationMinutes: Math.floor(duration),
+      status: "pending-triage",
+      source: "telegram-command",
+      actorRole: role,
+      clientRequestId: "tg-" + randomUUID(),
+    });
+
+    return [
+      "Appointment request submitted.",
+      "id: " + String(created.id || "n/a"),
+      "status: " + String(created.status || "n/a"),
+      "doctor: " + String(created.clinicianId || "n/a"),
+      "time: " + String(created.appointmentDate || "n/a"),
+      "Use /calendar " + String(created.id || "") + " after acceptance.",
+    ].join("\n");
+  }
+
+  if (command === "accept") {
+    if (["doctor", "nurse", "admin"].indexOf(role) < 0) {
+      return "Access denied for /accept. Allowed roles: doctor, nurse, admin.";
+    }
+
+    var appointmentId = String(args[0] || "").trim();
+    if (!appointmentId) {
+      return "Usage: /accept <appointmentId>";
+    }
+
+    var existing = await fetchAppointmentByIdForCommand(appointmentId);
+    if (normalizeTenantKey(existing.tenantKey, "default") !== tenantKey) {
+      return "Appointment tenant mismatch. Cannot accept across tenants.";
+    }
+
+    if (role === "doctor" && existing.clinicianId && String(existing.clinicianId) !== subject) {
+      return "Doctor access denied. This appointment belongs to another clinician.";
+    }
+
+    var updated = await updateAppointmentForCommand(appointmentId, {
+      tenantKey: tenantKey,
+      status: "scheduled",
+      actorRole: role,
+    });
+
+    return [
+      "Appointment accepted.",
+      "id: " + String(updated.id || appointmentId),
+      "status: " + String(updated.status || "scheduled"),
+      "patient: " + String(updated.patientId || "n/a"),
+      "time: " + String(updated.appointmentDate || "n/a"),
+    ].join("\n");
+  }
+
+  if (command === "calendar") {
+    var targetAppointmentId = String(args[0] || "").trim();
+    if (!targetAppointmentId) {
+      return "Usage: /calendar <appointmentId>";
+    }
+
+    var appointment = await fetchAppointmentByIdForCommand(targetAppointmentId);
+    if (normalizeTenantKey(appointment.tenantKey, "default") !== tenantKey) {
+      return "Appointment tenant mismatch. Cannot generate calendar links.";
+    }
+
+    if (role === "patient" && String(appointment.patientId || "") !== subject) {
+      return "Patient access denied for this appointment.";
+    }
+
+    if (role === "doctor" && String(appointment.clinicianId || "") !== subject) {
+      return "Doctor access denied for this appointment.";
+    }
+
+    var links = buildCalendarLinksForAppointment(appointment);
+    if (!links) {
+      return "Unable to build calendar links. Appointment date appears invalid.";
+    }
+
+    return [
+      "Calendar links for appointment " + targetAppointmentId,
+      "start: " + links.startIso,
+      "end: " + links.endIso,
+      "Google: " + links.googleUrl,
+      "Outlook: " + links.outlookUrl,
+    ].join("\n");
+  }
+
+  return "Unknown command. Use /help to see supported commands.";
+}
+
+function extractTelegramMessageUpdate(update) {
+  if (update && update.message && update.message.chat) {
+    return {
+      updateId: Number(update.update_id),
+      chatId: String(update.message.chat.id || "").trim(),
+      text: String(update.message.text || "").trim(),
+      messageId: Number(update.message.message_id || 0),
+      fromUsername: String((update.message.from && update.message.from.username) || "").trim(),
+    };
+  }
+
+  return null;
+}
+
+async function processTelegramCommandUpdate(tenantKey, botToken, update) {
+  var messageUpdate = extractTelegramMessageUpdate(update);
+  if (!messageUpdate || !messageUpdate.chatId || !messageUpdate.text) {
+    return {
+      handled: false,
+      reason: "no-command-message",
+      updateId: Number(update && update.update_id),
+    };
+  }
+
+  var commandInput = parseTelegramCommandInput(messageUpdate.text);
+  if (!commandInput) {
+    return {
+      handled: false,
+      reason: "not-a-command",
+      updateId: messageUpdate.updateId,
+      chatId: messageUpdate.chatId,
+    };
+  }
+
+  var binding = findTelegramBindingByChatId(tenantKey, messageUpdate.chatId);
+  if (!binding) {
+    await sendTelegramTextMessage(
+      botToken,
+      messageUpdate.chatId,
+      "This chat is not linked to a PulseWard account for tenant '" +
+        tenantKey +
+        "'. Link first using /integrations/messaging/telegram/link from an authenticated session."
+    );
+    return {
+      handled: true,
+      reason: "unlinked-chat",
+      command: commandInput.command,
+      updateId: messageUpdate.updateId,
+      chatId: messageUpdate.chatId,
+    };
+  }
+
+  var responseText;
+  try {
+    responseText = await executeTelegramCommandForBinding(binding, commandInput);
+  } catch (error) {
+    responseText =
+      "Command failed: " +
+      (error && error.message
+        ? error.message
+        : "Unexpected error while processing Telegram command.");
+  }
+
+  await sendTelegramTextMessage(botToken, messageUpdate.chatId, responseText);
+  return {
+    handled: true,
+    command: commandInput.command,
+    updateId: messageUpdate.updateId,
+    chatId: messageUpdate.chatId,
+    subject: binding.subject,
+    role: binding.role || "",
+  };
+}
+
+function getTelegramAutoPollConfig() {
+  var enabled = parseRetryBool(process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_ENABLED, true);
+  var intervalMs = parseRetryInt(
+    process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_INTERVAL_MS,
+    5000,
+    1000,
+    60000
+  );
+  var limit = parseRetryInt(
+    process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_LIMIT,
+    TELEGRAM_DEFAULT_POLL_LIMIT,
+    1,
+    TELEGRAM_MAX_POLL_LIMIT
+  );
+  var ensureCommands = parseRetryBool(
+    process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_SETUP_COMMANDS,
+    true
+  );
+
+  return {
+    enabled: enabled,
+    intervalMs: intervalMs,
+    limit: limit,
+    ensureCommands: ensureCommands,
+  };
+}
+
+function resolveTelegramAutoPollTenantKeys() {
+  var rawConfigured = String(
+    process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_TENANTS || ""
+  ).trim();
+  var tenants = [];
+
+  if (rawConfigured) {
+    rawConfigured.split(",").forEach(function (item) {
+      var normalized = normalizeTenantKey(item, "");
+      if (normalized && tenants.indexOf(normalized) < 0) {
+        tenants.push(normalized);
+      }
+    });
+  }
+
+  var strictTenant = normalizeTenantKey(process.env.PULSEWARD_STRICT_TENANT_KEY, "");
+  var defaultTenant = normalizeTenantKey(process.env.PLATFORM_DEFAULT_TENANT_KEY, "");
+
+  if (strictTenant && tenants.indexOf(strictTenant) < 0) {
+    tenants.push(strictTenant);
+  }
+
+  if (defaultTenant && tenants.indexOf(defaultTenant) < 0) {
+    tenants.push(defaultTenant);
+  }
+
+  if (tenants.length === 0) {
+    tenants.push("default");
+  }
+
+  return tenants;
+}
+
+async function pollTelegramCommandsForTenant(tenantKey, options) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var skipBacklogOnBoot = parseRetryBool(
+    process.env.INTEGRATION_TELEGRAM_COMMAND_AUTOPOLL_SKIP_BACKLOG_ON_BOOT,
+    true
+  );
+  var config = loadTenantIntegrationConfig(normalizedTenant);
+  var provider = findMessagingProvider(config, "telegram-bot");
+  if (!provider || !provider.enabled) {
+    return {
+      tenantKey: normalizedTenant,
+      skipped: true,
+      reason: "telegram-provider-disabled",
+      fetchedUpdates: 0,
+      handledCommands: 0,
+      nextOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+    };
+  }
+
+  var botToken = getTelegramBotToken(config);
+  if (!botToken) {
+    return {
+      tenantKey: normalizedTenant,
+      skipped: true,
+      reason: "telegram-bot-token-missing",
+      fetchedUpdates: 0,
+      handledCommands: 0,
+      nextOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+    };
+  }
+
+  if (options.ensureCommands && !telegramCommandSetupApplied.get(normalizedTenant)) {
+    await setTelegramCommands(botToken, buildTelegramCommandDefinitions());
+    telegramCommandSetupApplied.set(normalizedTenant, true);
+  }
+
+  var offset = Number(telegramCommandOffsets.get(normalizedTenant) || 0);
+  var hadStoredOffset = telegramCommandOffsets.has(normalizedTenant) && offset > 0;
+  var updates = await fetchTelegramUpdates(botToken, offset, options.limit);
+  var handledCommands = 0;
+  var failedCommands = 0;
+  var processed = [];
+  var nextOffset = offset;
+
+  if (!hadStoredOffset && skipBacklogOnBoot && updates.length > 0) {
+    var highestUpdateId = offset;
+    for (var scanIndex = 0; scanIndex < updates.length; scanIndex += 1) {
+      var scanUpdateId = Number(updates[scanIndex] && updates[scanIndex].update_id);
+      if (Number.isFinite(scanUpdateId) && scanUpdateId >= highestUpdateId) {
+        highestUpdateId = scanUpdateId + 1;
+      }
+    }
+
+    telegramCommandOffsets.set(normalizedTenant, highestUpdateId);
+    var bootAlarmSummary = await dispatchDoctorDailyAlarmsForTenant(normalizedTenant, botToken);
+
+    return {
+      tenantKey: normalizedTenant,
+      skipped: true,
+      reason: "startup-backlog-skipped",
+      fetchedUpdates: updates.length,
+      handledCommands: 0,
+      failedCommands: 0,
+      doctorDailyAlarms: bootAlarmSummary,
+      nextOffset: highestUpdateId,
+      processed: [],
+    };
+  }
+
+  for (var index = 0; index < updates.length; index += 1) {
+    var update = updates[index];
+    var updateId = Number(update && update.update_id);
+    if (Number.isFinite(updateId) && updateId >= nextOffset) {
+      nextOffset = updateId + 1;
+    }
+
+    try {
+      var result = await processTelegramCommandUpdate(normalizedTenant, botToken, update);
+      if (result && result.handled) {
+        handledCommands += 1;
+      }
+
+      if (result) {
+        processed.push(result);
+      }
+    } catch (updateError) {
+      failedCommands += 1;
+      processed.push({
+        handled: false,
+        reason: "update-processing-failed",
+        updateId: Number.isFinite(updateId) ? updateId : Number(update && update.update_id),
+        error:
+          updateError && updateError.message
+            ? updateError.message
+            : "Unknown Telegram command processing error",
+      });
+    }
+  }
+
+  telegramCommandOffsets.set(normalizedTenant, nextOffset);
+  var doctorAlarmSummary = await dispatchDoctorDailyAlarmsForTenant(normalizedTenant, botToken);
+
+  return {
+    tenantKey: normalizedTenant,
+    skipped: false,
+    reason: "",
+    fetchedUpdates: updates.length,
+    handledCommands: handledCommands,
+    failedCommands: failedCommands,
+    doctorDailyAlarms: doctorAlarmSummary,
+    nextOffset: nextOffset,
+    processed: processed,
+  };
+}
+
+function getTelegramAutoPollRuntimeState() {
+  var config = getTelegramAutoPollConfig();
+  return {
+    enabled: config.enabled,
+    intervalMs: config.intervalMs,
+    limit: config.limit,
+    ensureCommands: config.ensureCommands,
+    inFlight: telegramAutoPollInFlight,
+    running: Boolean(telegramAutoPollTimer),
+    lastRunAt: telegramAutoPollLastRunAt || null,
+    lastError: telegramAutoPollLastError || null,
+    tenants: resolveTelegramAutoPollTenantKeys(),
+    doctorAlarmSettingsCount: telegramDoctorDailyAlarmSettings.size,
+    lastSummary: telegramAutoPollLastSummary,
+  };
+}
+
+function startTelegramCommandAutoPolling(options) {
+  var logger = options && options.logger ? options.logger : console;
+
+  if (telegramAutoPollTimer) {
+    return {
+      started: false,
+      reason: "already-running",
+      runtime: getTelegramAutoPollRuntimeState(),
+    };
+  }
+
+  var config = getTelegramAutoPollConfig();
+  if (!config.enabled) {
+    if (logger && typeof logger.log === "function") {
+      logger.log("Notification Service Telegram auto-polling disabled by config.");
+    }
+
+    return {
+      started: false,
+      reason: "disabled",
+      runtime: getTelegramAutoPollRuntimeState(),
+    };
+  }
+
+  var runCycle = async function () {
+    if (telegramAutoPollInFlight) {
+      return;
+    }
+
+    telegramAutoPollInFlight = true;
+    telegramAutoPollLastError = "";
+
+    try {
+      var tenants = resolveTelegramAutoPollTenantKeys();
+      var summary = [];
+
+      for (var index = 0; index < tenants.length; index += 1) {
+        var tenantKey = tenants[index];
+        try {
+          var tenantResult = await pollTelegramCommandsForTenant(tenantKey, config);
+          summary.push(tenantResult);
+
+          if (
+            logger &&
+            typeof logger.log === "function" &&
+            tenantResult &&
+            tenantResult.handledCommands > 0
+          ) {
+            logger.log(
+              "Notification Service Telegram auto-poll handled " +
+                tenantResult.handledCommands +
+                " command(s) for tenant " +
+                tenantResult.tenantKey +
+                "."
+            );
+          }
+
+          if (
+            logger &&
+            typeof logger.log === "function" &&
+            tenantResult &&
+            tenantResult.doctorDailyAlarms &&
+            tenantResult.doctorDailyAlarms.sent > 0
+          ) {
+            logger.log(
+              "Notification Service Telegram daily alarm sent " +
+                tenantResult.doctorDailyAlarms.sent +
+                " reminder(s) for tenant " +
+                tenantResult.tenantKey +
+                "."
+            );
+          }
+        } catch (tenantError) {
+          summary.push({
+            tenantKey: tenantKey,
+            skipped: true,
+            reason: "tenant-poll-failed",
+            error:
+              tenantError && tenantError.message
+                ? tenantError.message
+                : "Unknown tenant poll error",
+          });
+        }
+      }
+
+      telegramAutoPollLastSummary = summary;
+      telegramAutoPollLastRunAt = new Date().toISOString();
+    } catch (error) {
+      telegramAutoPollLastError =
+        error && error.message ? error.message : "Unknown auto-poll error";
+      telegramAutoPollLastRunAt = new Date().toISOString();
+      if (logger && typeof logger.error === "function") {
+        logger.error("Notification Service Telegram auto-poll failed", error);
+      }
+    } finally {
+      telegramAutoPollInFlight = false;
+    }
+  };
+
+  runCycle().catch(function () {
+    return null;
+  });
+
+  telegramAutoPollTimer = setInterval(function () {
+    runCycle().catch(function () {
+      return null;
+    });
+  }, config.intervalMs);
+
+  if (telegramAutoPollTimer && typeof telegramAutoPollTimer.unref === "function") {
+    telegramAutoPollTimer.unref();
+  }
+
+  if (logger && typeof logger.log === "function") {
+    logger.log(
+      "Notification Service Telegram auto-polling started (interval=" +
+        config.intervalMs +
+        "ms, tenants=" +
+        resolveTelegramAutoPollTenantKeys().join(",") +
+        ")."
+    );
+  }
+
+  return {
+    started: true,
+    reason: "started",
+    runtime: getTelegramAutoPollRuntimeState(),
+  };
 }
 
 function parseRetryInt(value, fallback, minimum, maximum) {
@@ -3433,17 +4813,43 @@ router.post("/integrations/messaging/telegram/link", async function (req, res) {
   var bindingRecord = {
     tenantKey: tenantKey,
     subject: authSession.subject,
+    role: authSession.role || "",
+    provider: authSession.provider || "",
     chatId: chatId,
     updatedAt: new Date().toISOString(),
   };
 
   telegramUserChatBindings.set(key, bindingRecord);
 
+  var commandMenuSync = {
+    accepted: false,
+    reason: "bot-token-missing",
+  };
+  var botTokenForCommandMenu = getTelegramBotToken(config);
+  if (botTokenForCommandMenu) {
+    try {
+      commandMenuSync = await syncTelegramCommandsForRoleChat(
+        botTokenForCommandMenu,
+        bindingRecord.role,
+        chatId
+      );
+    } catch (menuSyncError) {
+      commandMenuSync = {
+        accepted: false,
+        reason: "menu-sync-failed",
+        detail: menuSyncError && menuSyncError.message ? menuSyncError.message : "Unknown error",
+      };
+    }
+  }
+
   res.status(201).json({
     accepted: true,
     tenantKey: tenantKey,
     subject: authSession.subject,
+    role: bindingRecord.role,
     chatId: chatId,
+    visibleCommands: buildTelegramCommandDefinitionsForRole(bindingRecord.role),
+    commandMenuSync: commandMenuSync,
     updatedAt: bindingRecord.updatedAt,
     detail: "Telegram chat linked for authenticated user",
   });
@@ -3595,7 +5001,9 @@ router.get("/integrations/messaging/telegram/setup", function (req, res) {
       "Open Telegram and start BotFather",
       "Create a bot and save bot token in secret manager",
       "Set INTEGRATION_TELEGRAM_CREDENTIALS reference",
-      "Configure endpoint in tenant integration config",
+      "Call POST /api/v1/integrations/messaging/telegram/commands/setup to publish bot commands",
+      "Link each user via POST /api/v1/integrations/messaging/telegram/link",
+      "Notification service auto-polls commands when running (manual poll endpoint remains available)",
       "Run POST /api/v1/integrations/messaging/test with providerKey=telegram-bot",
     ],
   });
@@ -3613,7 +5021,225 @@ router.get("/integrations/messaging/telegram/config-status", function (req, res)
     secretKey: secretStatus.secretKey,
     configured: Boolean(secretStatus.parsed && secretStatus.parsed.botToken),
     hasChatId: Boolean(secretStatus.parsed && secretStatus.parsed.chatId),
+    publishedCommands: buildTelegramCommandDefinitions(),
+    linkedUsersCount: getTenantTelegramBindingCount(tenantKey),
+    nextPollOffset: Number(
+      telegramCommandOffsets.get(normalizeTenantKey(tenantKey, "default")) || 0
+    ),
   });
+});
+
+router.post("/integrations/messaging/telegram/commands/setup", async function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  if (["admin", "operations"].indexOf(String(authSession.role || "").toLowerCase()) < 0) {
+    res.status(403).json({
+      accepted: false,
+      code: "TELEGRAM_COMMAND_SETUP_FORBIDDEN",
+      message: "Only admin or operations role can publish Telegram commands",
+    });
+    return;
+  }
+
+  var payload = req.body || {};
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var botToken = getTelegramBotToken(config);
+  if (!botToken) {
+    res.status(400).json({
+      accepted: false,
+      code: "TELEGRAM_BOT_TOKEN_MISSING",
+      message: "Telegram bot token is not configured for this tenant",
+    });
+    return;
+  }
+
+  var commands = buildTelegramCommandDefinitions();
+
+  try {
+    await setTelegramCommands(botToken, commands);
+    telegramCommandSetupApplied.set(tenantKey, true);
+    res.json({
+      accepted: true,
+      tenantKey: tenantKey,
+      commands: commands,
+      detail: "Telegram commands published successfully",
+    });
+  } catch (error) {
+    res.status(502).json({
+      accepted: false,
+      code: "TELEGRAM_COMMAND_SETUP_FAILED",
+      message: "Unable to publish Telegram commands",
+      detail: error && error.message ? error.message : "Unknown Telegram API error",
+    });
+  }
+});
+
+router.get("/integrations/messaging/telegram/commands/status", function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  var tenantKey = enforceTenantScope(res, authSession, req.query.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var config = loadTenantIntegrationConfig(normalizedTenant);
+  var botToken = getTelegramBotToken(config);
+
+  res.json({
+    tenantKey: normalizedTenant,
+    providerEnabled: Boolean(findMessagingProvider(config, "telegram-bot")),
+    botConfigured: Boolean(botToken),
+    linkedUsersCount: getTenantTelegramBindingCount(normalizedTenant),
+    nextPollOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+    commands: buildTelegramCommandDefinitions(),
+    visibleCommandsForRequester: buildTelegramCommandDefinitionsForRole(authSession.role),
+    autoPoll: getTelegramAutoPollRuntimeState(),
+  });
+});
+
+router.post("/integrations/messaging/telegram/commands/poll", async function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  if (["admin", "operations"].indexOf(String(authSession.role || "").toLowerCase()) < 0) {
+    res.status(403).json({
+      accepted: false,
+      code: "TELEGRAM_COMMAND_POLL_FORBIDDEN",
+      message: "Only admin or operations role can run Telegram polling",
+    });
+    return;
+  }
+
+  var payload = req.body || {};
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var config = loadTenantIntegrationConfig(normalizedTenant);
+  var botToken = getTelegramBotToken(config);
+  if (!botToken) {
+    res.status(400).json({
+      accepted: false,
+      code: "TELEGRAM_BOT_TOKEN_MISSING",
+      message: "Telegram bot token is not configured for this tenant",
+    });
+    return;
+  }
+
+  var providedOffset = Number(payload.offset);
+  var offset = Number.isFinite(providedOffset)
+    ? Math.max(0, Math.floor(providedOffset))
+    : Number(telegramCommandOffsets.get(normalizedTenant) || 0);
+  var limit = Number(payload.limit);
+
+  try {
+    var updates = await fetchTelegramUpdates(botToken, offset, limit);
+    var processed = [];
+    var nextOffset = offset;
+
+    for (var index = 0; index < updates.length; index += 1) {
+      var update = updates[index];
+      var updateId = Number(update && update.update_id);
+      if (Number.isFinite(updateId) && updateId >= nextOffset) {
+        nextOffset = updateId + 1;
+      }
+
+      var result = await processTelegramCommandUpdate(normalizedTenant, botToken, update);
+      if (result && result.handled) {
+        processed.push(result);
+      }
+    }
+
+    telegramCommandOffsets.set(normalizedTenant, nextOffset);
+
+    res.json({
+      accepted: true,
+      tenantKey: normalizedTenant,
+      fetchedUpdates: updates.length,
+      handledCommands: processed.length,
+      nextOffset: nextOffset,
+      processed: processed,
+    });
+  } catch (error) {
+    res.status(502).json({
+      accepted: false,
+      code: "TELEGRAM_COMMAND_POLL_FAILED",
+      message: "Unable to poll Telegram updates",
+      detail: error && error.message ? error.message : "Unknown polling failure",
+    });
+  }
+});
+
+router.post("/integrations/messaging/telegram/commands/webhook", async function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = normalizeTenantKey(req.query.tenantKey || payload.tenantKey, "default");
+  if (!tenantKey) {
+    res.status(400).json({
+      accepted: false,
+      code: "TELEGRAM_TENANT_REQUIRED",
+      message: "tenantKey is required in query or payload",
+    });
+    return;
+  }
+
+  var configuredSecret = String(process.env.INTEGRATION_TELEGRAM_WEBHOOK_SECRET || "").trim();
+  if (configuredSecret) {
+    var receivedSecret = String(req.headers["x-telegram-bot-api-secret-token"] || "").trim();
+    if (!receivedSecret || receivedSecret !== configuredSecret) {
+      res.status(403).json({
+        accepted: false,
+        code: "TELEGRAM_WEBHOOK_SECRET_INVALID",
+        message: "Telegram webhook secret token is invalid",
+      });
+      return;
+    }
+  }
+
+  var config = loadTenantIntegrationConfig(tenantKey);
+  var botToken = getTelegramBotToken(config);
+  if (!botToken) {
+    res.status(400).json({
+      accepted: false,
+      code: "TELEGRAM_BOT_TOKEN_MISSING",
+      message: "Telegram bot token is not configured for this tenant",
+    });
+    return;
+  }
+
+  try {
+    var result = await processTelegramCommandUpdate(tenantKey, botToken, payload);
+
+    res.json({
+      accepted: true,
+      tenantKey: tenantKey,
+      handled: Boolean(result && result.handled),
+      result: result,
+      nextOffset: Number(telegramCommandOffsets.get(tenantKey) || 0),
+    });
+  } catch (error) {
+    res.status(502).json({
+      accepted: false,
+      code: "TELEGRAM_WEBHOOK_PROCESSING_FAILED",
+      message: "Unable to process Telegram webhook update",
+      detail: error && error.message ? error.message : "Unknown webhook processing error",
+    });
+  }
 });
 
 router.get("/integrations/messaging/email/config-status", function (req, res) {
@@ -4718,3 +6344,5 @@ router.post("/integrations/messaging/webhook/signature/verify", function (req, r
 });
 
 module.exports = router;
+module.exports.startTelegramCommandAutoPolling = startTelegramCommandAutoPolling;
+module.exports.getTelegramAutoPollRuntimeState = getTelegramAutoPollRuntimeState;

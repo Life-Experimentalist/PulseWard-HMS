@@ -13,14 +13,19 @@ This app provides the M6 mobile-notification baseline for PulseWard using Expo m
 
 Set API base URL without changing source code:
 
+- Environment variable: EXPO_PUBLIC_PULSEWARD_HOST (recommended for LAN)
 - Environment variable: EXPO_PUBLIC_PULSEWARD_API_BASE_URL
-- Fallback default: http://127.0.0.1:5102
+- Environment variable: EXPO_PUBLIC_PULSEWARD_AUTH_BASE_URL
+- Runtime fallback: Expo LAN host auto-detected from dev session (port 5102 for API, 5101 for auth)
+- Last fallback: http://127.0.0.1:5102
 - Optional environment variable for EAS attribution: EXPO_PUBLIC_EXPO_PROJECT_ID
 
 Example PowerShell:
 
 ```powershell
-$env:EXPO_PUBLIC_PULSEWARD_API_BASE_URL = "http://127.0.0.1:5102"
+$env:EXPO_PUBLIC_PULSEWARD_HOST = "192.168.1.50"
+$env:EXPO_PUBLIC_PULSEWARD_API_BASE_URL = "http://192.168.1.50:5102"
+$env:EXPO_PUBLIC_PULSEWARD_AUTH_BASE_URL = "http://192.168.1.50:5101"
 $env:EXPO_PUBLIC_EXPO_PROJECT_ID = ""
 ```
 
@@ -33,14 +38,14 @@ Important for phone testing:
 
 ```powershell
 pnpm install
-pnpm run start
+pnpm run start:lan
 ```
 
 Or from repository root:
 
 ```powershell
 pnpm run install:mobile
-pnpm run start:mobile
+pnpm run start:mobile:lan
 ```
 
 ## API Path Used

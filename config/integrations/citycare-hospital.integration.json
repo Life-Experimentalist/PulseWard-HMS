@@ -1,148 +1,146 @@
 {
-    "tenantKey":  "citycare-hospital",
-    "messagingProviders":  [
-                               {
-                                   "key":  "whatsapp-cloud-api",
-                                   "enabled":  false,
-                                   "displayName":  "WhatsApp Cloud API",
-                                   "billing":  {
-                                                   "model":  "paid",
-                                                   "adminActionRequired":  true,
-                                                   "setupUrl":  "https://developers.facebook.com/docs/whatsapp",
-                                                   "notes":  "Hospital admin must provision Meta billing and sender configuration"
-                                               },
-                                   "credentialsRef":  {
-                                                          "secretKey":  "INTEGRATION_WHATSAPP_CREDENTIALS"
-                                                      }
-                               },
-                               {
-                                   "key":  "telegram-bot",
-                                   "enabled":  true,
-                                   "displayName":  "Telegram Bot",
-                                   "billing":  {
-                                                   "model":  "free",
-                                                   "adminActionRequired":  true,
-                                                   "setupUrl":  "https://core.telegram.org/bots",
-                                                   "notes":  "Admin creates bot token through BotFather"
-                                               },
-                                   "endpoint":  "https://api.telegram.org/bot\u003ctoken\u003e/sendMessage",
-                                   "credentialsRef":  {
-                                                          "secretKey":  "INTEGRATION_TELEGRAM_CREDENTIALS"
-                                                      }
-                               },
-                               {
-                                   "key":  "email-smtp",
-                                   "enabled":  true,
-                                   "displayName":  "SMTP Email",
-                                   "billing":  {
-                                                   "model":  "free",
-                                                   "adminActionRequired":  true,
-                                                   "notes":  "Can use organization mail server or low-cost SMTP provider"
-                                               },
-                                   "credentialsRef":  {
-                                                          "secretKey":  "INTEGRATION_EMAIL_SMTP_CREDENTIALS"
-                                                      }
-                               },
-                               {
-                                   "key":  "generic-webhook",
-                                   "enabled":  true,
-                                   "displayName":  "Website Webhook",
-                                   "billing":  {
-                                                   "model":  "free",
-                                                   "adminActionRequired":  false,
-                                                   "notes":  "Internal HTTP endpoint owned by hospital IT"
-                                               },
-                                   "endpoint":  "https://example-hospital.local/api/notify"
-                               }
-                           ],
-    "calendarProviders":  [
-                              {
-                                  "key":  "google-calendar",
-                                  "enabled":  true,
-                                  "displayName":  "Google Calendar",
-                                  "billing":  {
-                                                  "model":  "free",
-                                                  "adminActionRequired":  true,
-                                                  "setupUrl":  "https://developers.google.com/calendar",
-                                                  "notes":  "Admin must create OAuth app and service account"
-                                              },
-                                  "credentialsRef":  {
-                                                         "secretKey":  "INTEGRATION_GOOGLE_CALENDAR_CREDENTIALS"
-                                                     }
-                              },
-                              {
-                                  "key":  "apple-calendar",
-                                  "enabled":  true,
-                                  "displayName":  "Apple Calendar",
-                                  "billing":  {
-                                                  "model":  "free",
-                                                  "adminActionRequired":  true,
-                                                  "notes":  "Use CalDAV/ICS bridge credentials managed by hospital admin"
-                                              },
-                                  "credentialsRef":  {
-                                                         "secretKey":  "INTEGRATION_APPLE_CALENDAR_CREDENTIALS"
-                                                     }
-                              },
-                              {
-                                  "key":  "outlook-calendar",
-                                  "enabled":  false,
-                                  "displayName":  "Outlook Calendar",
-                                  "billing":  {
-                                                  "model":  "paid",
-                                                  "adminActionRequired":  true,
-                                                  "setupUrl":  "https://learn.microsoft.com/graph/api/resources/event",
-                                                  "notes":  "Requires Microsoft tenant and app registration"
-                                              },
-                                  "credentialsRef":  {
-                                                         "secretKey":  "INTEGRATION_OUTLOOK_CALENDAR_CREDENTIALS"
-                                                     }
-                              },
-                              {
-                                  "key":  "ics-calendar",
-                                  "enabled":  true,
-                                  "displayName":  "ICS Calendar",
-                                  "billing":  {
-                                                  "model":  "free",
-                                                  "adminActionRequired":  false,
-                                                  "notes":  "Generates standards-based ICS events"
-                                              },
-                                  "credentialsRef":  {
-                                                         "secretKey":  "INTEGRATION_ICS_CREDENTIALS"
-                                                     }
-                              }
-                          ],
-    "messagingRouting":  [
-                             {
-                                 "channel":  "patient-notification",
-                                 "defaultProvider":  "telegram-bot",
-                                 "fallbackProviders":  [
-                                                           "email-smtp",
-                                                           "generic-webhook",
-                                                           "whatsapp-cloud-api"
-                                                       ]
-                             },
-                             {
-                                 "channel":  "staff-notification",
-                                 "defaultProvider":  "email-smtp",
-                                 "fallbackProviders":  [
-                                                           "telegram-bot",
-                                                           "generic-webhook"
-                                                       ]
-                             },
-                             {
-                                 "channel":  "website-hook",
-                                 "defaultProvider":  "generic-webhook",
-                                 "fallbackProviders":  [
-                                                           "whatsapp-cloud-api"
-                                                       ]
-                             }
-                         ],
-    "calendarRouting":  {
-                            "defaultProvider":  "google-calendar",
-                            "fallbackProviders":  [
-                                                      "apple-calendar",
-                                                      "outlook-calendar",
-                                                      "ics-calendar"
-                                                  ]
-                        }
+    "tenantKey": "citycare-hospital",
+    "messagingProviders": [
+        {
+            "key": "whatsapp-cloud-api",
+            "enabled": false,
+            "displayName": "WhatsApp Cloud API",
+            "billing": {
+                "model": "paid",
+                "adminActionRequired": true,
+                "setupUrl": "https://developers.facebook.com/docs/whatsapp",
+                "notes": "Hospital admin must provision Meta billing and sender configuration"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_WHATSAPP_CREDENTIALS"
+            }
+        },
+        {
+            "key": "telegram-bot",
+            "enabled": true,
+            "displayName": "Telegram Bot",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": true,
+                "setupUrl": "https://core.telegram.org/bots",
+                "notes": "Admin creates bot token through BotFather"
+            },
+            "endpoint": "https://api.telegram.org/bot\u003ctoken\u003e/sendMessage",
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_TELEGRAM_CREDENTIALS"
+            }
+        },
+        {
+            "key": "email-smtp",
+            "enabled": false,
+            "displayName": "SMTP Email",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": true,
+                "notes": "Can use organization mail server or low-cost SMTP provider"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_EMAIL_SMTP_CREDENTIALS"
+            }
+        },
+        {
+            "key": "generic-webhook",
+            "enabled": true,
+            "displayName": "Website Webhook",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": false,
+                "notes": "Internal HTTP endpoint owned by hospital IT"
+            },
+            "endpoint": "https://example-hospital.local/api/notify"
+        }
+    ],
+    "calendarProviders": [
+        {
+            "key": "google-calendar",
+            "enabled": true,
+            "displayName": "Google Calendar",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": true,
+                "setupUrl": "https://developers.google.com/calendar",
+                "notes": "Admin must create OAuth app and service account"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_GOOGLE_CALENDAR_CREDENTIALS"
+            }
+        },
+        {
+            "key": "apple-calendar",
+            "enabled": true,
+            "displayName": "Apple Calendar",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": true,
+                "notes": "Use CalDAV/ICS bridge credentials managed by hospital admin"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_APPLE_CALENDAR_CREDENTIALS"
+            }
+        },
+        {
+            "key": "outlook-calendar",
+            "enabled": false,
+            "displayName": "Outlook Calendar",
+            "billing": {
+                "model": "paid",
+                "adminActionRequired": true,
+                "setupUrl": "https://learn.microsoft.com/graph/api/resources/event",
+                "notes": "Requires Microsoft tenant and app registration"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_OUTLOOK_CALENDAR_CREDENTIALS"
+            }
+        },
+        {
+            "key": "ics-calendar",
+            "enabled": true,
+            "displayName": "ICS Calendar",
+            "billing": {
+                "model": "free",
+                "adminActionRequired": false,
+                "notes": "Generates standards-based ICS events"
+            },
+            "credentialsRef": {
+                "secretKey": "INTEGRATION_ICS_CREDENTIALS"
+            }
+        }
+    ],
+    "messagingRouting": [
+        {
+            "channel": "patient-notification",
+            "defaultProvider": "telegram-bot",
+            "fallbackProviders": [
+                "generic-webhook",
+                "whatsapp-cloud-api"
+            ]
+        },
+        {
+            "channel": "staff-notification",
+            "defaultProvider": "telegram-bot",
+            "fallbackProviders": [
+                "generic-webhook"
+            ]
+        },
+        {
+            "channel": "website-hook",
+            "defaultProvider": "generic-webhook",
+            "fallbackProviders": [
+                "whatsapp-cloud-api"
+            ]
+        }
+    ],
+    "calendarRouting": {
+        "defaultProvider": "google-calendar",
+        "fallbackProviders": [
+            "apple-calendar",
+            "outlook-calendar",
+            "ics-calendar"
+        ]
+    }
 }

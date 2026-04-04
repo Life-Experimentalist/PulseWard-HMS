@@ -1,9 +1,9 @@
 const React = require("react");
 const {
   ActivityIndicator,
-  FlatList,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,8 +17,9 @@ const Notifications = require("expo-notifications");
 
 const { useCallback, useEffect, useMemo, useRef, useState } = React;
 
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:5102";
-const DEFAULT_AUTH_BASE_URL = "http://127.0.0.1:5101";
+const DEFAULT_NETWORK_HOST = "127.0.0.1";
+const DEFAULT_API_BASE_URL = "http://" + DEFAULT_NETWORK_HOST + ":5102";
+const DEFAULT_AUTH_BASE_URL = "http://" + DEFAULT_NETWORK_HOST + ":5101";
 const DEFAULT_TEST_PUSH_TITLE = "PulseWard Test Push";
 const DEFAULT_TEST_PUSH_BODY = "Your Android phone is connected to PulseWard push.";
 
@@ -32,15 +33,91 @@ Notifications.setNotificationHandler({
 });
 
 function getApiBaseUrl() {
-  return (
+  var explicitApiUrl =
     process.env.EXPO_PUBLIC_PULSEWARD_API_BASE_URL ||
-    process.env.EXPO_PUBLIC_API_BASE_URL ||
-    DEFAULT_API_BASE_URL
-  );
+    process.env.EXPO_PUBLIC_API_BASE_URL;
+
+  if (explicitApiUrl) {
+    return explicitApiUrl;
+  }
+
+  return "http://" + resolveNetworkHost() + ":5102";
 }
 
 function getAuthBaseUrl() {
-  return process.env.EXPO_PUBLIC_PULSEWARD_AUTH_BASE_URL || DEFAULT_AUTH_BASE_URL;
+  var explicitAuthUrl = process.env.EXPO_PUBLIC_PULSEWARD_AUTH_BASE_URL;
+  if (explicitAuthUrl) {
+    return explicitAuthUrl;
+  }
+
+  return "http://" + resolveNetworkHost() + ":5101";
+}
+
+function normalizeHostFromAddress(value) {
+  var raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    var source = raw;
+    if (!source.includes("://")) {
+      source = "http://" + source;
+    }
+
+    var parsed = new URL(source);
+    var host = String(parsed.hostname || "").trim();
+    if (!host) {
+      return "";
+    }
+
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("127.")) {
+      return "";
+    }
+
+    return host;
+  } catch (_parseError) {
+    return "";
+  }
+}
+
+function resolveExpoRuntimeHost() {
+  var candidates = [
+    Constants && Constants.expoConfig && Constants.expoConfig.hostUri,
+    Constants && Constants.expoConfig && Constants.expoConfig.debuggerHost,
+    Constants && Constants.manifest && Constants.manifest.debuggerHost,
+    Constants && Constants.manifest && Constants.manifest.hostUri,
+    Constants &&
+      Constants.manifest2 &&
+      Constants.manifest2.extra &&
+      Constants.manifest2.extra.expoClient &&
+      Constants.manifest2.extra.expoClient.hostUri,
+  ];
+
+  for (var index = 0; index < candidates.length; index += 1) {
+    var host = normalizeHostFromAddress(candidates[index]);
+    if (host) {
+      return host;
+    }
+  }
+
+  return "";
+}
+
+function resolveNetworkHost() {
+  var explicitHost =
+    process.env.EXPO_PUBLIC_PULSEWARD_HOST || process.env.EXPO_PUBLIC_LAPTOP_HOST;
+  var envHost = normalizeHostFromAddress(explicitHost);
+  if (envHost) {
+    return envHost;
+  }
+
+  var expoHost = resolveExpoRuntimeHost();
+  if (expoHost) {
+    return expoHost;
+  }
+
+  return DEFAULT_NETWORK_HOST;
 }
 
 function formatTimestamp(value) {
@@ -427,196 +504,202 @@ function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>PulseWard Notifications</Text>
-        <Text style={styles.subtitle}>Tenant-scoped appointment event inbox</Text>
-      </View>
-
-      <View style={styles.controls}>
-        <Text style={styles.title2}>User Login (Required)</Text>
-        <Text style={styles.label}>Auth base</Text>
-        <Text style={styles.meta}>{authBaseUrl}</Text>
-
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="patient@citycare.example.com"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="demo-password"
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Role</Text>
-        <TextInput
-          value={role}
-          onChangeText={setRole}
-          placeholder="patient"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={login}
-          style={styles.button}
-          disabled={authBusy}
-        >
-          <Text style={styles.buttonText}>{authBusy ? "Signing in..." : "Login"}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={registerUser}
-          style={styles.buttonSecondary}
-          disabled={authBusy}
-        >
-          <Text style={styles.buttonSecondaryText}>
-            {authBusy ? "Working..." : "Register user (first time)"}
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.meta}>{authStatus || "Login required for events and push flows."}</Text>
-        {authToken ? (
-          <Text style={styles.tokenPreview}>Token: {authToken.slice(0, 24)}...</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.controls}>
-        <Text style={styles.label}>Tenant key</Text>
-        <TextInput
-          value={tenantKey}
-          onChangeText={setTenantKey}
-          placeholder="citycare-hospital"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={loadEvents}
-          style={styles.button}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? "Loading..." : "Fetch events"}</Text>
-        </TouchableOpacity>
-        <Text style={styles.meta}>API base: {apiBaseUrl}</Text>
-      </View>
-
-      <View style={styles.controls}>
-        <Text style={styles.title2}>Android Push Setup</Text>
-        <Text style={styles.label}>Expo project id (optional if auto-detected)</Text>
-        <TextInput
-          value={projectId}
-          onChangeText={setProjectId}
-          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={registerForPushNotifications}
-          style={styles.button}
-          disabled={pushBusy}
-        >
-          <Text style={styles.buttonText}>
-            {pushBusy ? "Working..." : "Enable push and get token"}
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.label}>Expo push token</Text>
-        <Text selectable style={styles.tokenText}>
-          {pushToken || "No token yet"}
-        </Text>
-
-        <Text style={styles.label}>Test push title</Text>
-        <TextInput
-          value={pushTitle}
-          onChangeText={setPushTitle}
-          placeholder={DEFAULT_TEST_PUSH_TITLE}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Test push body</Text>
-        <TextInput
-          value={pushBody}
-          onChangeText={setPushBody}
-          placeholder={DEFAULT_TEST_PUSH_BODY}
-          style={styles.input}
-        />
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={sendTestPush}
-          style={styles.button}
-          disabled={pushBusy}
-        >
-          <Text style={styles.buttonText}>{pushBusy ? "Sending..." : "Send test push"}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.meta}>{pushStatus || "Register token and send a test push."}</Text>
-
-        {lastNotification ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Last notification received</Text>
-            <Text style={styles.cardLine}>
-              Title:{" "}
-              {lastNotification.request && lastNotification.request.content
-                ? lastNotification.request.content.title || "n/a"
-                : "n/a"}
-            </Text>
-            <Text style={styles.cardLine}>
-              Body:{" "}
-              {lastNotification.request && lastNotification.request.content
-                ? lastNotification.request.content.body || "n/a"
-                : "n/a"}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingBlock}>
-          <ActivityIndicator size="large" color="#0d6b52" />
-          <Text style={styles.loadingText}>Loading appointment events...</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>PulseWard Notifications</Text>
+          <Text style={styles.subtitle}>Tenant-scoped appointment event inbox</Text>
         </View>
-      ) : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.controls}>
+          <Text style={styles.title2}>User Login (Required)</Text>
+          <Text style={styles.label}>Auth base</Text>
+          <Text style={styles.meta}>{authBaseUrl}</Text>
 
-      <FlatList
-        data={events}
-        keyExtractor={(item, index) => item.id || item.correlationId || String(index)}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          !loading ? (
-            <Text style={styles.empty}>No events loaded yet. Fetch events for a tenant.</Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.eventType || "appointment.event"}</Text>
-            <Text style={styles.cardLine}>Appointment: {item.appointmentId || "n/a"}</Text>
-            <Text style={styles.cardLine}>Patient: {item.patientId || "n/a"}</Text>
-            <Text style={styles.cardLine}>Correlation: {item.correlationId || "n/a"}</Text>
-            <Text style={styles.cardLine}>Recorded: {formatTimestamp(item.recordedAt)}</Text>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="patient@citycare.example.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="demo-password"
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Role</Text>
+          <TextInput
+            value={role}
+            onChangeText={setRole}
+            placeholder="patient"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={login}
+            style={styles.button}
+            disabled={authBusy}
+          >
+            <Text style={styles.buttonText}>{authBusy ? "Signing in..." : "Login"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={registerUser}
+            style={styles.buttonSecondary}
+            disabled={authBusy}
+          >
+            <Text style={styles.buttonSecondaryText}>
+              {authBusy ? "Working..." : "Register user (first time)"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.meta}>{authStatus || "Login required for events and push flows."}</Text>
+          {authToken ? (
+            <Text style={styles.tokenPreview}>Token: {authToken.slice(0, 24)}...</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.controls}>
+          <Text style={styles.label}>Tenant key</Text>
+          <TextInput
+            value={tenantKey}
+            onChangeText={setTenantKey}
+            placeholder="citycare-hospital"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={loadEvents}
+            style={styles.button}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? "Loading..." : "Fetch events"}</Text>
+          </TouchableOpacity>
+          <Text style={styles.meta}>API base: {apiBaseUrl}</Text>
+        </View>
+
+        <View style={styles.controls}>
+          <Text style={styles.title2}>Android Push Setup</Text>
+          <Text style={styles.label}>Expo project id (optional if auto-detected)</Text>
+          <TextInput
+            value={projectId}
+            onChangeText={setProjectId}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={registerForPushNotifications}
+            style={styles.button}
+            disabled={pushBusy}
+          >
+            <Text style={styles.buttonText}>
+              {pushBusy ? "Working..." : "Enable push and get token"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Expo push token</Text>
+          <Text selectable style={styles.tokenText}>
+            {pushToken || "No token yet"}
+          </Text>
+
+          <Text style={styles.label}>Test push title</Text>
+          <TextInput
+            value={pushTitle}
+            onChangeText={setPushTitle}
+            placeholder={DEFAULT_TEST_PUSH_TITLE}
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Test push body</Text>
+          <TextInput
+            value={pushBody}
+            onChangeText={setPushBody}
+            placeholder={DEFAULT_TEST_PUSH_BODY}
+            style={styles.input}
+          />
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={sendTestPush}
+            style={styles.button}
+            disabled={pushBusy}
+          >
+            <Text style={styles.buttonText}>{pushBusy ? "Sending..." : "Send test push"}</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.meta}>{pushStatus || "Register token and send a test push."}</Text>
+
+          {lastNotification ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Last notification received</Text>
+              <Text style={styles.cardLine}>
+                Title:{" "}
+                {lastNotification.request && lastNotification.request.content
+                  ? lastNotification.request.content.title || "n/a"
+                  : "n/a"}
+              </Text>
+              <Text style={styles.cardLine}>
+                Body:{" "}
+                {lastNotification.request && lastNotification.request.content
+                  ? lastNotification.request.content.body || "n/a"
+                  : "n/a"}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator size="large" color="#0d6b52" />
+            <Text style={styles.loadingText}>Loading appointment events...</Text>
           </View>
-        )}
-      />
+        ) : null}
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.list}>
+          {!loading && events.length === 0 ? (
+            <Text style={styles.empty}>No events loaded yet. Fetch events for a tenant.</Text>
+          ) : null}
+
+          {events.map(function (item, index) {
+            var key = item && (item.id || item.correlationId) ? item.id || item.correlationId : String(index);
+
+            return (
+              <View key={key} style={styles.card}>
+                <Text style={styles.cardTitle}>{item.eventType || "appointment.event"}</Text>
+                <Text style={styles.cardLine}>Appointment: {item.appointmentId || "n/a"}</Text>
+                <Text style={styles.cardLine}>Patient: {item.patientId || "n/a"}</Text>
+                <Text style={styles.cardLine}>Correlation: {item.correlationId || "n/a"}</Text>
+                <Text style={styles.cardLine}>Recorded: {formatTimestamp(item.recordedAt)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -627,6 +710,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f6f8",
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     marginBottom: 12,
@@ -726,7 +815,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   list: {
-    paddingBottom: 20,
+    paddingBottom: 12,
   },
   empty: {
     color: "#5a7081",

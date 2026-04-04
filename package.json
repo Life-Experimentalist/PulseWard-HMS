@@ -15,6 +15,7 @@
     "start:operations": "node ./scripts/start-operations.mjs",
     "start:patient": "node ./scripts/start-patient.mjs",
     "start:mobile": "pnpm --dir ./apps/mobile-notifications start",
+    "start:mobile:lan": "pnpm --dir ./apps/mobile-notifications start:lan",
     "start:admin:dev": "pnpm --dir ./apps/admin-console dev -- --host",
     "start:clinician:dev": "pnpm --dir ./apps/clinician-portal dev -- --host",
     "start:operations:dev": "pnpm --dir ./apps/operations-dashboard dev -- --host",
@@ -88,6 +89,7 @@
     "jwt:generate": "node ./scripts/generate-jwt-secret.mjs",
     "push:expo:test": "node ./scripts/send-expo-push-test.mjs",
     "setup:bootstrap": "powershell -ExecutionPolicy Bypass -File ./scripts/bootstrap-local.ps1",
+    "simulate:doctor-day": "node ./scripts/simulate-doctor-day.mjs",
     "install:one-command": "powershell -ExecutionPolicy Bypass -File ./scripts/install-pulseward.ps1",
     "env:check": "node ./scripts/check-env-consistency.mjs",
     "env:guide": "node -e \"console.log('See docs/development-model/env-setup.md for setup steps and key acquisition guidance.')\""

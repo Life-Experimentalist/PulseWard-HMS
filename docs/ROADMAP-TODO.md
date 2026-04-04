@@ -44,6 +44,38 @@ flowchart LR
 ```
 <!-- ROADMAP_AUTO_SNAPSHOT_END -->
 
+## Deferred Admin AI Orchestration Request (Planned, Not Implemented Yet)
+
+Stakeholder-requested future scope to be scheduled in a dedicated milestone slice:
+
+1. Add modular AI provider adapters for `Gemini`, `OpenAI`, `Claude`, and `DeepSeek` behind a common interface.
+2. Add admin-console controls to choose provider, primary model, backup model, and fallback rules.
+3. Add multi-key management per provider with selectable key-routing strategy:
+  - round-robin
+  - random
+  - key-until-rate-limit-then-next
+4. Add tenant-scoped AI settings so one tenant's provider/model/key policy cannot impact another tenant.
+5. Add runtime failover behavior: primary model -> backup model -> provider fallback chain.
+6. Add API contract and runbook coverage for configuration, failover events, and key rotation.
+
+Delivery note:
+
+1. This request is documented for planned implementation and should not be executed in the current local push/telegram setup slice.
+
+## Deferred Multi-Tenant Account Linking (Planned, Lower Priority)
+
+Stakeholder request captured for a later identity iteration (not part of current setup slice):
+
+1. Allow one identity account to link to multiple tenant memberships.
+2. Add tenant profile switch in web/mobile sessions without re-authenticating each time.
+3. Keep strict tenant isolation on data access; switching changes active tenant context only.
+4. Record tenant-switch audit events with actor, previous tenant, next tenant, and timestamp.
+5. Add admin policy to control who can hold multi-tenant memberships.
+
+Delivery note:
+
+1. Priority is intentionally lower than current setup and demo stabilization work.
+
 ## Production Readiness Definition
 
 PulseWard is production ready when all conditions below are true:
@@ -84,17 +116,17 @@ This section formalizes slice sizing so milestone progress stays meaningful and 
 
 ### Module Slice Budget (Grouped Planning View)
 
-| Milestone | Atomic History (Observed)    | Grouped Execution Waves (Target/Used)                   | Status      |
-| --------- | ---------------------------- | ------------------------------------------------------- | ----------- |
-| M1        | 6 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
-| M2        | 5 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
-| M3        | 6 slices                     | 3-4 grouped waves (used: 4)                             | Completed   |
-| M4        | 4 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
-| M5        | 20 slices                    | 4 grouped waves (`M5-A` to `M5-D`)                      | Completed   |
-| M6        | 228 slices (contract stream) | Contract waves used: 46; milestone closeout waves `4/4` | Completed   |
-| M7        | planned                      | 8 grouped waves (`M7.8` complete, 0 remaining)          | Completed   |
-| M8        | planned                      | 6 grouped waves (`M8.6` complete, 0 remaining)          | Completed   |
-| M9        | planned                      | 5 grouped waves (`M9.5` complete, 0 remaining)          | Completed   |
+| Milestone | Atomic History (Observed)    | Grouped Execution Waves (Target/Used)                   | Status    |
+| --------- | ---------------------------- | ------------------------------------------------------- | --------- |
+| M1        | 6 slices                     | 2-3 grouped waves (used: 3)                             | Completed |
+| M2        | 5 slices                     | 2-3 grouped waves (used: 3)                             | Completed |
+| M3        | 6 slices                     | 3-4 grouped waves (used: 4)                             | Completed |
+| M4        | 4 slices                     | 2-3 grouped waves (used: 3)                             | Completed |
+| M5        | 20 slices                    | 4 grouped waves (`M5-A` to `M5-D`)                      | Completed |
+| M6        | 228 slices (contract stream) | Contract waves used: 46; milestone closeout waves `4/4` | Completed |
+| M7        | planned                      | 8 grouped waves (`M7.8` complete, 0 remaining)          | Completed |
+| M8        | planned                      | 6 grouped waves (`M8.6` complete, 0 remaining)          | Completed |
+| M9        | planned                      | 5 grouped waves (`M9.5` complete, 0 remaining)          | Completed |
 
 ### Remaining Effort Estimate (From Current State)
 

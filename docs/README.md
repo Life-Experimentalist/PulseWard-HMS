@@ -25,6 +25,7 @@ This directory is the primary source of truth for architecture, API behavior, de
 	- `docs/architecture/system-context.md`
 	- `docs/architecture/container-diagram.md`
 	- `docs/architecture/tech-stack-inventory.md`
+	- `docs/architecture/admin-ai-provider-orchestration-backlog.md` (planned)
 	- `docs/TECH-STACK-DECISIONS.md`
 - Development process:
 	- `docs/development-model/iterative-model.md`
@@ -34,6 +35,8 @@ This directory is the primary source of truth for architecture, API behavior, de
 	- `docs/deployment/demo-quickstart.md`
 	- `docs/deployment/integrations-admin-quickstart.md`
 	- `docs/deployment/deploy-and-domain-migration.md`
+	- `docs/deployment/deployment-profiles-local-aws-cloudflare.md`
+	- `docs/deployment/local-telegram-android-push-gmail-quickstart.md`
 	- `docs/runbooks/`
 - Release notes:
 	- `docs/releases/README.md`

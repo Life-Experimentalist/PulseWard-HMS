@@ -1,5 +1,6 @@
 var crypto = require("crypto");
 var express = require("express");
+var jwt = require("jsonwebtoken");
 var randomUUID = crypto.randomUUID;
 var sendNotificationWithRouting =
   require("./integrations/send-notification-with-routing").sendNotificationWithRouting;
@@ -10,6 +11,7 @@ var resolveSecretRef = require("../../packages/shared-utils/resolve-secret-ref")
 var router = express.Router();
 var notifications = [];
 var appointmentEventReceipts = [];
+var mobilePushRegistrations = new Map();
 var messagingFaultInjectionEvents = [];
 var maxMessagingFaultInjectionEvents = parseRetryInt(
   process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
@@ -352,6 +354,112 @@ function getWebhookReadinessStatus(providerEnabled, endpointConfigured, endpoint
   }
 
   return "healthy";
+}
+
+function normalizeTenantKey(value, fallback) {
+  var normalized = String(value || "").trim();
+  if (!normalized) {
+    return String(fallback || "default").trim() || "default";
+  }
+
+  return normalized;
+}
+
+function extractBearerToken(req) {
+  var headerValue = String((req.headers && req.headers.authorization) || "").trim();
+  if (!headerValue) {
+    return "";
+  }
+
+  var parts = headerValue.split(" ");
+  if (parts.length !== 2 || String(parts[0] || "").toLowerCase() !== "bearer") {
+    return "";
+  }
+
+  return String(parts[1] || "").trim();
+}
+
+function requireAuthenticatedSession(req, res) {
+  var token = extractBearerToken(req);
+  if (!token) {
+    res.status(401).json({
+      message: "Authorization bearer token is required",
+      code: "AUTH_TOKEN_REQUIRED",
+    });
+    return null;
+  }
+
+  try {
+    var decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+    var subject = String((decoded && decoded.sub) || "").trim();
+    var tenantKey = normalizeTenantKey(decoded && decoded.tenantKey, "default");
+
+    if (!subject) {
+      res.status(401).json({
+        message: "Token subject is missing",
+        code: "AUTH_TOKEN_INVALID",
+      });
+      return null;
+    }
+
+    return {
+      subject: subject,
+      tenantKey: tenantKey,
+      role: String((decoded && decoded.role) || "")
+        .trim()
+        .toLowerCase(),
+      provider: String((decoded && decoded.provider) || "").trim(),
+    };
+  } catch (_error) {
+    res.status(401).json({
+      message: "Authorization token is invalid or expired",
+      code: "AUTH_TOKEN_INVALID",
+    });
+    return null;
+  }
+}
+
+function enforceTenantScope(res, authSession, requestedTenantKey) {
+  var effectiveTenantKey = normalizeTenantKey(
+    requestedTenantKey || authSession.tenantKey,
+    "default"
+  );
+  if (effectiveTenantKey !== authSession.tenantKey) {
+    res.status(403).json({
+      message: "Tenant mismatch between token and request",
+      code: "AUTH_TENANT_MISMATCH",
+      details: {
+        tokenTenantKey: authSession.tenantKey,
+        requestedTenantKey: effectiveTenantKey,
+      },
+    });
+    return null;
+  }
+
+  return effectiveTenantKey;
+}
+
+function isExpoPushToken(value) {
+  return /^ExponentPushToken\[[^\]]+\]$/.test(value) || /^ExpoPushToken\[[^\]]+\]$/.test(value);
+}
+
+function toPushRegistrationKey(tenantKey, subject) {
+  return (
+    String(tenantKey || "").trim() +
+    "::" +
+    String(subject || "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function maskPushToken(pushToken) {
+  var token = String(pushToken || "");
+  if (token.length <= 16) {
+    return token;
+  }
+
+  return token.slice(0, 12) + "..." + token.slice(-4);
 }
 
 function parseRetryInt(value, fallback, minimum, maximum) {
@@ -3051,7 +3159,16 @@ router.post("/integrations/appointments/events", function (req, res) {
 });
 
 router.get("/integrations/appointments/events", function (req, res) {
-  var tenantKey = String(req.query.tenantKey || "").trim();
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  var tenantKey = enforceTenantScope(res, authSession, req.query.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
   var appointmentId = String(req.query.appointmentId || "").trim();
   var eventType = String(req.query.eventType || "")
     .trim()
@@ -3142,10 +3259,20 @@ router.get("/integrations/messaging/providers", function (req, res) {
 });
 
 router.post("/integrations/messaging/test", function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
   var payload = req.body || {};
-  var tenantKey = payload.tenantKey || "default";
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
   var config = loadTenantIntegrationConfig(tenantKey);
   var dryRun = true;
+  var recipient = String(payload.recipient || "").trim();
 
   if (typeof payload.dryRun === "string") {
     dryRun = payload.dryRun.toLowerCase() !== "false";
@@ -3157,7 +3284,7 @@ router.post("/integrations/messaging/test", function (req, res) {
     {
       tenantKey: tenantKey,
       channel: payload.channel || "patient-notification",
-      recipient: payload.recipient || "demo@example.com",
+      recipient: recipient || null,
       message: payload.message || "PulseWard integration test message",
       preferredProvider: payload.providerKey,
       credentialsOverride: payload.credentialsOverride || null,
@@ -3174,6 +3301,138 @@ router.post("/integrations/messaging/test", function (req, res) {
         detail: error.message,
       });
     });
+});
+
+router.post("/integrations/mobile/push/register", function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  var payload = req.body || {};
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var expoPushToken = String(payload.expoPushToken || payload.pushToken || "").trim();
+  if (!isExpoPushToken(expoPushToken)) {
+    res.status(400).json({
+      accepted: false,
+      message: "A valid Expo push token is required",
+      code: "MOBILE_PUSH_TOKEN_INVALID",
+    });
+    return;
+  }
+
+  var key = toPushRegistrationKey(tenantKey, authSession.subject);
+  var registration = {
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    role: authSession.role || "",
+    provider: authSession.provider || "",
+    expoPushToken: expoPushToken,
+    platform:
+      String(payload.platform || "android")
+        .trim()
+        .toLowerCase() || "android",
+    updatedAt: new Date().toISOString(),
+  };
+
+  mobilePushRegistrations.set(key, registration);
+
+  res.status(201).json({
+    accepted: true,
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    pushTokenMasked: maskPushToken(expoPushToken),
+    detail: "Push token registered for authenticated user",
+    updatedAt: registration.updatedAt,
+  });
+});
+
+router.post("/integrations/mobile/push/test", async function (req, res) {
+  var authSession = requireAuthenticatedSession(req, res);
+  if (!authSession) {
+    return;
+  }
+
+  var payload = req.body || {};
+  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
+  if (!tenantKey) {
+    return;
+  }
+
+  var key = toPushRegistrationKey(tenantKey, authSession.subject);
+  var registration = mobilePushRegistrations.get(key);
+  if (!registration || !isExpoPushToken(registration.expoPushToken)) {
+    res.status(404).json({
+      accepted: false,
+      message: "No registered push token for authenticated user",
+      code: "MOBILE_PUSH_REGISTRATION_NOT_FOUND",
+      detail: "Call /api/v1/integrations/mobile/push/register first from this user session",
+    });
+    return;
+  }
+
+  try {
+    var response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: registration.expoPushToken,
+        title: payload.title || "PulseWard Test Push",
+        body: payload.body || "Your authenticated PulseWard device received a push notification.",
+        sound: "default",
+        data: {
+          tenantKey: tenantKey,
+          subject: authSession.subject,
+          source: "notification-service-authenticated-demo",
+        },
+      }),
+    });
+
+    var responseBody = await response.json().catch(function () {
+      return null;
+    });
+
+    if (!response.ok) {
+      res.status(502).json({
+        accepted: false,
+        message: "Expo push delivery request failed",
+        code: "MOBILE_PUSH_DELIVERY_FAILED",
+        detail:
+          (responseBody &&
+            responseBody.errors &&
+            responseBody.errors[0] &&
+            responseBody.errors[0].message) ||
+          "Push provider returned a non-success response",
+      });
+      return;
+    }
+
+    var ticket =
+      responseBody && responseBody.data && responseBody.data[0] ? responseBody.data[0] : null;
+    res.json({
+      accepted: true,
+      tenantKey: tenantKey,
+      subject: authSession.subject,
+      pushTokenMasked: maskPushToken(registration.expoPushToken),
+      ticket: ticket,
+      detail: "Push request accepted by Expo",
+    });
+  } catch (error) {
+    res.status(502).json({
+      accepted: false,
+      message: "Push provider request failed",
+      code: "MOBILE_PUSH_DELIVERY_FAILED",
+      detail: error && error.message ? error.message : "Unknown push provider failure",
+    });
+  }
 });
 
 router.get("/integrations/messaging/telegram/setup", function (req, res) {

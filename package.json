@@ -85,6 +85,10 @@
     "roadmap:refresh": "node ./scripts/refresh-roadmap-snapshot.mjs",
     "visuals:generate": "node ./scripts/generate-mermaid-visuals.mjs",
     "integrations:validate": "node ./scripts/validate-integration-config.mjs",
+    "jwt:generate": "node ./scripts/generate-jwt-secret.mjs",
+    "push:expo:test": "node ./scripts/send-expo-push-test.mjs",
+    "setup:bootstrap": "powershell -ExecutionPolicy Bypass -File ./scripts/bootstrap-local.ps1",
+    "install:one-command": "powershell -ExecutionPolicy Bypass -File ./scripts/install-pulseward.ps1",
     "env:check": "node ./scripts/check-env-consistency.mjs",
     "env:guide": "node -e \"console.log('See docs/development-model/env-setup.md for setup steps and key acquisition guidance.')\""
   },

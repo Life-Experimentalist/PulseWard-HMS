@@ -16,10 +16,14 @@
             "supportsTablet": true
         },
         "android": {
+            "package": "com.lifeexperimentalist.pulsewardmobilenotifications",
             "adaptiveIcon": {
                 "backgroundColor": "#f2f5f7"
             }
         },
+        "plugins": [
+            "expo-notifications"
+        ],
         "web": {
             "bundler": "metro"
         },

@@ -31,6 +31,10 @@ The project will follow an **iterative development model**, allowing for continu
    - Implement billing and insurance processing functionalities to streamline financial operations.
 3. **Iteration 03: AI Operations Integration**
    - Integrate the AI project manager agent to assist in project management tasks, ensuring efficient resource allocation and task tracking.
+4. **Iteration 04: Multi-Tenant Identity and Profile Switching (Planned, lower priority)**
+   - Support one account linked to multiple tenants.
+   - Add secure tenant profile switching for web/mobile sessions.
+   - Preserve tenant isolation and auditability during context switches.
 
 ## Documentation
 

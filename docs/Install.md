@@ -3,14 +3,16 @@
 ## Who this guide is for
 
 Use this guide if you want a complete, repeatable setup with no source-code edits.
-This guide includes:
 
-1. Windows PowerShell commands.
-2. Bash commands for Linux/macOS and container shells.
-3. Toolchain setup including global pnpm install option.
-4. Database setup.
-5. Secrets onboarding (what each secret is, where to get it, where to enter it).
-6. Connector and external auth setup.
+This guide covers:
+
+1. Windows PowerShell and Bash commands.
+2. Correct database values (Postgres + Mongo) with no ambiguity.
+3. Required vs optional auth and connector settings.
+4. JWT secret generation tool.
+5. Tenant concept and strict tenant automation.
+6. One-command installer options, including `iex` path.
+7. Local server and cloud deployment profiles (AWS + Cloudflare).
 
 ## Package manager decision
 
@@ -21,14 +23,14 @@ Why pnpm-only here:
 1. One lockfile (`pnpm-lock.yaml`) for reproducible workspace installs.
 2. Faster monorepo installs with lower disk usage.
 3. Better CI consistency.
-4. Avoids npm/pnpm lockfile drift.
+4. Avoid npm/pnpm lockfile drift.
 
 ## Prerequisites
 
 1. Node.js 22+.
 2. Git.
 3. Docker Desktop (Windows/macOS) or Docker Engine + Compose (Linux).
-4. Network access to any external provider you plan to use (Google, Meta, SMTP, ABHA, etc.).
+4. Network access to providers you enable (Google, Meta, SMTP, ABHA, etc.).
 
 ## Step 1: Clone repository
 
@@ -70,7 +72,7 @@ corepack prepare pnpm@9.15.0 --activate
 pnpm -v
 ```
 
-### Option B (alternate `npm` path): npm global install
+### Option B (alternate npm path): npm global install
 
 PowerShell:
 
@@ -85,8 +87,6 @@ Bash:
 npm install -g pnpm@9.15.0
 pnpm -v
 ```
-
-Use this option if Corepack is unavailable or blocked in your environment.
 
 ## Step 3: Clean old npm artifacts (one time)
 
@@ -108,8 +108,6 @@ find . -name package-lock.json -type f -delete
 
 Install dependencies:
 
-PowerShell and Bash:
-
 ```bash
 pnpm install --frozen-lockfile
 ```
@@ -130,67 +128,110 @@ cp -n .env.example .env
 pnpm run env:check
 ```
 
-Where to enter secrets:
+## Step 5: Database setup (discrepancy fixed)
 
-1. Enter all runtime values in the root `.env` file.
-2. Do not put real secrets in `.env.example`.
-3. In production, inject the same keys as environment variables via your secret manager.
+### 5.1 Which value is correct?
 
-## Step 5: Database setup
+Correct values are the values in `.env.example`.
 
-This project currently uses DB settings from `.env` and can be run with local containerized databases for development.
+Use:
 
-### 5.1 Configure database keys in `.env`
+1. `DB_HOST=localhost`
+2. `DB_PORT=5432`
+3. `DB_NAME=pulseward`
+4. `DB_USER=pulseward_local`
+5. `DB_PASSWORD=change_me_local_only`
 
-Set these keys (already present in .env.example):
+Important clarification:
 
-1. `DB_HOST` -> `localhost` for local Docker setup
-2. `DB_PORT` -> `5432` for local Docker setup
-3. `DB_NAME` -> `pulseward` for local Docker setup
-4. `DB_USER` -> `pulseward_local` for local Docker setup
-5. `DB_PASSWORD` -> `change_me_local_only` for local Docker setup
+1. `pulseward-postgres` is the Docker container name.
+2. `pulseward` is the actual Postgres database name.
+3. `DB_NAME` must be `pulseward` for local default setup.
 
-### 5.2 Start local Postgres and MongoDB containers
+### 5.2 Postgres vs Mongo - which one do I need?
 
-PowerShell and Bash:
+For local parity, run both containers:
+
+1. Postgres: primary SQL configuration baseline in `.env`.
+2. MongoDB: used by services/adapters that rely on document-storage paths.
+
+Recommended for first setup: run both.
+
+### 5.3 Start local DB containers
+
+Using compose (recommended):
+
+```powershell
+docker compose up -d pulseward-postgres pulseward-mongo
+```
+
+Or manual docker run (equivalent):
 
 ```bash
 docker run -d --name pulseward-postgres -p 5432:5432 -e POSTGRES_DB=pulseward -e POSTGRES_USER=pulseward_local -e POSTGRES_PASSWORD=change_me_local_only postgres:16
 docker run -d --name pulseward-mongo -p 27017:27017 mongo:7
 ```
 
-Verify:
+Note:
 
-PowerShell and Bash:
+1. The Postgres values above must match `.env` (`DB_NAME=pulseward`, `DB_USER=pulseward_local`, `DB_PASSWORD=change_me_local_only`).
+2. Mongo is intentionally started without auth in local development for a simpler first-run experience.
+3. For production, run Mongo with authentication and use a secret-managed connection string.
+
+Verify:
 
 ```bash
 docker ps --filter name=pulseward-postgres
 docker ps --filter name=pulseward-mongo
 ```
 
-### 5.3 If using managed DB instead of local Docker
+## Step 6: JWT secret generator tool (small utility)
 
-Get credentials from your DBA/cloud dashboard and update `.env`:
+Generate a secure JWT secret:
 
-1. Postgres host, port, db, username, password.
-2. Mongo host/URI if your deployment path needs it.
+```bash
+pnpm run jwt:generate
+```
 
-## Step 6: Secrets guide (what, where from, where to enter)
+Optional custom format/length:
 
-All keys below are entered in `.env` at repository root.
+```bash
+pnpm run jwt:generate -- --bytes 64 --format hex
+```
 
-### 6.1 Core app secrets
+Then put it in `.env`:
+
+```dotenv
+JWT_SECRET=<generated-value>
+```
+
+What this does:
+
+1. Uses cryptographically secure random bytes.
+2. Outputs a long secret suitable for HS-based JWT signing.
+3. Avoids weak human-made strings.
+
+## Step 7: Secrets and auth - required vs optional
+
+### 7.1 Minimum required to boot local platform
+
+Required:
 
 1. `JWT_SECRET`
-	- What: token signing key.
-	- Where to get: generate your own random string.
-	- How to enter: `JWT_SECRET=<long-random-value>`
-2. `EMAIL_PASSWORD`
-	- What: SMTP account password or app password.
-	- Where to get: your mail provider/admin.
-	- How to enter: `EMAIL_PASSWORD=<smtp-password>`
+2. `EMAIL_PASSWORD` (if SMTP/email paths are enabled)
+3. DB keys from Step 5
 
-### 6.2 Google OAuth secrets
+Optional for local boot:
+
+1. Google OAuth keys
+2. Clerk keys
+3. ABHA keys
+
+### 7.2 Is Google OAuth required?
+
+No, optional.
+
+Enable only if you want Google-based login/calendar flows.
 
 Keys:
 
@@ -198,109 +239,252 @@ Keys:
 2. `GOOGLE_OAUTH_CLIENT_SECRET`
 3. `GOOGLE_OAUTH_REDIRECT_URI`
 
-Where to get:
+### 7.3 Is Clerk required?
 
-1. Google Cloud Console.
-2. Create OAuth client credentials in your project.
-3. Set redirect URI to your deployed callback.
+No, optional.
 
-Where to enter: root `.env`.
-
-### 6.3 Clerk keys
+Enable only if you want Clerk as your identity provider.
 
 Keys:
 
 1. `CLERK_PUBLISHABLE_KEY`
 2. `CLERK_SECRET_KEY`
 
-Where to get: Clerk Dashboard for your application.
+### 7.4 Do I need at least one auth provider?
 
-Where to enter: root `.env`.
+Yes.
 
-### 6.4 ABHA keys
+Minimum practical auth posture:
 
-Keys:
+1. Base app auth with strong `JWT_SECRET`.
+2. Optionally add one external provider (Google or Clerk) for SSO.
 
-1. `ABHA_ENABLED`
-2. `ABHA_CLIENT_ID`
-3. `ABHA_CLIENT_SECRET`
-4. `ABHA_GATEWAY_BASE_URL`
-5. `ABHA_TRANSACTION_READ_PATH` (optional override)
-6. `ABHA_TRANSACTION_WRITE_PATH` (optional override)
+## Step 8: Redirect URI setup (Google and OAuth callbacks)
 
-Where to get:
+Google requires exact redirect URI match with configured OAuth client.
 
-1. Your ABHA onboarding process (sandbox or production credentials).
-2. Gateway base URL from ABHA partner docs/ops team.
+Rules:
 
-Where to enter: root `.env`.
+1. Must exactly match registered value (scheme, host, path, trailing slash).
+2. Localhost HTTP is allowed for local testing.
+3. Production should use HTTPS.
 
-### 6.5 Connector credentials (important)
+Examples:
 
-How connector secrets are resolved in code:
+1. Local: `http://localhost:8081/api/v1/auth/oauth/google/callback`
+2. Staging: `https://staging-api.yourhospital.com/api/v1/auth/oauth/google/callback`
+3. Production: `https://api.yourhospital.com/api/v1/auth/oauth/google/callback`
 
-1. Integration config uses `credentialsRef.secretKey` names.
-2. Runtime reads `process.env[secretKey]`.
-3. Value is parsed as JSON.
+Common failure:
 
-So for local development, set JSON directly in `.env` for each key.
+1. `redirect_uri_mismatch` means Cloud Console and `.env` URI are not exactly identical.
 
-Example entries for `.env`:
+## Step 9: EMAIL_PASSWORD explained clearly
+
+`EMAIL_PASSWORD` is the credential your SMTP provider expects for authenticated send.
+
+Use one of these patterns:
+
+1. Gmail/Google Workspace SMTP:
+	`EMAIL_USER=yourmail@domain.com`
+	`EMAIL_PASSWORD=<gmail-app-password>`
+
+2. Microsoft 365 SMTP:
+	`EMAIL_USER=yourmail@domain.com`
+	`EMAIL_PASSWORD=<mailbox-password-or-app-password>`
+
+3. SendGrid SMTP:
+	`EMAIL_USER=apikey`
+	`EMAIL_PASSWORD=<sendgrid-api-key>`
+
+4. Mailgun SMTP:
+	`EMAIL_USER=postmaster@mg.yourdomain.com`
+	`EMAIL_PASSWORD=<mailgun-smtp-password>`
+
+Security notes:
+
+1. Never commit real email passwords.
+2. Prefer app-password/token over personal account password.
+3. Rotate immediately if leaked.
+
+## Step 10: ABHA setup (where to get, free or not)
+
+### 10.1 Where to start
+
+1. Official ABDM portal: `https://abdm.gov.in/`
+2. Sandbox portal: `https://sandbox.abdm.gov.in/`
+3. Sandbox registration: `https://sandbox.abdm.gov.in/sandbox/v3/sandbox-registration`
+
+### 10.2 Is ABHA free?
+
+1. Sandbox access is generally available for integration testing/onboarding.
+2. Production onboarding requires ABDM process compliance and approvals (HIP/HIU workflows, testing, audits, and go-live process).
+3. Commercial effort/cost is typically operational and compliance-driven, not like public SaaS self-serve billing.
+
+### 10.3 ABHA env keys
+
+1. `ABHA_ENABLED=false` until onboarding is ready.
+2. `ABHA_CLIENT_ID=<issued-by-abdm>`
+3. `ABHA_CLIENT_SECRET=<issued-by-abdm>`
+4. `ABHA_GATEWAY_BASE_URL=<issued-gateway-url>`
+5. Keep transaction path defaults unless told otherwise.
+
+## Step 11: Connectors explained one-by-one
+
+All connector env values are JSON strings in `.env`.
+
+### 11.1 Telegram Bot
+
+1. Cost/ease: free and easiest to start.
+2. Get token from `@BotFather`.
+3. Env value:
 
 ```dotenv
-INTEGRATION_TELEGRAM_CREDENTIALS={"botToken":"<telegram_bot_token>","chatId":"<telegram_chat_id_or_channel>"}
-INTEGRATION_WHATSAPP_CREDENTIALS={"accessToken":"<meta_access_token>","phoneNumberId":"<meta_phone_number_id>","senderNumber":"<whatsapp_sender_number>"}
+INTEGRATION_TELEGRAM_CREDENTIALS={"botToken":"<bot_token>","chatId":"<chat_or_channel_id>"}
+```
+
+### 11.2 SMTP Email
+
+1. Cost/ease: cheapest if you already have org mail.
+2. Env value:
+
+```dotenv
 INTEGRATION_EMAIL_SMTP_CREDENTIALS={"host":"smtp.example.com","port":587,"secure":false,"user":"smtp-user","pass":"smtp-pass","from":"noreply@example.com"}
-INTEGRATION_WEBHOOK_SIGNING_SECRET={"signingSecret":"<webhook_hmac_secret>"}
-INTEGRATION_GOOGLE_CALENDAR_CREDENTIALS={"accessToken":"<google_oauth_access_token>","calendarId":"<google_calendar_id>"}
-INTEGRATION_APPLE_CALENDAR_CREDENTIALS={"bridgeEndpoint":"https://apple-bridge.example.com/events","apiKey":"<optional_bridge_api_key>"}
-INTEGRATION_OUTLOOK_CALENDAR_CREDENTIALS={"accessToken":"<ms_graph_access_token>","userId":"<outlook_user_id_or_upn>"}
-INTEGRATION_ICS_CREDENTIALS={"bridgeEndpoint":"https://ics-bridge.example.com/calendar","apiKey":"<optional_bridge_api_key>"}
 ```
 
-Where to get each provider secret:
+### 11.3 Generic Webhook
 
-1. Telegram: create bot via BotFather, use bot token and target chat/channel id.
-2. WhatsApp Cloud API: Meta developers app, phone number id, long-lived access token.
-3. SMTP: your mail server/provider host, port, username, password, sender mailbox.
-4. Webhook: your internal HMAC secret generated by your platform/security team.
-5. Google Calendar: OAuth token with calendar write scope plus calendar id.
-6. Outlook Calendar: Azure app token plus user id/UPN.
-7. Apple/ICS bridge: your bridge endpoint and optional API key.
+1. Cost/ease: free if you own the endpoint.
+2. Env value:
 
-Note:
-
-1. `.env.example` contains placeholder reference style values.
-2. For local runtime tests, replace with real JSON payloads in `.env`.
-
-## Step 7: Tenant integration config
-
-1. Start from `config/integrations/default-integration-config.json`.
-2. Create tenant override file such as `config/integrations/citycare-hospital.integration.json`.
-3. Keep `credentialsRef.secretKey` aligned to actual `.env` keys.
-
-Validate:
-
-PowerShell and Bash:
-
-```bash
-pnpm run integrations:validate
+```dotenv
+INTEGRATION_WEBHOOK_SIGNING_SECRET={"signingSecret":"<hmac_secret>"}
 ```
 
-## Step 8: Start infrastructure and app runtime
+### 11.4 WhatsApp Cloud API
 
-### 8.1 Demo infra
+1. Cost/ease: medium setup, paid usage model.
+2. Meta uses per-message pricing for template messages (country/category based).
+3. Env value:
 
-PowerShell and Bash:
+```dotenv
+INTEGRATION_WHATSAPP_CREDENTIALS={"accessToken":"<meta_token>","phoneNumberId":"<phone_number_id>","senderNumber":"<whatsapp_sender>"}
+```
+
+### 11.5 Google Calendar
+
+1. Cost/ease: free API usage for many small deployments, but setup complexity is medium.
+2. Env value:
+
+```dotenv
+INTEGRATION_GOOGLE_CALENDAR_CREDENTIALS={"accessToken":"<oauth_access_token>","calendarId":"<calendar_id>"}
+```
+
+### 11.6 Outlook Calendar
+
+1. Cost/ease: medium-to-high (Microsoft tenant/app setup).
+2. Env value:
+
+```dotenv
+INTEGRATION_OUTLOOK_CALENDAR_CREDENTIALS={"accessToken":"<ms_graph_token>","userId":"<upn_or_user_id>"}
+```
+
+### 11.7 Apple Calendar bridge
+
+1. Cost/ease: depends on your bridge service.
+2. Env value:
+
+```dotenv
+INTEGRATION_APPLE_CALENDAR_CREDENTIALS={"bridgeEndpoint":"https://apple-bridge.example.com/events","apiKey":"<optional_key>"}
+```
+
+### 11.8 ICS bridge
+
+1. Cost/ease: usually low.
+2. Env value:
+
+```dotenv
+INTEGRATION_ICS_CREDENTIALS={"bridgeEndpoint":"https://ics-bridge.example.com/calendar","apiKey":"<optional_key>"}
+```
+
+Minimum connector recommendation:
+
+1. Start with Telegram + SMTP + Webhook (fastest and cheapest).
+2. Add WhatsApp/Google/Outlook only when needed.
+
+## Step 12: Tenant meaning and strict tenant mode
+
+### 12.1 What tenant means
+
+A tenant is one hospital/org boundary in a multi-tenant system.
+
+Examples:
+
+1. `citycare-hospital`
+2. `metro-clinic`
+
+Tenant key is used to:
+
+1. Pick integration config file.
+2. Scope routing/settings.
+3. Keep isolation boundaries explicit.
+
+### 12.2 Strict tenant mode (recommended for stable single tenant)
+
+Set in `.env`:
+
+1. `PLATFORM_DEFAULT_TENANT_KEY=citycare-hospital`
+2. `PULSEWARD_STRICT_TENANT_KEY=citycare-hospital`
+
+When strict key is set, `pnpm run integrations:validate` enforces:
+
+1. Only `default-integration-config.json` and `<tenant>.integration.json` are allowed.
+2. Strict tenant file must exist.
+3. Its `tenantKey` must exactly match strict key.
+
+## Step 13: Automated bootstrap (interactive and strict)
+
+Run:
+
+```powershell
+pnpm run setup:bootstrap
+```
+
+What it does:
+
+1. Creates `.env` if missing.
+2. Generates and writes `JWT_SECRET`.
+3. Writes DB local defaults.
+4. Sets strict tenant keys.
+5. Lets you enter connector JSON values one-by-one.
+6. Creates tenant integration file automatically.
+7. Runs validation.
+8. Runs setup compose workflow.
+
+## Step 14: One-command installer (`iex` style)
+
+Once pushed to GitHub, run from PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Life-Experimentalist/PulseWard-HMS/main/scripts/install-pulseward.ps1 | iex
+```
+
+This script:
+
+1. Clones/updates repo.
+2. Prompts for tenant.
+3. Runs strict bootstrap setup end-to-end.
+
+## Step 15: Start infrastructure and runtime
+
+### 15.1 Demo infra
 
 ```bash
 pnpm run setup:demo
 pnpm run demo:up
 ```
 
-### 8.2 Backend services (run in separate terminals)
-
-PowerShell and Bash:
+### 15.2 Backend services (separate terminals)
 
 ```bash
 pnpm run start:auth
@@ -309,9 +493,7 @@ pnpm run start:appointment
 pnpm run start:patient
 ```
 
-### 8.3 Frontend surfaces
-
-PowerShell and Bash:
+### 15.3 Frontend surfaces
 
 ```bash
 pnpm run start:admin:dev
@@ -321,9 +503,9 @@ pnpm run start:patient:dev
 pnpm run start:mobile
 ```
 
-## Step 9: Readiness probes and test calls
+## Step 16: Probes and checks
 
-### 9.1 PowerShell probe commands
+PowerShell:
 
 ```powershell
 $tenant = "citycare-hospital"
@@ -341,7 +523,7 @@ Invoke-RestMethod "$auth/platform/abha/config-status"
 Invoke-RestMethod "$auth/platform/abha/health-check"
 ```
 
-### 9.2 Bash probe commands
+Bash:
 
 ```bash
 TENANT="citycare-hospital"
@@ -359,9 +541,7 @@ curl -fsS "$AUTH/platform/abha/config-status"
 curl -fsS "$AUTH/platform/abha/health-check"
 ```
 
-## Step 10: Full verification and security
-
-PowerShell and Bash:
+Full verify:
 
 ```bash
 pnpm run verify:full
@@ -370,9 +550,51 @@ pnpm run audit:apps
 pnpm run build:apps
 ```
 
-## Step 11: Shutdown
+## Step 17: Pricing and easiest setup guidance (quick decision table)
 
-PowerShell and Bash:
+Current guidance (verify before go-live because vendor pricing changes):
+
+1. Cheapest and easiest to start:
+	Telegram bot + SMTP + webhook + local Docker.
+2. Lowest-friction cloud edge:
+	Cloudflare Free plan for DNS/TLS/WAF baseline.
+3. Lowest-friction cloud compute:
+	AWS Lightsail (predictable bundled pricing, starts from low monthly tiers).
+4. More flexible but more ops overhead:
+	AWS EC2 on-demand (+ separate networking/storage cost components).
+5. Potentially paid messaging channel:
+	WhatsApp template messaging (country/category dependent pricing).
+6. Auth provider cost posture:
+	Clerk has free hobby tier and paid plans as usage/features grow.
+
+## Step 18: Local server and cloud deployment profiles
+
+### Profile A: Physical local server (on-prem)
+
+1. Install Docker + Node.
+2. Clone repo and run bootstrap.
+3. Run compose stack and services behind reverse proxy.
+4. Keep secrets in OS-level secret manager or injected env.
+
+### Profile B: AWS + Cloudflare (recommended first production path)
+
+1. Compute: start with a single Lightsail VM.
+2. DNS/TLS/WAF: Cloudflare in front.
+3. Deploy compose stack on VM.
+4. Keep `/api/v1` path stable during domain migration.
+
+### Profile C: Future container platform
+
+1. Move to ECS/Fargate or Kubernetes when scale/ops justify it.
+2. Keep tenant config and secret model unchanged.
+
+For deeper rollout details, also see:
+
+1. `docs/deployment/demo-quickstart.md`
+2. `docs/deployment/deploy-and-domain-migration.md`
+3. `docs/deployment/local-telegram-android-push-gmail-quickstart.md`
+
+## Shutdown
 
 ```bash
 pnpm run demo:down
@@ -381,16 +603,16 @@ docker stop pulseward-postgres pulseward-mongo
 
 ## Common troubleshooting
 
-1. pnpm command not found
-	- Use either Corepack path or `npm install -g pnpm@9.15.0`.
-2. Connector config looks set but provider still not configured
-	- Check that env key value is valid JSON, not plain text placeholder.
-3. ABHA health-check fails
-	- Verify `ABHA_ENABLED=true`, valid `ABHA_CLIENT_ID`, `ABHA_CLIENT_SECRET`, and reachable `ABHA_GATEWAY_BASE_URL`.
-4. Docker issues
-	- Ensure Docker daemon is running and compose is available.
-5. Port conflicts
-	- Change ports in `.env` and restart services.
+1. `pnpm` not found:
+	Use Corepack path or `npm install -g pnpm@9.15.0`.
+2. Connector configured but still failing:
+	Ensure env value is valid JSON, not placeholder text.
+3. Google OAuth fails:
+	Verify redirect URI exact match in Google Cloud Console.
+4. ABHA health-check fails:
+	Verify onboarding credentials, gateway URL reachability, and `ABHA_ENABLED=true`.
+5. Docker issues:
+	Ensure daemon is running and `docker compose version` works.
 
 ## Future-proof policy
 

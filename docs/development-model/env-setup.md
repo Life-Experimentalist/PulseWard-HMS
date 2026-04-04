@@ -14,14 +14,15 @@ This guide explains how to fill environment variables safely for local developme
 
 - Required runtime secrets:
   - `JWT_SECRET`
-  - `CLERK_SECRET_KEY`
-  - `GOOGLE_OAUTH_CLIENT_SECRET`
-  - `EMAIL_PASSWORD`
-  - `ABHA_CLIENT_SECRET`
+  - `EMAIL_PASSWORD` (when SMTP/email paths are enabled)
 - Required runtime non-secrets:
   - Service ports and base URLs
   - Retry and retention tuning values
   - Feature flags and mode selectors
+- Optional provider secrets (required only when that provider is enabled):
+  - `CLERK_SECRET_KEY`
+  - `GOOGLE_OAUTH_CLIENT_SECRET`
+  - `ABHA_CLIENT_SECRET`
 - Optional integration values:
   - `INTEGRATION_WEBHOOK_ENDPOINT`
   - `CONTRACT_CHECK_SPEC_OVERRIDES`
@@ -41,6 +42,8 @@ Use these as safe local-development examples.
 - `APPOINTMENT_SERVICE_BASE_URL=http://localhost:5103`
 - `VITE_NOTIFICATION_PROXY_TARGET=http://127.0.0.1:8088`
 - `VITE_AUTH_PROXY_TARGET=http://127.0.0.1:5101`
+- `PLATFORM_DEFAULT_TENANT_KEY=citycare-hospital`
+- `PULSEWARD_STRICT_TENANT_KEY=citycare-hospital`
 
 ## How To Acquire Keys
 

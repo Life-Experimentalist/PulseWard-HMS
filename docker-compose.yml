@@ -1,4 +1,35 @@
 services:
+  pulseward-postgres:
+    image: postgres:16
+    container_name: pulseward-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pulseward
+      POSTGRES_USER: pulseward_local
+      POSTGRES_PASSWORD: change_me_local_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - pulseward-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulseward_local -d pulseward"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pulseward-network
+
+  pulseward-mongo:
+    image: mongo:7
+    container_name: pulseward-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - pulseward-mongo-data:/data/db
+    networks:
+      - pulseward-network
+
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -101,3 +132,7 @@ services:
 networks:
   pulseward-network:
     driver: bridge
+
+volumes:
+  pulseward-postgres-data:
+  pulseward-mongo-data:

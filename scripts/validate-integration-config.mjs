@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 
@@ -10,7 +10,15 @@ const {
 } = require("../packages/shared-types/integrations");
 
 const root = process.cwd();
+const envPath = path.join(root, ".env");
+
+if (existsSync(envPath)) {
+  const dotenv = require("dotenv");
+  dotenv.config({ path: envPath });
+}
+
 const integrationsDir = path.join(root, "config", "integrations");
+const strictTenantKey = String(process.env.PULSEWARD_STRICT_TENANT_KEY || "").trim();
 
 function fail(message) {
   console.error(message);
@@ -104,10 +112,49 @@ const files = readdirSync(integrationsDir)
   .filter((name) => name.endsWith(".json") && name !== "README.md")
   .map((name) => path.join(integrationsDir, name));
 
+const strictTenantFileName = strictTenantKey
+  ? strictTenantKey === "default"
+    ? "default-integration-config.json"
+    : `${strictTenantKey}.integration.json`
+  : null;
+
+const strictAllowedFiles = strictTenantKey
+  ? strictTenantKey === "default"
+    ? new Set(["default-integration-config.json"])
+    : new Set(["default-integration-config.json", strictTenantFileName])
+  : null;
+
+let strictTenantFileFound = false;
+
 for (const filePath of files) {
+  const fileName = path.basename(filePath);
+
+  if (strictAllowedFiles && !strictAllowedFiles.has(fileName)) {
+    fail(
+      `${fileName}: disallowed in strict tenant mode. Allowed files: ${[...strictAllowedFiles].join(
+        ", "
+      )}`
+    );
+  }
+
   const content = readFileSync(filePath, "utf8");
   const config = JSON.parse(content);
   validateConfigObject(path.basename(filePath), config);
+
+  if (strictTenantFileName && fileName === strictTenantFileName) {
+    strictTenantFileFound = true;
+    if (config.tenantKey !== strictTenantKey) {
+      fail(
+        `${fileName}: tenantKey mismatch in strict mode. Expected ${strictTenantKey}, got ${config.tenantKey}`
+      );
+    }
+  }
+}
+
+if (strictTenantFileName && !strictTenantFileFound) {
+  fail(
+    `Strict tenant mode is enabled but ${strictTenantFileName} was not found under config/integrations.`
+  );
 }
 
 if (process.exitCode && process.exitCode !== 0) {

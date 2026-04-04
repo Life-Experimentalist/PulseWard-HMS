@@ -1,6 +1,7 @@
 var express = require("express");
 var jwt = require("jsonwebtoken");
-var randomUUID = require("crypto").randomUUID;
+var crypto = require("crypto");
+var randomUUID = crypto.randomUUID;
 var domainConfigUtils = require("../../packages/shared-utils/load-domain-config");
 var adminSettingsStore = require("./admin-settings-store");
 var authPolicySchema = require("./auth-policy-schema");
@@ -64,6 +65,31 @@ function normalizeRoleKey(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function hashPassword(value) {
+  return crypto
+    .createHash("sha256")
+    .update(String(value || ""))
+    .digest("hex");
+}
+
+function findUserRecord(tenantKey, email, role) {
+  var normalizedTenant = String(tenantKey || "default").trim() || "default";
+  var normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  var normalizedRole = normalizeRoleKey(role);
+
+  return users.find(function (user) {
+    return (
+      String(user.tenantKey || "default").trim() === normalizedTenant &&
+      String(user.email || "")
+        .trim()
+        .toLowerCase() === normalizedEmail &&
+      normalizeRoleKey(user.role) === normalizedRole
+    );
+  });
 }
 
 function createOtpCode() {
@@ -1355,11 +1381,23 @@ router.post("/auth/register", function (req, res) {
     return;
   }
 
+  var tenantKey = String(payload.tenantKey || "default").trim() || "default";
+  var existingUser = findUserRecord(tenantKey, payload.email, payload.role);
+  if (existingUser) {
+    res.status(409).json({
+      message: "User already registered for tenant and role",
+      code: "AUTH_USER_ALREADY_EXISTS",
+    });
+    return;
+  }
+
   var user = {
     id: randomUUID(),
     email: payload.email,
     role: payload.role,
-    tenantKey: payload.tenantKey || "default",
+    tenantKey: tenantKey,
+    passwordHash: hashPassword(payload.password),
+    createdAt: new Date().toISOString(),
   };
 
   users.push(user);
@@ -1378,6 +1416,25 @@ router.post("/auth/login", function (req, res) {
 
   if (roles.indexOf(payload.role) === -1) {
     res.status(400).json({ message: "Unsupported role" });
+    return;
+  }
+
+  var userRecord = findUserRecord(tenantKey, payload.email, payload.role);
+  if (!userRecord || userRecord.passwordHash !== hashPassword(payload.password)) {
+    recordAuthSessionEvent({
+      eventType: "auth.login.invalid-credentials",
+      tenantKey: tenantKey,
+      role: roleKey,
+      provider: "email-password",
+      action: "auth.login",
+      outcome: "denied",
+      code: "AUTH_INVALID_CREDENTIALS",
+    });
+
+    res.status(401).json({
+      message: "Invalid credentials for tenant and role",
+      code: "AUTH_INVALID_CREDENTIALS",
+    });
     return;
   }
 

@@ -709,6 +709,13 @@ Patient chat menu:
 4. `/book <doctorId> <YYYY-MM-DDTHH:mm:ssZ> [minutes]`
 5. `/calendar <appointmentId>`
 
+Unlinked chat onboarding behavior:
+
+1. `/start` returns an onboarding intro with tenant and detected `chatId`.
+2. The message includes the exact link endpoint:
+	`POST /api/v1/integrations/messaging/telegram/link`.
+3. After linking, run `/help` to see role-specific commands.
+
 9. Send tenant and user-scoped Telegram test:
 
 ```powershell

@@ -667,6 +667,68 @@ function buildTelegramHelpMessageForRole(role) {
   return lines.join("\n");
 }
 
+function buildTelegramLinkedStartMessage(binding) {
+  var tenantKey = normalizeTenantKey(binding && binding.tenantKey, "default");
+  var subject = String((binding && binding.subject) || "").trim() || "unknown";
+  var role = normalizeTelegramRole((binding && binding.role) || "patient");
+
+  return [
+    "Welcome to PulseWard Telegram Assistant.",
+    "You are linked and ready.",
+    "tenant: " + tenantKey,
+    "subject: " + subject,
+    "role: " + role,
+    "",
+    buildTelegramHelpMessageForRole(role),
+  ].join("\n");
+}
+
+function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var normalizedChatId = String(chatId || "").trim() || "<chat_id>";
+  var normalizedCommand = normalizeTelegramCommandName(commandName);
+  var lines = [
+    "Welcome to PulseWard Telegram Assistant.",
+    "This chat is not linked to an account yet.",
+    "tenant: " + normalizedTenant,
+    "chatId: " + normalizedChatId,
+    "",
+  ];
+
+  if (normalizedCommand && normalizedCommand !== "start" && normalizedCommand !== "help") {
+    lines.push("Received command: /" + normalizedCommand);
+    lines.push("Run /start anytime to see this onboarding guide again.");
+    lines.push("");
+  }
+
+  lines.push("Link flow:");
+  lines.push("1) Login to PulseWard and copy your Bearer token.");
+  lines.push("2) Link this chat from your authenticated session:");
+  lines.push("POST /api/v1/integrations/messaging/telegram/link");
+  lines.push(
+    "Body: {\"tenantKey\":\"" +
+      normalizedTenant +
+      "\",\"chatId\":\"" +
+      normalizedChatId +
+      "\"}"
+  );
+  lines.push("");
+  lines.push("PowerShell example:");
+  lines.push(
+    "Invoke-RestMethod -Method Post -Uri 'http://<laptop-ip>:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
+      normalizedTenant +
+      "'; chatId='" +
+      normalizedChatId +
+      "' } | ConvertTo-Json)"
+  );
+  lines.push("");
+  lines.push("If command menu is missing after linking, ask admin to run:");
+  lines.push("POST /api/v1/integrations/messaging/telegram/commands/setup");
+  lines.push("Then use /help for your command menu.");
+
+  return lines.join("\n");
+}
+
 function normalizeTelegramCommandName(rawName) {
   var withoutSlash = String(rawName || "")
     .trim()
@@ -1191,7 +1253,11 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
   var command = parsedCommand && parsedCommand.command ? parsedCommand.command : "";
   var args = parsedCommand && Array.isArray(parsedCommand.args) ? parsedCommand.args : [];
 
-  if (command === "start" || command === "help") {
+  if (command === "start") {
+    return buildTelegramLinkedStartMessage(binding);
+  }
+
+  if (command === "help") {
     return buildTelegramHelpMessageForRole(role);
   }
 
@@ -1553,9 +1619,7 @@ async function processTelegramCommandUpdate(tenantKey, botToken, update) {
     await sendTelegramTextMessage(
       botToken,
       messageUpdate.chatId,
-      "This chat is not linked to a PulseWard account for tenant '" +
-        tenantKey +
-        "'. Link first using /integrations/messaging/telegram/link from an authenticated session."
+      buildTelegramUnlinkedMessage(tenantKey, messageUpdate.chatId, commandInput.command)
     );
     return {
       handled: true,

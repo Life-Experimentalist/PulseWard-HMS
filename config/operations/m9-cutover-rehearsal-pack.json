@@ -1,0 +1,67 @@
+{
+    "version": "1.0.0",
+    "owner": "platform-operations",
+    "rehearsal": {
+        "environment": "staging",
+        "window": "off-hours",
+        "maxDurationMinutes": 120,
+        "participants": [
+            "product-owner",
+            "engineering-lead",
+            "operations-lead",
+            "oncall-engineer"
+        ]
+    },
+    "rehearsalSteps": [
+        {
+            "key": "communications-dry-run",
+            "description": "Execute stakeholder communication dry-run and escalation fanout test.",
+            "required": true
+        },
+        {
+            "key": "traffic-shift-simulation",
+            "description": "Simulate pilot traffic shift to cutover path with rollback guardrails active.",
+            "required": true
+        },
+        {
+            "key": "rollback-rehearsal",
+            "description": "Execute rollback sequence and verify route, contract, and service health recovery.",
+            "required": true
+        },
+        {
+            "key": "data-integrity-smoke-check",
+            "description": "Validate read/write integrity on core pilot flows after shift and rollback phases.",
+            "required": true
+        },
+        {
+            "key": "signoff-capture",
+            "description": "Capture rehearsal signoff from product, engineering, and operations owners.",
+            "required": true
+        }
+    ],
+    "successCriteria": [
+        {
+            "key": "rehearsal-duration",
+            "description": "Rehearsal completes within configured duration window.",
+            "metric": "rehearsal.duration.minutes",
+            "threshold": 120
+        },
+        {
+            "key": "rollback-rto",
+            "description": "Rollback path restores stable runtime within rehearsal target.",
+            "metric": "rollback.rto.minutes",
+            "threshold": 30
+        },
+        {
+            "key": "critical-incidents",
+            "description": "No unresolved critical incidents remain at rehearsal close.",
+            "metric": "incident.critical.open.count",
+            "threshold": 0
+        }
+    ],
+    "riskControls": {
+        "rollbackTargetMinutes": 30,
+        "maxCriticalIncidents": 0,
+        "evidenceLogPath": "docs/runbooks/evidence"
+    }
+}

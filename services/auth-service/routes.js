@@ -551,7 +551,12 @@ async function executeAbhaTransaction(req, res, operation) {
     return;
   }
 
-  var decision = buildAbhaFallbackDecision(fallbackScenario, enabled, configured, latestHealthEvent);
+  var decision = buildAbhaFallbackDecision(
+    fallbackScenario,
+    enabled,
+    configured,
+    latestHealthEvent
+  );
   if (decision.shouldFallback) {
     var fallbackDecision = recordAbhaFallbackDecisionEvent({
       tenantKey: tenantKey,

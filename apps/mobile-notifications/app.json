@@ -1,0 +1,30 @@
+{
+    "expo": {
+        "name": "PulseWard Mobile Notifications",
+        "slug": "pulseward-mobile-notifications",
+        "version": "1.3.0",
+        "orientation": "portrait",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "resizeMode": "contain",
+            "backgroundColor": "#f2f5f7"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true
+        },
+        "android": {
+            "adaptiveIcon": {
+                "backgroundColor": "#f2f5f7"
+            }
+        },
+        "web": {
+            "bundler": "metro"
+        },
+        "extra": {
+            "apiBaseUrl": "http://127.0.0.1:5102"
+        }
+    }
+}

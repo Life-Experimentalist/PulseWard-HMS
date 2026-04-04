@@ -4,9 +4,7 @@ function buildIcsPayload(request) {
   var now = Date.now();
   var startTime = request && request.startTime ? request.startTime : new Date(now).toISOString();
   var endTime =
-    request && request.endTime
-      ? request.endTime
-      : new Date(now + 30 * 60 * 1000).toISOString();
+    request && request.endTime ? request.endTime : new Date(now + 30 * 60 * 1000).toISOString();
   var startIso = new Date(startTime).toISOString().replace(/[-:]/g, "").replace(".000", "");
   var endIso = new Date(endTime).toISOString().replace(/[-:]/g, "").replace(".000", "");
   var createdIso = new Date().toISOString().replace(/[-:]/g, "").replace(".000", "");
@@ -45,8 +43,7 @@ class IcsCalendarProvider {
         provider: this.key,
         accepted: true,
         externalEventId: `ics-${request.appointmentId}`,
-        detail:
-          "ICS dry-run mode. Configure bridgeEndpoint and dryRun=false for live delivery.",
+        detail: "ICS dry-run mode. Configure bridgeEndpoint and dryRun=false for live delivery.",
         preview: {
           contentType: "text/calendar",
           payloadBytes: Buffer.byteLength(icsPayload, "utf8"),
@@ -58,7 +55,9 @@ class IcsCalendarProvider {
       method: "POST",
       headers: {
         "Content-Type": "text/calendar",
-        ...(secretPayload.apiKey ? { Authorization: "Bearer " + String(secretPayload.apiKey) } : {}),
+        ...(secretPayload.apiKey
+          ? { Authorization: "Bearer " + String(secretPayload.apiKey) }
+          : {}),
       },
       body: icsPayload,
     });

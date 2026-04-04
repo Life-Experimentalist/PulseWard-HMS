@@ -2186,7 +2186,8 @@ function applyFaultManifestVerifyAttemptRetention(payload) {
       escalationPolicyResult.policy.mitigationNoteTypes.slice();
     faultManifestVerifyRetentionEscalationAutoDeescalateOnMitigation =
       escalationPolicyResult.policy.autoDeescalateOnMitigation;
-    faultManifestVerifyRetentionEscalationExportEnabled = escalationExportPolicyResult.policy.enabled;
+    faultManifestVerifyRetentionEscalationExportEnabled =
+      escalationExportPolicyResult.policy.enabled;
     faultManifestVerifyRetentionEscalationExportDefaultFormat =
       escalationExportPolicyResult.policy.defaultFormat;
     faultManifestVerifyRetentionEscalationExportMaxRows =
@@ -4133,7 +4134,11 @@ router.post(
     }
 
     if (applied.persisted) {
-      maybeCaptureFaultManifestVerifySaturationTrend("retention-apply", applied.telemetry.saturation, true);
+      maybeCaptureFaultManifestVerifySaturationTrend(
+        "retention-apply",
+        applied.telemetry.saturation,
+        true
+      );
     }
     var trend = collectFaultManifestVerifyAttemptSaturationTrend({
       windowMinutes: req.query.windowMinutes,

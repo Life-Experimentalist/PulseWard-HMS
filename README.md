@@ -32,6 +32,7 @@ Example:
 - apps/clinician-portal: clinician workflow interface.
 - apps/operations-dashboard: operations and reliability visibility.
 - apps/patient-portal: patient-facing experience.
+- apps/mobile-notifications: Expo mobile track for tenant-scoped appointment notification events.
 - apps/landing-page: static website and marketing shell.
 
 ## Core Services
@@ -68,6 +69,7 @@ npm run start:admin:dev
 npm run start:clinician:dev
 npm run start:operations:dev
 npm run start:patient:dev
+npm run start:mobile
 ```
 
 ## Quality Gates
@@ -114,8 +116,10 @@ Typecheck excludes generated output:
 - docs/api/api-catalog.md
 - docs/api/endpoint-contract-coverage-matrix.md
 - docs/runbooks/integration-provider-operations.md
+- docs/runbooks/on-call.md
+- docs/runbooks/observability-alerting-baseline.md
 - docs/runbooks/abha-operational-readiness.md
-- docs/releases/v1.2.1.md
+- docs/releases/v1.3.0.md
 - docs/deployment/deploy-and-domain-migration.md
 
 ## Cloudflare Pages (Landing Page)

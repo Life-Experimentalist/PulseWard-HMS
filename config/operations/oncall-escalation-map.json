@@ -1,0 +1,89 @@
+{
+    "version": "1.0.0",
+    "timezone": "Asia/Kolkata",
+    "incidentSystem": "GitHub Issues",
+    "communicationChannels": {
+        "primary": "Slack #pulseward-incidents",
+        "secondary": "Email ops-alerts@pulseward.local"
+    },
+    "roles": [
+        {
+            "key": "oncall-engineer",
+            "description": "First responder for platform incidents"
+        },
+        {
+            "key": "incident-manager",
+            "description": "Coordinates incident timeline and comms"
+        },
+        {
+            "key": "technical-lead",
+            "description": "Owns deep technical mitigation and rollback decisions"
+        },
+        {
+            "key": "service-owner",
+            "description": "Domain service owner for affected component"
+        }
+    ],
+    "escalationLevels": [
+        {
+            "level": 1,
+            "targetRoles": [
+                "oncall-engineer"
+            ],
+            "targetResponseMinutes": 15
+        },
+        {
+            "level": 2,
+            "targetRoles": [
+                "incident-manager",
+                "service-owner"
+            ],
+            "targetResponseMinutes": 30
+        },
+        {
+            "level": 3,
+            "targetRoles": [
+                "technical-lead"
+            ],
+            "targetResponseMinutes": 60
+        }
+    ],
+    "serviceOwnership": [
+        {
+            "service": "api-gateway",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "auth-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "appointment-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "notification-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "patient-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "ehr-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "lab-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "pharmacy-service",
+            "ownerRole": "service-owner"
+        },
+        {
+            "service": "billing-service",
+            "ownerRole": "service-owner"
+        }
+    ]
+}

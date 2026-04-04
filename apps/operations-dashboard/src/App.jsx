@@ -573,7 +573,8 @@ function App() {
               });
             }}
           >
-            {state.operatorAction.loading && state.operatorAction.name === "export-escalation-breaches"
+            {state.operatorAction.loading &&
+            state.operatorAction.name === "export-escalation-breaches"
               ? "Running..."
               : "Export escalation SLA breaches"}
           </button>
@@ -687,7 +688,8 @@ function App() {
                   ),
                   checkEndpoint(AUTH_API_BASE_URL + "/platform/abha/operational-readiness", [200]),
                   checkEndpoint(
-                    AUTH_API_BASE_URL + "/platform/abha/transactions/evidence?tenantKey=default&limit=5",
+                    AUTH_API_BASE_URL +
+                      "/platform/abha/transactions/evidence?tenantKey=default&limit=5",
                     [200]
                   ),
                 ]);
@@ -716,7 +718,9 @@ function App() {
                   );
                 }
 
-                return "Checklist completed: " + String(passed) + "/" + String(total) + " checks passed";
+                return (
+                  "Checklist completed: " + String(passed) + "/" + String(total) + " checks passed"
+                );
               });
             }}
           >

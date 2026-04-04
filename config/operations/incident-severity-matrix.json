@@ -1,0 +1,40 @@
+{
+    "version": "1.0.0",
+    "owner": "platform-operations",
+    "timezone": "Asia/Kolkata",
+    "defaultUpdateChannel": "Slack #pulseward-incidents",
+    "severities": [
+        {
+            "key": "critical",
+            "description": "Safety-impacting or full-platform outage conditions requiring immediate command activation.",
+            "targetAcknowledgeMinutes": 5,
+            "targetMitigateMinutes": 30,
+            "targetStatusUpdateMinutes": 15,
+            "requiresLeadershipBridge": true
+        },
+        {
+            "key": "high",
+            "description": "Major degradation affecting one or more core clinical workflows.",
+            "targetAcknowledgeMinutes": 10,
+            "targetMitigateMinutes": 60,
+            "targetStatusUpdateMinutes": 30,
+            "requiresLeadershipBridge": false
+        },
+        {
+            "key": "medium",
+            "description": "Partial degradation with available workarounds and no immediate safety risk.",
+            "targetAcknowledgeMinutes": 20,
+            "targetMitigateMinutes": 240,
+            "targetStatusUpdateMinutes": 60,
+            "requiresLeadershipBridge": false
+        },
+        {
+            "key": "low",
+            "description": "Minor issue with limited operational impact and no urgent risk.",
+            "targetAcknowledgeMinutes": 60,
+            "targetMitigateMinutes": 1440,
+            "targetStatusUpdateMinutes": 240,
+            "requiresLeadershipBridge": false
+        }
+    ]
+}

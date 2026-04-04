@@ -4,12 +4,10 @@ This directory is the primary source of truth for architecture, API behavior, de
 
 ## Current Delivery Status
 
-- Roadmap phase: M1 completed through M1.5 (contract parity and drift regression guardrails).
-- Active next contract slice: M1.6 endpoint-level schema assertions for high-risk booking and notification APIs.
-- Seeded follow-on work:
-	- M2 seed: auth admin-settings persistence and ABHA readiness endpoints.
-	- M5 seed: live provider configuration checks for Telegram and SMTP.
-	- M6 seed: production-style admin console scaffold with static runtime serving.
+- Roadmap phase: M6 contract-hardening stream completed through M6.228.
+- Current milestone state: M7 operability milestone is complete (`8/8` grouped waves), M8 performance/resilience milestone is complete (`6/6` grouped waves), and M9 pilot/cutover/go-live milestone is complete (`5/5` grouped waves).
+- Active execution modules:
+	- Post-M9 production operations: hypercare execution tracking and release acceptance evidence maintenance.
 
 ## Documentation Map
 
@@ -38,6 +36,7 @@ This directory is the primary source of truth for architecture, API behavior, de
 	- `docs/runbooks/`
 - Release notes:
 	- `docs/releases/README.md`
+	- `docs/releases/v1.3.0.md`
 
 ## Required Update Rule
 

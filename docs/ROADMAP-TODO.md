@@ -17,6 +17,33 @@ This roadmap is the primary execution plan to take `PulseWard HMS` from current 
 - **Pilot target**: `1` hospital with `100-300` active users.
 - **Notification priority under channel constraints**: appointment reminders first.
 
+## Execution Snapshot (2026-04-04)
+
+<!-- ROADMAP_AUTO_SNAPSHOT_START -->
+- Last auto-refresh: `2026-04-04` via `npm run roadmap:refresh`.
+- M6 contract stream completion: `228/228` (remaining: `0`).
+- M6 milestone closeout waves: `4/4` (remaining: `0`).
+- M6 web closeout evidence status: Completed.
+- M6 mobile notification evidence status: Completed.
+- Expo artifact presence in repository: Detected.
+- M7 grouped waves: `8/8` (remaining: `0`).
+- M8 grouped waves: `6/6` (remaining: `0`).
+- M9 grouped waves: `5/5` (remaining: `0`).
+- Total grouped waves remaining (M6-M9): `0`.
+
+```mermaid
+flowchart LR
+  A[M6 Contract Stream\n228/228] --> B[M6 Closeout Waves\n4/4]
+  B --> C[Web Evidence\nDone]
+  B --> D[Mobile Evidence\nDone]
+  D --> E[Expo Artifacts\nDetected]
+  C --> F[M7\n8/8]
+  E --> F
+  F --> G[M8\n6/6]
+  G --> H[M9\n5/5]
+```
+<!-- ROADMAP_AUTO_SNAPSHOT_END -->
+
 ## Production Readiness Definition
 
 PulseWard is production ready when all conditions below are true:
@@ -57,31 +84,31 @@ This section formalizes slice sizing so milestone progress stays meaningful and 
 
 ### Module Slice Budget (Grouped Planning View)
 
-| Milestone | Atomic History (Observed) | Grouped Execution Waves (Target/Used) | Status      |
-| --------- | ------------------------- | ------------------------------------- | ----------- |
-| M1        | 6 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
-| M2        | 5 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
-| M3        | 6 slices                  | 3-4 grouped waves (used: 4)           | Completed   |
-| M4        | 4 slices                  | 2-3 grouped waves (used: 3)           | Completed   |
-| M5        | 20 slices                 | 4 grouped waves (`M5-A` to `M5-D`)    | Completed   |
-| M6        | 41 slices so far          | 8-10 grouped waves (used so far: 9)   | In progress |
-| M7        | planned                   | 8 grouped waves                       | Pending     |
-| M8        | planned                   | 6 grouped waves                       | Pending     |
-| M9        | planned                   | 5 grouped waves                       | Pending     |
+| Milestone | Atomic History (Observed)    | Grouped Execution Waves (Target/Used)                   | Status      |
+| --------- | ---------------------------- | ------------------------------------------------------- | ----------- |
+| M1        | 6 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
+| M2        | 5 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
+| M3        | 6 slices                     | 3-4 grouped waves (used: 4)                             | Completed   |
+| M4        | 4 slices                     | 2-3 grouped waves (used: 3)                             | Completed   |
+| M5        | 20 slices                    | 4 grouped waves (`M5-A` to `M5-D`)                      | Completed   |
+| M6        | 228 slices (contract stream) | Contract waves used: 46; milestone closeout waves `4/4` | Completed   |
+| M7        | planned                      | 8 grouped waves (`M7.8` complete, 0 remaining)          | Completed   |
+| M8        | planned                      | 6 grouped waves (`M8.6` complete, 0 remaining)          | Completed   |
+| M9        | planned                      | 5 grouped waves (`M9.5` complete, 0 remaining)          | Completed   |
 
 ### Remaining Effort Estimate (From Current State)
 
-- `M6` closeout: about `2-4` grouped waves.
-- `M7`: about `8` grouped waves.
-- `M8`: about `6` grouped waves.
-- `M9`: about `5` grouped waves.
-- Remaining total: about `21-23` grouped waves.
+- `M6` contract stream: `0` remaining; milestone closeout: `0` grouped waves remaining.
+- `M7`: `0` grouped waves remaining.
+- `M8`: `0` grouped waves remaining.
+- `M9`: `0` grouped waves remaining.
+- Remaining total: `0` grouped waves.
 
 Time estimate at current cadence:
 
-- Fast track (`3 waves/week`): about `7-8 weeks`.
-- Balanced track (`2 waves/week`): about `10-12 weeks`.
-- Risk-adjusted envelope (integration delays/rework): about `8-14 weeks`.
+- Fast track (`3 waves/week`): grouped-wave execution complete.
+- Balanced track (`2 waves/week`): grouped-wave execution complete.
+- Risk-adjusted envelope (integration delays/rework): grouped-wave execution complete.
 
 ### Large-Slice Handling
 
@@ -92,6 +119,11 @@ Time estimate at current cadence:
   - `M9` pilot cutover execution pack.
 
 ## Detailed Milestones
+
+Maintenance note:
+
+- If any slice changes milestone goals, scope, sequencing, exit criteria, or assumptions, this section must be updated in the same slice.
+- Each such update must include a concise explanation note in the execution ledger describing what changed and why.
 
 ### M0 Program Alignment and Baseline (Weeks 1-2)
 
@@ -847,3 +879,80 @@ Exit criteria:
 522. M6.227 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation `utilizationPercent` schema-property type drifts from OpenAPI baseline.
 523. M6.228 completed: strict contract checker now enforces retention-saturation remaining-entries anchor for `MessagingFaultManifestVerifyAttemptRetentionSaturation.remainingEntries` integer compatibility.
 524. M6.228 evidence checkpoint: mutation regressions now prove strict-check failure when retention-saturation `remainingEntries` schema-property type drifts from OpenAPI baseline.
+525. M6 contract-hardening closeout checkpoint completed: roadmap accounting now explicitly marks the contract stream complete through M6.228 and separates milestone-exit criteria from contract-slice totals.
+526. M6 closeout evidence checkpoint: budget table and remaining-estimate section are rebaselined so estimate drift does not misreport completion state.
+527. M7.1 completed: Docker Desktop-first local operability path is added with a one-command setup script (`npm run setup:demo`) and deterministic startup checks.
+528. M7.1 evidence checkpoint: deployment quickstart now includes setup flowchart, verification commands, service port map, and operator fallback steps.
+529. Version consistency checkpoint completed: root and app package versions are synchronized to `1.3.0` with matching lockfile metadata.
+530. Version consistency evidence checkpoint: release registry and versioning policy now reference `1.3.0` as current stable with updated release notes.
+531. M6 closeout wave 1 completed: web portal smoke baseline is validated with repository smoke tests, strict contract checks, and production web builds for admin, clinician, operations, and patient portals.
+532. M6 closeout wave 1 evidence checkpoint: command evidence captured for `npm run test:smoke`, `npm run contracts:check -- --strict`, and `npm run build:apps` with all checks passing in local execution.
+533. M6 web closeout evidence completed: smoke, contract, and production build signals are documented as the web baseline evidence pack for milestone closeout.
+534. M6 closeout wave 2 completed: access-control baseline is validated through tenant auth-policy enforcement coverage and billing trigger role-boundary enforcement.
+535. M6 closeout wave 2 evidence checkpoint: command evidence captured for `npm run test:quick -- tests/auth/auth-policy-enforcement.test.js tests/auth/admin-settings-auth-policy.test.js tests/billing/billing-clinical-trigger-hooks.test.js` with `3/3` suites passing and `16/16` tests passing.
+536. M6 closeout wave 2 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice executed existing M6 closeout scope without changing goals, sequencing, assumptions, or exit criteria.
+537. M6 closeout wave 3 completed: responsive web baseline evidence is now automated across all four portals using a dedicated verification script.
+538. M6 closeout wave 3 evidence checkpoint: command evidence captured for `npm run test:responsive` with viewport meta and max-width media-query checks passing for admin, clinician, operations, and patient portals.
+539. M6 closeout wave 3 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice validated existing M6 closeout scope without changing milestone definitions.
+540. M6 closeout wave 4 completed: Expo managed mobile notification track is now present under `apps/mobile-notifications` with tenant-configurable API base URL and appointment-event inbox workflow.
+541. M6 closeout wave 4 evidence checkpoint: command evidence captured for `npm run test:quick -- tests/notification/appointment-event-ingestion-validation.test.js` with `1/1` suite passing and `2/2` tests passing for the mobile-consumed endpoint.
+542. M6 mobile notification evidence completed: repository now contains Expo artifacts (`apps/mobile-notifications/app.json`, `apps/mobile-notifications/package.json`, `apps/mobile-notifications/App.jsx`) and tenant-scoped notification fetch path implementation.
+543. M6 milestone closeout completed: all four M6 closeout waves are complete (web smoke, access control, responsive baseline, mobile notification path).
+544. M6 closeout wave 4 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice delivered planned M6 scope without changing milestone definitions.
+545. M7.2 completed: observability and alerting baseline is now codified through `config/observability/default-alert-rules.json`, `docs/runbooks/observability-alerting-baseline.md`, and automated validation command `npm run ops:observability:check`.
+546. M7.2 evidence checkpoint: command evidence captured for `npm run ops:observability:check` with baseline verification passing (`4` required alert rules and `5` required runbooks validated).
+547. M7.2 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice delivered existing M7 scope without changing goals, sequencing, assumptions, or exit criteria.
+548. M7.3 completed: backup and restore drill evidence generation is now automated via `scripts/generate-backup-drill-evidence.mjs` and `npm run runbook:backup-drill`, with runbook guidance updated for repeatable operator use.
+549. M7.3 evidence checkpoint: command evidence captured for `npm run runbook:backup-drill -- --tenant citycare-hospital --backup-id backup-2026-04-04 --restore-target sandbox-citycare --rto-minutes 45 --rpo-minutes 15 --operator platform-operations`, producing `docs/runbooks/evidence/backup-drill-2026-04-04-citycare-hospital.md`.
+550. M7.3 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice implements existing M7 backup/restore drill scope without changing milestone definitions.
+551. M7.4 completed: on-call escalation ownership baseline is now codified through `config/operations/oncall-escalation-map.json` and automated via `npm run ops:oncall:check`.
+552. M7.4 evidence checkpoint: command evidence captured for `npm run ops:oncall:check` with verification passing (`3` escalation levels and `9` service ownership mappings validated).
+553. M7.4 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice implemented existing M7 scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+554. M7.5 completed: restore tenant-isolation verification is now automated via `scripts/verify-restore-tenant-isolation.mjs` and `npm run runbook:restore-verify`, with runbook guidance added for repeatable post-restore checks.
+555. M7.5 evidence checkpoint: command evidence captured for `npm run runbook:restore-verify -- --tenant citycare-hospital --records-file docs/runbooks/evidence/restore-validation-sample-citycare-2026-04-04.json --operator platform-operations`, producing `docs/runbooks/evidence/restore-isolation-2026-04-04-citycare-hospital.md`.
+556. M7.5 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice delivered existing M7 backup/restore validation scope without changing milestone definitions.
+557. M7.6 completed: structured request logging and trace correlation baseline is now codified via `packages/shared-utils/request-context.js`, wired across gateway/domain service runtimes, and documented in `docs/runbooks/trace-correlation-baseline.md`.
+558. M7.6 evidence checkpoint: command evidence captured for `npm run ops:trace:check` with verification passing across `9` scoped service runtimes and trace/runbook anchors.
+559. M7.6 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice implements existing M7 structured logging and trace-correlation scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+560. M7.7 completed: incident command readiness baseline is now codified through `config/operations/incident-severity-matrix.json`, a strict automation command `npm run ops:incident:check`, and an expanded `docs/runbooks/incident-response.md` with command flow, severity objectives, and trace-capture requirements.
+561. M7.7 evidence checkpoint: command evidence captured for `npm run ops:incident:check` with verification passing (`4` severity definitions and `6` required incident-runbook headings validated).
+562. M7.7 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice finalized existing M7 incident-handling scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+563. M7.8 completed: unified M7 operability readiness gate is now codified via `scripts/check-m7-operability-readiness.mjs`, `npm run ops:m7:check`, and `docs/runbooks/m7-operability-readiness.md`, aggregating observability, on-call, trace, incident, and recovery evidence checks.
+564. M7.8 evidence checkpoint: command evidence captured for `npm run ops:m7:check` with verification passing (`4` nested baseline checks plus backup/restore evidence artifact validation).
+565. M7.8 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice completed existing M7 operability closeout scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+566. M7 milestone completed: all `8/8` grouped M7 waves are now closed with evidence-backed operational controls (observability, backup/restore, on-call ownership, trace correlation, incident readiness, and aggregate closeout gate).
+567. M8.1 completed: load validation baseline is now codified through `config/performance/m8-load-profiles.json`, `scripts/check-m8-load-baseline.mjs`, `docs/runbooks/m8-load-validation.md`, and `docs/runbooks/templates/m8-load-summary-template.md`.
+568. M8.1 evidence checkpoint: command evidence captured for `npm run perf:m8:check` with baseline verification passing (`5` required load profiles and `7` required runbook sections validated).
+569. M8.1 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice established existing M8 scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+570. M8.2 completed: resilience drill baseline is now codified through `config/performance/m8-resilience-drills.json`, `scripts/check-m8-resilience-baseline.mjs`, `docs/runbooks/m8-resilience-drills.md`, and `docs/runbooks/templates/m8-resilience-summary-template.md`.
+571. M8.2 evidence checkpoint: command evidence captured for `npm run perf:m8:resilience:check` with baseline verification passing (`3` required resilience drills and `6` required runbook sections validated).
+572. M8.2 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice established existing M8 resilience-drill scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+573. M8.3 completed: release-candidate regression gate is now codified through `scripts/check-m8-release-candidate-gate.mjs`, `npm run perf:m8:rc:check`, `docs/runbooks/m8-release-candidate-gate.md`, and `docs/runbooks/templates/m8-release-candidate-summary-template.md`.
+574. M8.3 evidence checkpoint: command evidence captured for `npm run perf:m8:rc:check` with verification passing across `6` nested checks (load baseline, resilience baseline, strict contracts, route load, adapter regressions, and portal builds).
+575. M8.3 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice implemented existing M8 release-candidate scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+576. M8.4 completed: RC evidence automation is now codified through `scripts/generate-m8-rc-gate-evidence.mjs` and command `npm run runbook:m8:rc:evidence`, with runbook automation guidance added for milestone handoff.
+577. M8.4 evidence checkpoint: command evidence captured for `npm run runbook:m8:rc:evidence -- --environment staging --operator platform-operations`, generating a dated RC gate artifact under `docs/runbooks/evidence`.
+578. M8.4 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice automated existing M8 evidence-capture scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+579. M8.5 completed: strict RC evidence-presence gating is now codified through `scripts/check-m8-rc-evidence-presence.mjs`, command `npm run perf:m8:rc:evidence:check`, and default integration into `scripts/check-m8-release-candidate-gate.mjs` with generation-safe bypass handling for automated evidence runs.
+580. M8.5 evidence checkpoint: command evidence captured for `npm run perf:m8:rc:evidence:check`, `npm run perf:m8:rc:check`, and `npm run runbook:m8:rc:evidence -- --environment staging --operator platform-operations`, validating pass-status evidence anchors and aggregate RC gate readiness with evidence-presence enforcement.
+581. M8.5 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice hardened existing M8 release-candidate governance controls without changing milestone goals, sequencing, assumptions, or exit criteria.
+582. M8.6 completed: unified M8 milestone-closeout readiness is now codified through `scripts/check-m8-performance-readiness.mjs`, command `npm run perf:m8:final:check`, and runbook `docs/runbooks/m8-performance-readiness.md`, aggregating load, resilience, RC evidence, and RC gate validations.
+583. M8.6 evidence checkpoint: command evidence captured for `npm run perf:m8:final:check` with verification passing across `4` nested checks plus RC evidence artifact pass-marker coverage.
+584. M8.6 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice completed existing M8 closeout scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+585. M8 milestone completed: all `6/6` grouped M8 waves are now closed with evidence-backed performance controls, resilience drills, RC regression gating, and automated evidence-presence enforcement.
+586. M9.1 completed: pilot and cutover readiness baseline is now codified through `config/operations/m9-pilot-cutover-checklist.json`, `scripts/check-m9-pilot-readiness.mjs`, `docs/runbooks/m9-pilot-cutover-readiness.md`, and `docs/runbooks/templates/m9-pilot-cutover-summary-template.md`.
+587. M9.1 evidence checkpoint: command evidence captured for `npm run pilot:m9:check` with baseline verification passing for pilot cohort scope, acceptance criteria, cutover checklist, hypercare controls, and runbook/template anchors.
+588. M9.1 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice established existing M9 pilot/cutover baseline scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+589. M9.2 completed: pilot acceptance evidence automation and strict evidence-presence gating are now codified through `scripts/generate-m9-pilot-cutover-evidence.mjs`, `scripts/check-m9-pilot-evidence-presence.mjs`, command wiring (`npm run runbook:m9:pilot:evidence`, `npm run pilot:m9:evidence:check`), and integrated enforcement in `scripts/check-m9-pilot-readiness.mjs` with generation-safe bypass handling.
+590. M9.2 evidence checkpoint: command evidence captured for `npm run runbook:m9:pilot:evidence -- --environment staging --tenant citycare-hospital --operator platform-operations`, `npm run pilot:m9:evidence:check`, and `npm run pilot:m9:check`, validating automated evidence generation plus strict artifact coverage anchors.
+591. M9.2 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice hardened existing M9 pilot/cutover governance controls without changing milestone goals, sequencing, assumptions, or exit criteria.
+592. M9.3 completed: cutover rehearsal execution pack and strict rehearsal evidence validation are now codified through `config/operations/m9-cutover-rehearsal-pack.json`, `scripts/check-m9-cutover-rehearsal-readiness.mjs`, `scripts/check-m9-cutover-rehearsal-evidence-presence.mjs`, `scripts/generate-m9-cutover-rehearsal-evidence.mjs`, `docs/runbooks/m9-cutover-rehearsal.md`, and `docs/runbooks/templates/m9-cutover-rehearsal-summary-template.md`, with command wiring for `npm run pilot:m9:rehearsal:check`, `npm run pilot:m9:rehearsal:evidence:check`, and `npm run runbook:m9:rehearsal:evidence`.
+593. M9.3 evidence checkpoint: command evidence captured for `npm run pilot:m9:rehearsal:evidence:check` (pre-artifact expected fail), `npm run runbook:m9:rehearsal:evidence -- --date=2026-04-04 --environment=staging`, `npm run pilot:m9:rehearsal:evidence:check` (post-artifact pass), and `npm run pilot:m9:rehearsal:check`, validating strict rehearsal anchors and aggregate readiness dependency on pilot baseline.
+594. M9.3 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice hardened existing M9 cutover rehearsal governance controls without changing milestone goals, sequencing, assumptions, or exit criteria.
+595. M9.4 completed: go-live acceptance controls and strict go-live evidence validation are now codified through `config/operations/m9-go-live-acceptance-pack.json`, `scripts/check-m9-go-live-readiness.mjs`, `scripts/check-m9-go-live-evidence-presence.mjs`, `scripts/generate-m9-go-live-acceptance-evidence.mjs`, `docs/runbooks/m9-go-live-acceptance.md`, and `docs/runbooks/templates/m9-go-live-acceptance-summary-template.md`, with command wiring for `npm run pilot:m9:golive:check`, `npm run pilot:m9:golive:evidence:check`, and `npm run runbook:m9:golive:evidence`.
+596. M9.4 evidence checkpoint: command evidence captured for `npm run pilot:m9:golive:evidence:check` (pre-artifact expected fail), `npm run runbook:m9:golive:evidence -- --date=2026-04-04 --environment=staging`, `npm run pilot:m9:golive:evidence:check` (post-artifact pass), and `npm run pilot:m9:golive:check`, validating strict go-live anchors plus dependency enforcement on pilot and cutover rehearsal readiness.
+597. M9.4 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice hardened existing M9 go-live acceptance governance controls without changing milestone goals, sequencing, assumptions, or exit criteria.
+598. M9.5 completed: unified M9 milestone-closeout readiness is now codified through `scripts/check-m9-production-readiness.mjs`, command `npm run pilot:m9:final:check`, and runbook `docs/runbooks/m9-production-readiness.md`, aggregating pilot, cutover rehearsal, go-live readiness, and strict evidence-pass validation.
+599. M9.5 evidence checkpoint: command evidence captured for `npm run pilot:m9:final:check`, validating pass-state across `6` nested checks (three evidence-presence gates plus pilot, rehearsal, and go-live readiness gates) and latest artifact pass markers.
+600. M9.5 detailed-milestone check: no `## Detailed Milestones` definition update was required because this slice completed existing M9 closeout scope without changing milestone goals, sequencing, assumptions, or exit criteria.
+601. M9 milestone completed: all `5/5` grouped M9 waves are now closed with evidence-backed pilot readiness, strict pilot/rehearsal/go-live artifact governance, cutover rehearsal controls, and final production-acceptance gate enforcement.

@@ -16,7 +16,10 @@ function serializePayload(payload) {
 function buildSignature(payloadString, signingSecret) {
   return (
     "sha256=" +
-    crypto.createHmac("sha256", String(signingSecret || "")).update(payloadString, "utf8").digest("hex")
+    crypto
+      .createHmac("sha256", String(signingSecret || ""))
+      .update(payloadString, "utf8")
+      .digest("hex")
   );
 }
 

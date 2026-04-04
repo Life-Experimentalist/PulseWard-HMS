@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "owner": "platform-operations",
+  "goLiveWindow": {
+    "environment": "production",
+    "changeFreezeHours": 48,
+    "deploymentWindow": "off-hours"
+  },
+  "acceptanceChecks": [
+    {
+      "key": "pilot-stability-confirmed",
+      "description": "Pilot metrics remained within accepted thresholds for the hold period.",
+      "required": true
+    },
+    {
+      "key": "cutover-rehearsal-confirmed",
+      "description": "Cutover rehearsal completed with pass status and required approvals.",
+      "required": true
+    },
+    {
+      "key": "incident-command-ready",
+      "description": "Incident command roster and communication channels are confirmed active.",
+      "required": true
+    },
+    {
+      "key": "rollback-approval-confirmed",
+      "description": "Rollback authority and guardrail trigger criteria are confirmed.",
+      "required": true
+    },
+    {
+      "key": "stakeholder-signoff-captured",
+      "description": "Product, engineering, and operations signoffs are captured.",
+      "required": true
+    }
+  ],
+  "operationalGuardrails": [
+    {
+      "key": "api-error-rate",
+      "metric": "api.error.rate",
+      "threshold": 0.03
+    },
+    {
+      "key": "notification-delivery-success",
+      "metric": "notification.delivery.success.rate",
+      "threshold": 0.98
+    },
+    {
+      "key": "critical-incidents",
+      "metric": "incident.critical.open.count",
+      "threshold": 0
+    }
+  ],
+  "hypercare": {
+    "durationDays": 14,
+    "dailyStatusUpdateRequired": true,
+    "triageSlaMinutes": 30,
+    "evidenceLogPath": "docs/runbooks/evidence"
+  }
+}

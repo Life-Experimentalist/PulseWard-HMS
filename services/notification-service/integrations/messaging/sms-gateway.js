@@ -16,7 +16,8 @@ class SmsGatewayProvider {
       return {
         provider: this.key,
         accepted: true,
-        detail: "SMS gateway dry-run mode. Configure endpoint/apiKey and use dryRun=false for live delivery.",
+        detail:
+          "SMS gateway dry-run mode. Configure endpoint/apiKey and use dryRun=false for live delivery.",
         preview: {
           recipient: request && request.recipient ? request.recipient : null,
           message: request && request.message ? request.message : null,

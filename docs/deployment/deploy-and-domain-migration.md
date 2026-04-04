@@ -11,7 +11,7 @@ This guide keeps deployment practical: start cheap, keep API stable at `/api/v1`
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- npm 10+
 - Docker Desktop
 - Cloudflare account (recommended for DNS/TLS/WAF)
 
@@ -20,7 +20,7 @@ This guide keeps deployment practical: start cheap, keep API stable at `/api/v1`
 Install dependencies:
 
 ```powershell
-pnpm install
+npm ci
 ```
 
 Prepare environment:
@@ -32,35 +32,35 @@ Copy-Item .env.example .env
 Start supporting stack:
 
 ```powershell
-pnpm demo:up
+npm run demo:up
 ```
 
 Start services in separate terminals:
 
 ```powershell
-pnpm start:auth
+npm run start:auth
 ```
 
 ```powershell
-pnpm start:notification
+npm run start:notification
 ```
 
 ```powershell
-pnpm start:appointment
+npm run start:appointment
 ```
 
 Start landing page:
 
 ```powershell
-pnpm start:landing
+npm run start:landing
 ```
 
 Validate:
 
 ```powershell
-pnpm integrations:validate
-pnpm test:routes
-pnpm test:smoke
+npm run integrations:validate
+npm run test:routes
+npm run test:smoke
 ```
 
 ## 2) Configure Tenant Domains
@@ -143,8 +143,8 @@ If migration fails:
 4. Re-run:
 
 ```powershell
-pnpm integrations:validate
-pnpm test:smoke
+npm run integrations:validate
+npm run test:smoke
 ```
 
 5. Record incident and rollback evidence in GitHub issues.

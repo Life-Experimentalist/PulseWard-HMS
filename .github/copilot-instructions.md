@@ -42,3 +42,26 @@ Deliver safe, modular, cost-aware, production-ready outcomes for PulseWard HMS.
 - Documentation updated
 - Monitoring/alerting impact considered
 - Rollback path described
+
+## Slice Budget Tracking
+
+For milestone slicing work (especially M6 contract-hardening waves), every response must include budget tracking in two places:
+
+- Module Slice Budget (Initial): at the top of the response before execution details.
+- Module Slice Budget (Updated): near the end of the response after execution details.
+
+Each budget block must include:
+
+- Scope name (for example: M6 command-surface tranche, full verify-attempt schema surface)
+- Total estimated slices
+- Completed slices
+- Remaining slices
+- Current wave size
+- Prompt count used (count each user prompt as 1)
+
+When estimates change, include an explicit delta line:
+
+- Estimate change: <old> -> <new>
+- Reason for change
+
+If multiple scopes are tracked (narrow tranche and full-surface), show both scopes in the same budget block.

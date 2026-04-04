@@ -1,0 +1,59 @@
+{
+    "version": "1.0.0",
+    "owner": "platform-operations",
+    "dashboards": [
+        {
+            "key": "platform-reliability-overview",
+            "title": "Platform Reliability Overview",
+            "description": "Topline API health, latency, and adapter reliability metrics for incident triage."
+        },
+        {
+            "key": "notification-reliability",
+            "title": "Notification Reliability",
+            "description": "Queue behavior, provider delivery outcomes, and retry/error trends."
+        },
+        {
+            "key": "abha-operational-readiness",
+            "title": "ABHA Operational Readiness",
+            "description": "Gateway reachability, fallback trends, and transaction outcome evidence."
+        }
+    ],
+    "alerts": [
+        {
+            "key": "api-error-rate-high",
+            "metric": "api.error.rate",
+            "threshold": 0.05,
+            "windowMinutes": 5,
+            "severity": "critical",
+            "runbook": "docs/runbooks/incident-response.md",
+            "escalation": "immediate"
+        },
+        {
+            "key": "queue-backlog-high",
+            "metric": "notification.queue.backlog",
+            "threshold": 500,
+            "windowMinutes": 10,
+            "severity": "warning",
+            "runbook": "docs/runbooks/integration-provider-operations.md",
+            "escalation": "same-shift"
+        },
+        {
+            "key": "adapter-failure-rate-high",
+            "metric": "integrations.adapter.failure.rate",
+            "threshold": 0.03,
+            "windowMinutes": 10,
+            "severity": "critical",
+            "runbook": "docs/runbooks/integration-provider-operations.md",
+            "escalation": "immediate"
+        },
+        {
+            "key": "p95-latency-high",
+            "metric": "api.latency.p95.ms",
+            "threshold": 1200,
+            "windowMinutes": 5,
+            "severity": "warning",
+            "runbook": "docs/runbooks/on-call.md",
+            "escalation": "same-shift"
+        }
+    ]
+}

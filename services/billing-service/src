@@ -1,7 +1,10 @@
 var express = require("express");
 var randomUUID = require("crypto").randomUUID;
+var withRequestContext = require("../../packages/shared-utils/request-context").withRequestContext;
 
 var router = express.Router();
+
+router.use(withRequestContext("billing-service"));
 
 var billingRecords = [];
 var triggerReceipts = [];

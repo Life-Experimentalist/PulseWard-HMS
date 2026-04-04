@@ -54,7 +54,7 @@ The PulseWard API follows [Semantic Versioning](https://semver.org/) (SemVer) pr
 
 ## Current Release Track
 
-- Current stable release: 1.2.0
+- Current stable release: 1.3.0
 - Current API base path: /api/v1
 - Minor and patch releases keep the URL path at v1 unless a breaking change is introduced.
 - Versioned release notes location: `docs/releases/`

@@ -26,7 +26,9 @@ class AppleCalendarProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(secretPayload.apiKey ? { Authorization: "Bearer " + String(secretPayload.apiKey) } : {}),
+        ...(secretPayload.apiKey
+          ? { Authorization: "Bearer " + String(secretPayload.apiKey) }
+          : {}),
       },
       body: JSON.stringify({
         provider: this.key,

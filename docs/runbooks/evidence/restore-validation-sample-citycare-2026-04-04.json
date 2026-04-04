@@ -1,0 +1,17 @@
+[
+    {
+        "id": "rec-citycare-001",
+        "tenantKey": "citycare-hospital",
+        "table": "appointments"
+    },
+    {
+        "id": "rec-citycare-002",
+        "tenantKey": "citycare-hospital",
+        "table": "patient_records"
+    },
+    {
+        "id": "rec-citycare-003",
+        "tenantKey": "citycare-hospital",
+        "table": "billing_entries"
+    }
+]

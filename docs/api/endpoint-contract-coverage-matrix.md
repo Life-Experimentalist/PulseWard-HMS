@@ -1897,15 +1897,6 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 - Mutation-based parity regressions now prove strict-check failure when retention-saturation `remainingEntries` property type drifts from OpenAPI baseline.
 
 
-# M7 Security, Observability, and Operability
-
-
-# M8 Performance, Resilience, and Release Candidate
-
-
-# M9 Pilot, Cutover, and Production Go-Live
-
-
 ## Current Allowlisted Drifts
 
 - None.

@@ -4,11 +4,11 @@ This folder stores versioned release notes for PulseWard.
 
 ## Current release
 
-- 1.2.0
+- 1.3.0
 
 ## Active development track
 
-- 1.2.1 (in-progress milestone snapshot)
+- 1.3.1 (next incremental milestone snapshot)
 
 ## Rules
 
@@ -18,6 +18,7 @@ This folder stores versioned release notes for PulseWard.
 
 ## Index
 
+- 1.3.0: docs/releases/v1.3.0.md
 - 1.2.0: docs/releases/v1.2.0.md
 - 1.2.1: docs/releases/v1.2.1.md
 - 1.1.0: docs/releases/v1.1.0.md

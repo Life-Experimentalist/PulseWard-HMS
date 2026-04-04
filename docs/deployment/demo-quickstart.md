@@ -1,48 +1,60 @@
-# Demo Quickstart (No DevOps Expertise Required)
+# Demo Quickstart (Docker Desktop First)
 
-This guide gets a working PulseWard demo up with the fewest steps.
+This guide is designed for first-time setup with the least manual work.
 
-## Demo Readiness By Milestone
+## Setup Flow
 
-- M2.5: Identity and policy demo (login, OAuth policy checks, OTP/MFA flow).
-- M3.2: Rudimentary OPD and appointments demo (OPD intake, appointment draft handoff, role-scoped appointment entry).
-- M4+: Scheduling reliability and notification resilience demo.
-
-Recommended answer for rudimentary demo start point: M3.2.
+```mermaid
+flowchart TD
+	A[Install Docker Desktop + Node.js] --> B[Run npm ci]
+	B --> C[Run npm run setup:demo]
+	C --> D[Check docker compose ps]
+	D --> E[Start API services in separate terminals]
+	E --> F[Run smoke and demo checks]
+	F --> G[Demo ready]
+```
 
 ## Prerequisites
 
-- Docker Desktop installed and running
-- Node.js 20+
-- npm 10+ (pnpm is optional)
+- Docker Desktop running with Linux containers
+- Node.js 22+
+- npm 10+
 
-## One-Time Setup
+## Step 1: Install Dependencies
 
-```powershell
-npm install
-```
-
-Copy environment template and set required values:
+From repository root:
 
 ```powershell
-Copy-Item .env.example .env
+npm ci
 ```
 
-## Start Demo Stack
+## Step 2: One-Command Local Setup
+
+Run:
 
 ```powershell
-npm run demo:up
+npm run setup:demo
 ```
 
-## Check Services
+What this does:
+
+- Validates Docker engine and Docker Compose availability
+- Installs app dependencies
+- Creates .env from .env.example if needed
+- Runs docker compose up with build
+- Prints service status
+
+## Step 3: Verify Compose Services
 
 ```powershell
 docker compose ps
 ```
 
-## Start API Services (local demo)
+Expected status: all configured services show State as running/healthy.
 
-Run each command in a separate terminal:
+## Step 4: Start Local API Services
+
+Use separate terminals:
 
 ```powershell
 npm run start:auth
@@ -56,53 +68,50 @@ npm run start:notification
 npm run start:appointment
 ```
 
-## Rudimentary OPD Demo (M3.2)
-
-After appointment service is running, run:
-
-```powershell
-npm run demo:opd
-```
-
-What this demo shows:
-
-- OPD intake creation using `POST /api/v1/opd/entries`.
-- Automatic appointment draft handoff from OPD intake.
-- Role-scoped access behavior on appointment updates (blocked and allowed paths).
-
-If you are running via Docker port mapping, use:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File ./scripts/demo-opd-flow.ps1 -BaseUrl "http://localhost:8083/api/v1"
-```
-
-## Start Landing Page
+## Step 5: Start Web Surfaces (Optional For Full Demo)
 
 ```powershell
 npm run start:landing
 ```
 
-## Start Admin Console
-
-Build once, then serve static runtime:
-
 ```powershell
-npm run install:admin
-npm run build:admin
-npm run start:admin
+npm run start:operations:dev
 ```
 
-## Validate Runtime Contracts
+```powershell
+npm run start:admin:dev
+```
+
+## Step 6: Run Demo And Health Checks
 
 ```powershell
-npm run contracts:check -- --strict
-npm run integrations:validate
-npm run test:routes
-npm run test
+npm run demo:opd
+```
+
+```powershell
 npm run test:smoke
 ```
 
-## Stop Demo Stack
+```powershell
+npm run contracts:check -- --strict
+```
+
+## Service Port Map
+
+| Service                  | URL                   |
+| ------------------------ | --------------------- |
+| API Gateway              | http://localhost:8080 |
+| Auth Service             | http://localhost:8081 |
+| Patient Service          | http://localhost:8082 |
+| Appointment Service      | http://localhost:8083 |
+| EHR Service              | http://localhost:8084 |
+| Billing Service          | http://localhost:8085 |
+| Pharmacy Service         | http://localhost:8086 |
+| Lab Service              | http://localhost:8087 |
+| Notification Service     | http://localhost:8088 |
+| AI Project Manager Agent | http://localhost:8089 |
+
+## Stop Everything
 
 ```powershell
 npm run demo:down
@@ -110,30 +119,21 @@ npm run demo:down
 
 ## If Something Fails
 
-1. Restart Docker Desktop.
-2. Re-run `npm run demo:up`.
-3. Check logs with:
+1. Restart Docker Desktop and wait until engine is fully ready.
+2. Re-run setup:
 
 ```powershell
-docker compose logs --tail=100
+npm run setup:demo
 ```
 
-## Optional pnpm Equivalents
+3. Inspect logs:
 
-If you prefer pnpm in this repository, all commands above can be run with `pnpm` equivalents.
+```powershell
+docker compose logs --tail=120
+```
 
-## Cloud Demo Path (Easy Upgrade)
+## Next Guide
 
-When you want online demo access with minimal setup:
-
-1. Keep Docker for local development.
-2. Deploy app containers to a managed platform (start with a single managed container host).
-3. Add Cloudflare in front for DNS, TLS, and WAF.
-4. Move to AWS services later only when needed.
-5. Keep landing and APIs on `/api/v1` and update tenant domain config before cutover.
-
-## Full Deployment Guide
-
-For GitHub subdomain, custom domain migration, and tenant origin controls:
+For domain migration and production-like rollout:
 
 - docs/deployment/deploy-and-domain-migration.md

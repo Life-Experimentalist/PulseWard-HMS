@@ -3,12 +3,14 @@ require("dotenv").config();
 var express = require("express");
 var bodyParser = require("body-parser");
 var cors = require("cors");
+var withRequestContext = require("../../packages/shared-utils/request-context").withRequestContext;
 var routes = require("./routes");
 
 var app = express();
 var PORT = Number(process.env.EHR_SERVICE_PORT || process.env.PORT || 5104);
 
 app.use(bodyParser.json());
+app.use(withRequestContext("ehr-service"));
 
 var allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "*")
   .split(",")

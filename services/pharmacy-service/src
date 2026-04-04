@@ -2,10 +2,13 @@ require("dotenv").config();
 
 var express = require("express");
 var randomUUID = require("crypto").randomUUID;
+var withRequestContext = require("../../packages/shared-utils/request-context").withRequestContext;
 
 var router = express.Router();
 var pharmacyService = router;
 var app = express();
+
+router.use(withRequestContext("pharmacy-service"));
 
 var medications = [];
 var prescriptionOrders = [];

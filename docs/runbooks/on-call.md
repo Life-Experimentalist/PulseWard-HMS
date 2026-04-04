@@ -53,6 +53,23 @@ The purpose of this on-call procedure is to provide clear guidelines for staff w
 - Maintain detailed records of all incidents, including resolutions and any follow-up actions required.
 - Review and update this document annually or after significant incidents.
 
+## Configuration Source Of Truth
+
+- Escalation levels and service ownership mappings are stored in:
+  - `config/operations/oncall-escalation-map.json`
+
+Run automated coverage verification from repository root:
+
+```powershell
+npm run ops:oncall:check
+```
+
+The verification checks:
+
+- Escalation levels (`1`, `2`, `3`) exist with valid response targets.
+- Core backend service ownership mappings are complete.
+- Required incident runbooks remain present.
+
 ## Training
 
 - All on-call staff must undergo training on the incident management system and procedures.

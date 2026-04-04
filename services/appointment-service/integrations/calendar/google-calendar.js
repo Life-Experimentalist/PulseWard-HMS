@@ -35,9 +35,7 @@ class GoogleCalendarProvider {
       body: JSON.stringify({
         summary: request && request.subject ? request.subject : "PulseWard appointment",
         description:
-          request && request.description
-            ? request.description
-            : "PulseWard calendar test booking",
+          request && request.description ? request.description : "PulseWard calendar test booking",
         start: { dateTime: request.startTime },
         end: { dateTime: request.endTime },
       }),

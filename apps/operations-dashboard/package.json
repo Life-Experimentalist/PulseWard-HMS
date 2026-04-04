@@ -1,6 +1,6 @@
 {
   "name": "@pulseward/operations-dashboard",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "React + Vite operations dashboard for service health, incidents, and throughput monitoring.",
   "private": true,
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@pulseward/patient-portal",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "React + Vite patient portal for appointments, records visibility, and care communication flows.",
   "private": true,
   "type": "module",

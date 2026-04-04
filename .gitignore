@@ -3,6 +3,9 @@ dist/
 build/
 coverage/
 .pnpm-store/
+package-lock.json
+**/package-lock.json
+!pnpm-lock.yaml
 
 # Local environment files
 .env

@@ -1,4 +1,4 @@
-# M8 Release Candidate Gate Evidence (2026-04-04)
+﻿# M8 Release Candidate Gate Evidence (2026-04-04)
 
 ## Metadata
 
@@ -6,7 +6,7 @@
 - Operator: platform-operations
 - Commit SHA: not-specified
 - Executed at: 2026-04-03T23:30:18.663Z
-- Command: npm run perf:m8:rc:check
+- Command: pnpm run perf:m8:rc:check
 
 ## Gate Status
 
@@ -35,3 +35,4 @@ Validated 6 nested checks across evidence presence, contracts, route loading, ad
 
 - Regenerate this artifact whenever RC gate command or nested test/build inventory changes.
 - If status is fail, attach issue link and mitigation plan before marking RC checkpoint complete.
+

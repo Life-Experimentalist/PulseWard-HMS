@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+﻿import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
@@ -62,7 +62,7 @@ const prefilled = template
 writeFileSync(targetPath, prefilled, "utf8");
 
 try {
-  execSync("npm run pilot:m9:golive:check", {
+  execSync("pnpm run pilot:m9:golive:check", {
     cwd: workspaceRoot,
     shell: true,
     stdio: ["ignore", "pipe", "pipe"],

@@ -27,8 +27,8 @@ Detailed implementation mapping (service-by-service and app-by-app) is maintaine
 
 ## Tooling Decision
 
-- **Primary scripts**: npm scripts (with pnpm compatibility retained).
-- **Package manager**: pnpm workspace with npm-compatible script execution.
+- **Primary scripts**: pnpm scripts at repository root.
+- **Package manager**: pnpm workspace with frozen-lockfile installs in local and CI workflows.
 - **CI/CD**: GitHub Actions.
 - **Containerization**: Docker.
 

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+﻿import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -24,21 +24,21 @@ const requiredRunbookSections = [
 ];
 
 const nestedChecks = [
-  { label: "m8-load-baseline", command: "npm run perf:m8:check" },
-  { label: "m8-resilience-baseline", command: "npm run perf:m8:resilience:check" },
+  { label: "m8-load-baseline", command: "pnpm run perf:m8:check" },
+  { label: "m8-resilience-baseline", command: "pnpm run perf:m8:resilience:check" },
   {
     label: "rc-evidence-presence",
-    command: "npm run perf:m8:rc:evidence:check",
+    command: "pnpm run perf:m8:rc:evidence:check",
     skipWhenEnv: "SKIP_M8_RC_EVIDENCE_CHECK",
   },
-  { label: "contracts-strict", command: "npm run contracts:check -- --strict" },
-  { label: "route-load", command: "npm run test:routes" },
+  { label: "contracts-strict", command: "pnpm run contracts:check -- --strict" },
+  { label: "route-load", command: "pnpm run test:routes" },
   {
     label: "adapter-regressions",
     command:
-      "npm run test:quick -- tests/appointment/calendar-providers.test.js tests/appointment/calendar-interoperability-diagnostics.test.js tests/notification/messaging-providers.test.js tests/notification/messaging-connector-diagnostics.test.js tests/notification/webhook-delivery-diagnostics.test.js",
+      "pnpm run test:quick -- tests/appointment/calendar-providers.test.js tests/appointment/calendar-interoperability-diagnostics.test.js tests/notification/messaging-providers.test.js tests/notification/messaging-connector-diagnostics.test.js tests/notification/webhook-delivery-diagnostics.test.js",
   },
-  { label: "portal-build", command: "npm run build:apps" },
+  { label: "portal-build", command: "pnpm run build:apps" },
 ];
 
 function runShellCommand(command) {
@@ -96,3 +96,4 @@ console.log(
       .length
   } nested checks across evidence presence, contracts, route loading, adapter regressions, and portal builds.`
 );
+

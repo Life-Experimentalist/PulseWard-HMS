@@ -1,4 +1,4 @@
-# M7 Operability Readiness Gate
+﻿# M7 Operability Readiness Gate
 
 ## Objective
 
@@ -26,7 +26,7 @@ The M7 readiness gate verifies:
 Run from repository root:
 
 ```powershell
-npm run ops:m7:check
+pnpm run ops:m7:check
 ```
 
 Expected output:
@@ -38,10 +38,10 @@ Expected output:
 
 The M7 command executes these baseline checks:
 
-- `npm run ops:observability:check`
-- `npm run ops:oncall:check`
-- `npm run ops:trace:check`
-- `npm run ops:incident:check`
+- `pnpm run ops:observability:check`
+- `pnpm run ops:oncall:check`
+- `pnpm run ops:trace:check`
+- `pnpm run ops:incident:check`
 
 ## Evidence Requirements
 

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+﻿import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const ROADMAP_PATH = path.resolve(process.cwd(), "docs/ROADMAP-TODO.md");
@@ -80,7 +80,7 @@ const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0"
 ).padStart(2, "0")}`;
 
 const snapshotBlock = `${SNAPSHOT_START}
-- Last auto-refresh: \`${today}\` via \`npm run roadmap:refresh\`.
+- Last auto-refresh: \`${today}\` via \`pnpm run roadmap:refresh\`.
 - M6 contract stream completion: \`${m6Max}/228\` (remaining: \`${Math.max(0, 228 - m6Max)}\`).
 - M6 milestone closeout waves: \`${m6CloseoutDone}/${
   planned.m6Closeout
@@ -116,3 +116,4 @@ const updated = roadmap.replace(blockRegex, snapshotBlock);
 writeFileSync(ROADMAP_PATH, updated, "utf8");
 
 console.log("Roadmap snapshot refreshed.");
+

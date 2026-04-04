@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$NoBuild
 )
 
@@ -47,4 +47,5 @@ Invoke-CheckedCommand -Description 'Docker Compose status check' -Command {
     docker compose ps
 }
 
-Write-Host 'Demo stack is running. Use npm run demo:down to stop.'
+Write-Host 'Demo stack is running. Use pnpm run demo:down to stop.'
+

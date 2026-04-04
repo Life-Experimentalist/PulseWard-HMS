@@ -1,4 +1,4 @@
-import net from "node:net";
+﻿import net from "node:net";
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
@@ -34,7 +34,7 @@ async function findPort(start, retriesLeft) {
 async function start() {
   if (!fs.existsSync(distRoot)) {
     throw new Error(
-      "Patient portal build output not found. Run 'npm run build:patient' before 'npm run start:patient'."
+      "Patient portal build output not found. Run 'pnpm run build:patient' before 'pnpm run start:patient'."
     );
   }
 
@@ -60,3 +60,4 @@ start().catch((error) => {
   console.error("Failed to start patient portal", error);
   process.exit(1);
 });
+

@@ -1,4 +1,4 @@
-# M9 Pilot and Cutover Summary Template
+﻿# M9 Pilot and Cutover Summary Template
 
 ## Run Metadata
 
@@ -11,7 +11,7 @@
 ## Command
 
 ```text
-npm run pilot:m9:check
+pnpm run pilot:m9:check
 ```
 
 ## Acceptance Criteria Results

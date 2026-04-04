@@ -1,4 +1,4 @@
-# Endpoint Contract Coverage Matrix (M1)
+﻿# Endpoint Contract Coverage Matrix (M1)
 
 This matrix tracks route-contract coverage and semantic parity for core PulseWard services in M1.
 
@@ -16,16 +16,16 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 
 ## M1.2 Parity Rules
 
-- Presence and semantic parity are both validated by `npm run contracts:check`.
+- Presence and semantic parity are both validated by `pnpm run contracts:check`.
 - Default mode fails on any unexpected runtime/spec mismatch.
-- Strict mode (`npm run contracts:check -- --strict`) also fails when allowlist entries become stale and should be removed.
+- Strict mode (`pnpm run contracts:check -- --strict`) also fails when allowlist entries become stale and should be removed.
 - CI runs strict mode by default to prevent drift regressions.
 - Regression tests are tracked in `tests/contracts/parity-regression.test.js` and run in the standard Jest pipeline.
 - Known drifts can be explicitly allowlisted to prevent hidden breakage while documenting intentional exceptions.
 
 ## M1.6 Schema Coverage Rules
 
-- Critical endpoint request/response schema coverage is now validated by `npm run contracts:check`.
+- Critical endpoint request/response schema coverage is now validated by `pnpm run contracts:check`.
 - The checker asserts required request bodies and `application/json` schema definitions for critical operations in:
 	- `auth-service`
 	- `appointment-service`
@@ -104,7 +104,7 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 
 ## M4.3 Test Coverage Completion Module
 
-- Jest coverage execution is now standardized through `jest.config.cjs` and root `npm run test` scripts for consistent full-suite reporting.
+- Jest coverage execution is now standardized through `jest.config.cjs` and root `pnpm run test` scripts for consistent full-suite reporting.
 - Route-edge validation suites now cover error and reliability branches for appointment, notification, EHR, lab, and auth service surfaces.
 - Integration adapter suites now cover calendar/messaging provider selection, fallback behavior, and unsupported-provider failure paths.
 - Shared utility suites now cover tenant config/domain resolution, origin policy checks, secret-ref parsing, and route-provider resolution behavior.
@@ -1900,3 +1900,4 @@ This matrix tracks route-contract coverage and semantic parity for core PulseWar
 ## Current Allowlisted Drifts
 
 - None.
+

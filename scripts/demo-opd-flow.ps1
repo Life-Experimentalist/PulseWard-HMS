@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$BaseUrl = "http://localhost:5103/api/v1"
 )
 
@@ -26,7 +26,7 @@ try {
 }
 catch {
     Write-Host "Unable to reach appointment-service at $BaseUrl"
-    Write-Host 'Start appointment-service first with: npm run start:appointment'
+    Write-Host 'Start appointment-service first with: pnpm run start:appointment'
     Write-Host 'If using Docker mapped port, run with: -BaseUrl "http://localhost:8083/api/v1"'
     exit 1
 }
@@ -86,3 +86,4 @@ $allowedUpdate = Invoke-DemoRequest -Method 'PUT' -Url "$BaseUrl/appointments/$a
 Write-Host "Allowed update succeeded. Appointment status: $($allowedUpdate.status)"
 
 Write-Host 'OPD rudimentary demo completed successfully.'
+

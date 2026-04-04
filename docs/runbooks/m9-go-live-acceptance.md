@@ -1,4 +1,4 @@
-# M9 Go-Live Acceptance Runbook
+﻿# M9 Go-Live Acceptance Runbook
 
 ## Purpose
 
@@ -8,16 +8,16 @@ This runbook defines the final M9 go-live acceptance gate before production laun
 
 - Go-live config: `config/operations/m9-go-live-acceptance-pack.json`
 - Summary template: `docs/runbooks/templates/m9-go-live-acceptance-summary-template.md`
-- Primary readiness command: `npm run pilot:m9:golive:check`
+- Primary readiness command: `pnpm run pilot:m9:golive:check`
 
 ## Dependency Gates
 
 Go-live acceptance is blocked until both dependency gates pass:
 
 1. Pilot readiness gate:
-   - `npm run pilot:m9:check`
+   - `pnpm run pilot:m9:check`
 2. Cutover rehearsal readiness gate:
-   - `npm run pilot:m9:rehearsal:check`
+   - `pnpm run pilot:m9:rehearsal:check`
 
 ## Go-Live Acceptance Checks
 
@@ -53,7 +53,7 @@ Go-live acceptance requires:
 
 Generate go-live evidence document from the template:
 
-- `npm run runbook:m9:golive:evidence -- --date=2026-04-04 --environment=staging`
+- `pnpm run runbook:m9:golive:evidence -- --date=2026-04-04 --environment=staging`
 
 Supported arguments:
 
@@ -64,7 +64,7 @@ Supported arguments:
 
 Before marking M9.4 complete, run strict evidence validation:
 
-- `npm run pilot:m9:golive:evidence:check`
+- `pnpm run pilot:m9:golive:evidence:check`
 
 ## Evidence Capture
 
@@ -85,7 +85,8 @@ Required anchors inside each evidence file:
 
 Run end-to-end verification:
 
-1. `npm run pilot:m9:golive:evidence:check`
-2. `npm run pilot:m9:golive:check`
+1. `pnpm run pilot:m9:golive:evidence:check`
+2. `pnpm run pilot:m9:golive:check`
 
 Both commands must pass before marking M9.4 complete.
+

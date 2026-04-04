@@ -1,4 +1,4 @@
-# On-Call Procedures for PulseWard Hospital Management System
+﻿# On-Call Procedures for PulseWard Hospital Management System
 
 ## Overview
 
@@ -61,7 +61,7 @@ The purpose of this on-call procedure is to provide clear guidelines for staff w
 Run automated coverage verification from repository root:
 
 ```powershell
-npm run ops:oncall:check
+pnpm run ops:oncall:check
 ```
 
 The verification checks:
@@ -78,3 +78,4 @@ The verification checks:
 ## Conclusion
 
 Adhering to these on-call procedures will help ensure that the PulseWard HMS operates smoothly, providing continuous support to healthcare professionals and patients alike.
+

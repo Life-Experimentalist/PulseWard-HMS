@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+﻿import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -22,15 +22,15 @@ const requiredFiles = [
 ];
 
 const nestedChecks = [
-  { label: "m9-pilot-evidence-presence", command: "npm run pilot:m9:evidence:check" },
+  { label: "m9-pilot-evidence-presence", command: "pnpm run pilot:m9:evidence:check" },
   {
     label: "m9-cutover-rehearsal-evidence-presence",
-    command: "npm run pilot:m9:rehearsal:evidence:check",
+    command: "pnpm run pilot:m9:rehearsal:evidence:check",
   },
-  { label: "m9-go-live-evidence-presence", command: "npm run pilot:m9:golive:evidence:check" },
-  { label: "m9-pilot-readiness", command: "npm run pilot:m9:check" },
-  { label: "m9-cutover-rehearsal-readiness", command: "npm run pilot:m9:rehearsal:check" },
-  { label: "m9-go-live-readiness", command: "npm run pilot:m9:golive:check" },
+  { label: "m9-go-live-evidence-presence", command: "pnpm run pilot:m9:golive:evidence:check" },
+  { label: "m9-pilot-readiness", command: "pnpm run pilot:m9:check" },
+  { label: "m9-cutover-rehearsal-readiness", command: "pnpm run pilot:m9:rehearsal:check" },
+  { label: "m9-go-live-readiness", command: "pnpm run pilot:m9:golive:check" },
 ];
 
 function runShellCommand(command) {

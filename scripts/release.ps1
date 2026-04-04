@@ -1,4 +1,4 @@
-# Release Script for PulseWard Hospital Management System
+﻿# Release Script for PulseWard Hospital Management System
 
 # This script automates the release process for the PulseWard Hospital Management System.
 # It includes steps for building, testing, and deploying the applications and services.
@@ -26,9 +26,9 @@ function Build-Service {
     Write-Host "Building $serviceName..."
     # Navigate to the service directory
     Set-Location "$projectRoot\services\$serviceName\src"
-    # Run the build command (assuming npm is used)
-    npm install
-    npm run build
+    # Run the build command
+    pnpm install
+    pnpm run build
     # Move the build output to the designated directory
     Move-Item -Path "$projectRoot\services\$serviceName\dist" -Destination "$buildOutput\$serviceName" -Force
 }
@@ -42,7 +42,7 @@ function Test-Service {
     # Navigate to the service directory
     Set-Location "$projectRoot\services\$serviceName\src"
     # Run the test command
-    npm test
+    pnpm test
 }
 
 # Build and test each service

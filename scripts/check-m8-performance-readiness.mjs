@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+﻿import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -19,10 +19,10 @@ const requiredFiles = [
 ];
 
 const nestedChecks = [
-  { label: "m8-load-baseline", command: "npm run perf:m8:check" },
-  { label: "m8-resilience-baseline", command: "npm run perf:m8:resilience:check" },
-  { label: "m8-rc-evidence-presence", command: "npm run perf:m8:rc:evidence:check" },
-  { label: "m8-release-candidate-gate", command: "npm run perf:m8:rc:check" },
+  { label: "m8-load-baseline", command: "pnpm run perf:m8:check" },
+  { label: "m8-resilience-baseline", command: "pnpm run perf:m8:resilience:check" },
+  { label: "m8-rc-evidence-presence", command: "pnpm run perf:m8:rc:evidence:check" },
+  { label: "m8-release-candidate-gate", command: "pnpm run perf:m8:rc:check" },
 ];
 
 function runShellCommand(command) {
@@ -90,3 +90,4 @@ console.log("M8 performance readiness check passed.");
 console.log(
   `Validated ${nestedChecks.length} nested checks plus RC evidence artifact coverage for milestone closeout.`
 );
+

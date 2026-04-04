@@ -1,4 +1,4 @@
-# M8 Release Candidate Regression Gate
+﻿# M8 Release Candidate Regression Gate
 
 ## Objective
 
@@ -14,7 +14,7 @@ Provide one deterministic command to validate release-candidate readiness across
 Run from repository root:
 
 ```powershell
-npm run perf:m8:rc:check
+pnpm run perf:m8:rc:check
 ```
 
 Expected output:
@@ -27,7 +27,7 @@ Expected output:
 Run this command to execute the RC gate and write a dated evidence artifact:
 
 ```powershell
-npm run runbook:m8:rc:evidence -- --environment staging --operator platform-operations
+pnpm run runbook:m8:rc:evidence -- --environment staging --operator platform-operations
 ```
 
 Artifact output path pattern:
@@ -41,10 +41,10 @@ During evidence generation, the RC gate bypasses only the evidence-presence nest
 - Validate the latest RC evidence artifact before release-candidate signoff:
 
 ```powershell
-npm run perf:m8:rc:evidence:check
+pnpm run perf:m8:rc:evidence:check
 ```
 
-- The RC aggregate gate (`npm run perf:m8:rc:check`) includes this evidence-presence check by default.
+- The RC aggregate gate (`pnpm run perf:m8:rc:check`) includes this evidence-presence check by default.
 
 ## Contract Regression Gate
 

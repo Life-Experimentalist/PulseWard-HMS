@@ -1,4 +1,4 @@
-# PulseWard Clinician Portal
+﻿# PulseWard Clinician Portal
 
 Framework-based clinician workspace built with React + Vite.
 
@@ -13,8 +13,8 @@ Framework-based clinician workspace built with React + Vite.
 From repository root:
 
 ```powershell
-npm run install:clinician
-npm run start:clinician:dev
+pnpm run install:clinician
+pnpm run start:clinician:dev
 ```
 
 Default Vite dev host runs with automatic port selection near `4311`.
@@ -24,8 +24,8 @@ Default Vite dev host runs with automatic port selection near `4311`.
 From repository root:
 
 ```powershell
-npm run build:clinician
-npm run start:clinician
+pnpm run build:clinician
+pnpm run start:clinician
 ```
 
 `start:clinician` serves prebuilt static output from `dist` and does not bundle at runtime.
@@ -36,3 +36,4 @@ Default static port is `4181` with automatic fallback to the next available port
 - API catalog: `../../docs/api/api-catalog.md`
 - Governance charter: `../../governance/project-management-charter.md`
 - Architecture references: `../../docs/architecture/`
+

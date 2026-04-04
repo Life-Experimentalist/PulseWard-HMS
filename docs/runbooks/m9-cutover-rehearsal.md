@@ -1,4 +1,4 @@
-# M9 Cutover Rehearsal Readiness Runbook
+﻿# M9 Cutover Rehearsal Readiness Runbook
 
 ## Purpose
 
@@ -8,16 +8,16 @@ This runbook defines how to execute and evaluate M9 cutover rehearsal readiness 
 
 - Rehearsal configuration: `config/operations/m9-cutover-rehearsal-pack.json`
 - Summary template: `docs/runbooks/templates/m9-cutover-rehearsal-summary-template.md`
-- Primary readiness command: `npm run pilot:m9:rehearsal:check`
+- Primary readiness command: `pnpm run pilot:m9:rehearsal:check`
 
 ## Pilot Gate Dependency
 
 M9 rehearsal readiness depends on pilot readiness completion.
 
 1. Verify pilot readiness baseline:
-   - `npm run pilot:m9:check`
+   - `pnpm run pilot:m9:check`
 2. Confirm latest pilot evidence is present:
-   - `npm run pilot:m9:evidence:check`
+   - `pnpm run pilot:m9:evidence:check`
 
 Do not execute rehearsal if pilot readiness is failing.
 
@@ -45,7 +45,7 @@ Minimum expectations:
 
 Generate rehearsal evidence document from the template:
 
-- `npm run runbook:m9:rehearsal:evidence -- --date=2026-04-04 --environment=staging`
+- `pnpm run runbook:m9:rehearsal:evidence -- --date=2026-04-04 --environment=staging`
 
 Supported arguments:
 
@@ -56,7 +56,7 @@ Supported arguments:
 
 Before accepting rehearsal readiness, run the strict evidence gate:
 
-- `npm run pilot:m9:rehearsal:evidence:check`
+- `pnpm run pilot:m9:rehearsal:evidence:check`
 
 This validates that the latest rehearsal evidence file exists and includes all required anchors.
 
@@ -81,7 +81,8 @@ Required anchors inside each evidence file:
 
 Run end-to-end verification:
 
-1. `npm run pilot:m9:rehearsal:evidence:check`
-2. `npm run pilot:m9:rehearsal:check`
+1. `pnpm run pilot:m9:rehearsal:evidence:check`
+2. `pnpm run pilot:m9:rehearsal:check`
 
 Both commands must pass before marking M9.3 complete.
+

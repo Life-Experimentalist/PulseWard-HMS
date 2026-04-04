@@ -1,4 +1,4 @@
-# Trace Correlation and Structured Logging Baseline
+﻿# Trace Correlation and Structured Logging Baseline
 
 ## Objective
 
@@ -40,7 +40,7 @@ Ensure each core PulseWard runtime emits request-completion logs with stable cor
 Run from repository root:
 
 ```powershell
-npm run ops:trace:check
+pnpm run ops:trace:check
 ```
 
 Expected output:

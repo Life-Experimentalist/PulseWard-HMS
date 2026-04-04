@@ -18,6 +18,15 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "22"
+          cache: "pnpm"
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Generate SVG visuals from Mermaid diagrams
         run: node ./scripts/generate-mermaid-visuals.mjs

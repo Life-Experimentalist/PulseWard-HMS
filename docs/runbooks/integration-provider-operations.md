@@ -1,4 +1,4 @@
-# Integration Provider Operations Runbook
+﻿# Integration Provider Operations Runbook
 
 ## Daily checks
 
@@ -38,14 +38,14 @@
 
 ## Local tooling readiness
 
-- Run `npm run build:types` before milestone handoff; this now uses root `tsconfig.json` for deterministic local/CI behavior.
-- Run `npm run build:types:show-config` when local and CI typecheck scope appears inconsistent.
+- Run `pnpm run build:types` before milestone handoff; this now uses root `tsconfig.json` for deterministic local/CI behavior.
+- Run `pnpm run build:types:show-config` when local and CI typecheck scope appears inconsistent.
 - For demo stack commands (`pnpm demo:up`, `pnpm demo:down`), ensure Docker Desktop is running and Linux engine is available before execution.
 - Demo scripts now fail fast with explicit Docker engine guidance; resolve Docker connectivity first, then rerun.
 
 ## Operations dashboard reliability view
 
-- Start dashboard in dev: `npm run start:operations:dev`.
+- Start dashboard in dev: `pnpm run start:operations:dev`.
 - The dashboard consumes:
 	- retention status telemetry
 	- saturation trend summaries
@@ -158,6 +158,7 @@
 Run from repository root after integration-affecting change:
 
 ```powershell
-npm run integrations:validate
-npm run test:smoke
+pnpm run integrations:validate
+pnpm run test:smoke
 ```
+

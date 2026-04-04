@@ -1,4 +1,4 @@
-# PulseWard Environment Setup Guide
+﻿# PulseWard Environment Setup Guide
 
 This guide explains how to fill environment variables safely for local development and staging.
 
@@ -7,8 +7,8 @@ This guide explains how to fill environment variables safely for local developme
 1. Copy `.env.example` to `.env` if `.env` does not exist.
 2. Keep `.env.example` committed with non-secret defaults and placeholders.
 3. Keep real secrets only in `.env` or your deployment secret manager.
-4. Run `npm run env:check` to verify `.env` and `.env.example` key consistency.
-5. Run `npm run verify:m6` to validate contracts, parity regressions, and quick suite.
+4. Run `pnpm run env:check` to verify `.env` and `.env.example` key consistency.
+5. Run `pnpm run verify:m6` to validate contracts, parity regressions, and quick suite.
 
 ## Variable Types
 
@@ -89,14 +89,15 @@ Use these as safe local-development examples.
 
 ## Validation Checklist
 
-1. Run `npm run env:check` and confirm success.
-2. Run `npm run contracts:check -- --strict`.
-3. Run `npm run test:quick -- tests/contracts/parity-regression.test.js`.
-4. Run `npm run test:quick`.
-5. If you need coverage report, run `npm run test`.
+1. Run `pnpm run env:check` and confirm success.
+2. Run `pnpm run contracts:check -- --strict`.
+3. Run `pnpm run test:quick -- tests/contracts/parity-regression.test.js`.
+4. Run `pnpm run test:quick`.
+5. If you need coverage report, run `pnpm run test`.
 
 ## Notes
 
 - Do not commit real secrets.
 - Keep values aligned with service fallback defaults to avoid inconsistent runtime behavior.
-- If key names change, update `.env.example` and rerun `npm run env:check`.
+- If key names change, update `.env.example` and rerun `pnpm run env:check`.
+

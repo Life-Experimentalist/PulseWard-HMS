@@ -1,4 +1,4 @@
-# PulseWard HMS
+﻿# PulseWard HMS
 
 PulseWard HMS is a modular hospital management platform by Life Experimentalist for patient, clinician, operations, and admin workflows.
 
@@ -52,24 +52,25 @@ Example:
 Prerequisites:
 
 - Node.js 22+
-- npm 10+
+- Corepack enabled with pnpm 9.15.0
 
 Install dependencies:
 
 ```powershell
-npm ci
-npm run install:apps
+corepack enable
+corepack prepare pnpm@9.15.0 --activate
+pnpm install --frozen-lockfile
 ```
 
 Run key apps:
 
 ```powershell
-npm run start:landing
-npm run start:admin:dev
-npm run start:clinician:dev
-npm run start:operations:dev
-npm run start:patient:dev
-npm run start:mobile
+pnpm run start:landing
+pnpm run start:admin:dev
+pnpm run start:clinician:dev
+pnpm run start:operations:dev
+pnpm run start:patient:dev
+pnpm run start:mobile
 ```
 
 ## Quality Gates
@@ -77,17 +78,17 @@ npm run start:mobile
 Core validation pipeline:
 
 ```powershell
-npm run contracts:check -- --strict
-npm test
-npm run build:apps
-npm run lint
-npm run build:types
+pnpm run contracts:check -- --strict
+pnpm test
+pnpm run build:apps
+pnpm run lint
+pnpm run build:types
 ```
 
 TypeScript config visibility:
 
 ```powershell
-npm run build:types:show-config
+pnpm run build:types:show-config
 ```
 
 Typecheck scope includes:
@@ -107,7 +108,7 @@ Typecheck excludes generated output:
 
 ## CI and Reliability
 
-- Workflows use npm lockfile builds.
+- Workflows use pnpm lockfile builds.
 - GitHub Actions JavaScript actions are pinned to Node24 runtime.
 - Visual generation is manual-only (Automated Visuals via workflow_dispatch) to avoid blocking delivery.
 
@@ -157,3 +158,4 @@ Suggested topics:
 
 This project is proprietary and confidential.
 See LICENSE.md for license terms.
+

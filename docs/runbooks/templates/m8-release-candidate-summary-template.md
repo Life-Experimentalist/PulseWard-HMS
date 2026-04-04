@@ -1,4 +1,4 @@
-# M8 Release Candidate Gate Summary Template
+﻿# M8 Release Candidate Gate Summary Template
 
 ## Run Metadata
 
@@ -10,7 +10,7 @@
 ## Command
 
 ```text
-npm run perf:m8:rc:check
+pnpm run perf:m8:rc:check
 ```
 
 ## Nested Check Results

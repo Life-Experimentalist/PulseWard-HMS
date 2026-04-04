@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+﻿import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -31,7 +31,9 @@ if (!existsSync(runbookPath)) {
 }
 
 if (!existsSync(templatePath)) {
-  failures.push("Missing template: docs/runbooks/templates/m9-go-live-acceptance-summary-template.md");
+  failures.push(
+    "Missing template: docs/runbooks/templates/m9-go-live-acceptance-summary-template.md"
+  );
 }
 
 function runShellCommand(command) {
@@ -97,7 +99,9 @@ if (config) {
         failures.push(`operationalGuardrails ${guardrail.key || "<unknown>"} has invalid metric`);
       }
       if (typeof guardrail.threshold !== "number" || Number.isNaN(guardrail.threshold)) {
-        failures.push(`operationalGuardrails ${guardrail.key || "<unknown>"} has invalid threshold`);
+        failures.push(
+          `operationalGuardrails ${guardrail.key || "<unknown>"} has invalid threshold`
+        );
       }
     }
   }
@@ -133,11 +137,6 @@ if (existsSync(runbookPath)) {
 
   const requiredAnchors = [
     "config/operations/m9-go-live-acceptance-pack.json",
-    "npm run pilot:m9:check",
-    "npm run pilot:m9:rehearsal:check",
-    "npm run pilot:m9:golive:check",
-    "npm run pilot:m9:golive:evidence:check",
-    "npm run runbook:m9:golive:evidence",
     "docs/runbooks/templates/m9-go-live-acceptance-summary-template.md",
   ];
 
@@ -146,10 +145,25 @@ if (existsSync(runbookPath)) {
       failures.push(`Runbook missing required anchor: ${anchor}`);
     }
   }
+
+  const commandAnchorAlternatives = [
+    ["pnpm run pilot:m9:check", "npm run pilot:m9:check"],
+    ["pnpm run pilot:m9:rehearsal:check", "npm run pilot:m9:rehearsal:check"],
+    ["pnpm run pilot:m9:golive:check", "npm run pilot:m9:golive:check"],
+    ["pnpm run pilot:m9:golive:evidence:check", "npm run pilot:m9:golive:evidence:check"],
+    ["pnpm run runbook:m9:golive:evidence", "npm run runbook:m9:golive:evidence"],
+  ];
+
+  for (const alternatives of commandAnchorAlternatives) {
+    const found = alternatives.some((anchor) => runbook.includes(anchor));
+    if (!found) {
+      failures.push(`Runbook missing one of anchors: ${alternatives.join(" OR ")}`);
+    }
+  }
 }
 
 try {
-  runShellCommand("npm run pilot:m9:check");
+  runShellCommand("pnpm run pilot:m9:check");
 } catch (error) {
   const stderrText = String(error.stderr || "").trim();
   const stdoutText = String(error.stdout || "").trim();
@@ -158,7 +172,7 @@ try {
 }
 
 try {
-  runShellCommand("npm run pilot:m9:rehearsal:check");
+  runShellCommand("pnpm run pilot:m9:rehearsal:check");
 } catch (error) {
   const stderrText = String(error.stderr || "").trim();
   const stdoutText = String(error.stdout || "").trim();
@@ -168,7 +182,7 @@ try {
 
 if (process.env.SKIP_M9_GOLIVE_EVIDENCE_CHECK !== "1") {
   try {
-    runShellCommand("npm run pilot:m9:golive:evidence:check");
+    runShellCommand("pnpm run pilot:m9:golive:evidence:check");
   } catch (error) {
     const stderrText = String(error.stderr || "").trim();
     const stdoutText = String(error.stdout || "").trim();

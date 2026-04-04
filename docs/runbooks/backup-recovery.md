@@ -1,4 +1,4 @@
-# Backup and Recovery Procedures for PulseWard Hospital Management System
+﻿# Backup and Recovery Procedures for PulseWard Hospital Management System
 
 ## Overview
 
@@ -69,7 +69,7 @@ This document outlines the backup and recovery procedures for the PulseWard Hosp
 Generate a drill evidence artifact from repository root:
 
 ```powershell
-npm run runbook:backup-drill -- --tenant citycare-hospital --backup-id backup-2026-04-04 --restore-target sandbox-citycare --rto-minutes 45 --rpo-minutes 15 --operator platform-operations
+pnpm run runbook:backup-drill -- --tenant citycare-hospital --backup-id backup-2026-04-04 --restore-target sandbox-citycare --rto-minutes 45 --rpo-minutes 15 --operator platform-operations
 ```
 
 The command writes a dated evidence file under docs/runbooks/evidence for audit and milestone tracking.
@@ -77,7 +77,7 @@ The command writes a dated evidence file under docs/runbooks/evidence for audit 
 Verify tenant-isolation on restored records:
 
 ```powershell
-npm run runbook:restore-verify -- --tenant citycare-hospital --records-file docs/runbooks/evidence/restore-validation-sample-citycare-2026-04-04.json --operator platform-operations
+pnpm run runbook:restore-verify -- --tenant citycare-hospital --records-file docs/runbooks/evidence/restore-validation-sample-citycare-2026-04-04.json --operator platform-operations
 ```
 
 The command scans restored records for cross-tenant leakage and writes a dated evidence report under docs/runbooks/evidence.
@@ -85,3 +85,4 @@ The command scans restored records for cross-tenant leakage and writes a dated e
 ## Conclusion
 
 Implementing robust backup and recovery procedures is crucial for the PulseWard Hospital Management System to ensure data integrity and availability. Regular reviews and updates to these procedures will help maintain their effectiveness and adapt to any changes in the system or regulatory requirements.
+

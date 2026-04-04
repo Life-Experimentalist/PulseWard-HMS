@@ -1,4 +1,4 @@
-# M8 Performance and Resilience Readiness Gate
+﻿# M8 Performance and Resilience Readiness Gate
 
 ## Objective
 
@@ -16,7 +16,7 @@ Provide a single milestone-closeout command to validate M8 load, resilience, and
 Run from repository root:
 
 ```powershell
-npm run perf:m8:final:check
+pnpm run perf:m8:final:check
 ```
 
 Expected output:
@@ -28,10 +28,10 @@ Expected output:
 
 The M8 final gate executes these commands:
 
-- `npm run perf:m8:check`
-- `npm run perf:m8:resilience:check`
-- `npm run perf:m8:rc:evidence:check`
-- `npm run perf:m8:rc:check`
+- `pnpm run perf:m8:check`
+- `pnpm run perf:m8:resilience:check`
+- `pnpm run perf:m8:rc:evidence:check`
+- `pnpm run perf:m8:rc:check`
 
 ## Evidence Requirements
 

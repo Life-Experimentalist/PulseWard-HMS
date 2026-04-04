@@ -1,4 +1,4 @@
-# PulseWard Admin Console
+﻿# PulseWard Admin Console
 
 The Admin Console is a framework-based React + Vite application built for modular, professional operations workflows.
 Production usage is precompiled static assets (`dist`) served by a lightweight Node static server.
@@ -17,16 +17,16 @@ Production usage is precompiled static assets (`dist`) served by a lightweight N
 From repository root:
 
 ```powershell
-npm run install:admin
-npm run build:admin
-npm run start:admin
+pnpm run install:admin
+pnpm run build:admin
+pnpm run start:admin
 ```
 
 For CI/CD production pipelines:
 
 ```powershell
-npm run build:admin:ci
-npm run start:admin
+pnpm run build:admin:ci
+pnpm run start:admin
 ```
 
 `start:admin` serves prebuilt files only and does not run runtime bundling.
@@ -37,7 +37,7 @@ By default, it starts on `http://127.0.0.1:4180` and auto-falls forward to the n
 For iterative UI development:
 
 ```powershell
-npm run start:admin:dev
+pnpm run start:admin:dev
 ```
 
 ## Required Service Endpoints
@@ -64,3 +64,4 @@ For quick validation, the dashboard can submit one-time credentials directly in 
 
 - Keep CORS allowed origins permissive for local/LAN demos, then restrict for production.
 - Avoid using real patient identifiers in integration test payloads.
+

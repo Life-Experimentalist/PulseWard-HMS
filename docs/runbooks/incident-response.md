@@ -1,4 +1,4 @@
-# Incident Response Runbook for PulseWard Hospital Management System
+﻿# Incident Response Runbook for PulseWard Hospital Management System
 
 ## Purpose
 
@@ -79,8 +79,8 @@ Within one business day:
 Run baseline checks from repository root:
 
 ```powershell
-npm run ops:incident:check
-npm run ops:oncall:check
+pnpm run ops:incident:check
+pnpm run ops:oncall:check
 ```
 
 Expected outcome:
@@ -88,3 +88,4 @@ Expected outcome:
 - Incident severity matrix exists and includes all required severities.
 - Incident runbook contains required command-flow and trace-capture sections.
 - Required incident-related runbooks are present.
+

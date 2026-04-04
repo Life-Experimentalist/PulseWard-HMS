@@ -1,4 +1,4 @@
-# PulseWard API Catalog
+﻿# PulseWard API Catalog
 
 ## Purpose
 
@@ -212,8 +212,9 @@ Under `/billing` (also supported through gateway mounts):
 ## Contract and Drift Guardrails
 
 - Coverage and parity matrix: `docs/api/endpoint-contract-coverage-matrix.md`
-- Semantic parity check: `npm run contracts:check`
-- Strict CI parity check: `npm run contracts:check -- --strict`
+- Semantic parity check: `pnpm run contracts:check`
+- Strict CI parity check: `pnpm run contracts:check -- --strict`
 - Regression suite: `tests/contracts/parity-regression.test.js`
-- Coverage gate check: `npm run test` (Jest global thresholds enforced)
+- Coverage gate check: `pnpm run test` (Jest global thresholds enforced)
 - M4.3 route-edge and integration reliability suites: `tests/appointment/*edge*`, `tests/notification/*`, `tests/ehr/*edge*`, `tests/lab/*edge*`, `tests/auth/*surface*`, `tests/integrations/*`, and `tests/shared-utils/*`
+

@@ -1,4 +1,4 @@
-# M9 Cutover Rehearsal Evidence
+﻿# M9 Cutover Rehearsal Evidence
 
 - Status: pass
 
@@ -8,7 +8,7 @@
 - Environment: staging
 - Rehearsal owner:
 - Observer(s):
-- Command reference: `npm run pilot:m9:rehearsal:check`
+- Command reference: `pnpm run pilot:m9:rehearsal:check`
 
 ## Timeline
 
@@ -42,3 +42,4 @@
 - Delivery lead:
 - Operations lead:
 - Clinical safety lead:
+

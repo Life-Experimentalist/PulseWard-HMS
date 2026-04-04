@@ -1,4 +1,4 @@
-# M9 Pilot and Cutover Evidence (2026-04-04)
+﻿# M9 Pilot and Cutover Evidence (2026-04-04)
 
 ## Metadata
 
@@ -7,7 +7,7 @@
 - Operator: platform-operations
 - Commit SHA: not-specified
 - Executed at: 2026-04-03T23:40:31.416Z
-- Command: npm run pilot:m9:check
+- Command: pnpm run pilot:m9:check
 
 ## Pilot Status
 
@@ -39,3 +39,4 @@ Validated pilot cohort, evidence presence, cutover checklist, hypercare controls
 
 - Regenerate this artifact whenever pilot acceptance criteria or cutover checklist inventory changes.
 - If status is fail, attach issue link and mitigation plan before marking pilot checkpoint complete.
+

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+﻿import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -67,7 +67,7 @@ let status = "pass";
 let outputTail = "";
 
 try {
-  const stdout = execSync("npm run pilot:m9:check", {
+  const stdout = execSync("pnpm run pilot:m9:check", {
     cwd: workspaceRoot,
     shell: true,
     env: {
@@ -92,7 +92,7 @@ const content = `# M9 Pilot and Cutover Evidence (${dateStamp})
 - Operator: ${operator}
 - Commit SHA: ${commitSha}
 - Executed at: ${now.toISOString()}
-- Command: npm run pilot:m9:check
+- Command: pnpm run pilot:m9:check
 
 ## Pilot Status
 
@@ -133,3 +133,4 @@ if (status === "fail") {
 }
 
 console.log(`M9 pilot evidence generated: ${path.relative(workspaceRoot, outputPath)}`);
+

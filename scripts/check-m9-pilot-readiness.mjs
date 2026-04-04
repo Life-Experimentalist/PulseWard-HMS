@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+﻿import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -140,9 +140,6 @@ if (existsSync(runbookPath)) {
 
   const requiredAnchors = [
     "config/operations/m9-pilot-cutover-checklist.json",
-    "npm run pilot:m9:check",
-    "npm run pilot:m9:evidence:check",
-    "npm run runbook:m9:pilot:evidence",
     "docs/runbooks/templates/m9-pilot-cutover-summary-template.md",
   ];
 
@@ -151,11 +148,24 @@ if (existsSync(runbookPath)) {
       failures.push(`Runbook missing required anchor: ${anchor}`);
     }
   }
+
+  const commandAnchorAlternatives = [
+    ["pnpm run pilot:m9:check", "npm run pilot:m9:check"],
+    ["pnpm run pilot:m9:evidence:check", "npm run pilot:m9:evidence:check"],
+    ["pnpm run runbook:m9:pilot:evidence", "npm run runbook:m9:pilot:evidence"],
+  ];
+
+  for (const alternatives of commandAnchorAlternatives) {
+    const found = alternatives.some((anchor) => runbook.includes(anchor));
+    if (!found) {
+      failures.push(`Runbook missing one of anchors: ${alternatives.join(" OR ")}`);
+    }
+  }
 }
 
 if (process.env.SKIP_M9_PILOT_EVIDENCE_CHECK !== "1") {
   try {
-    runShellCommand("npm run pilot:m9:evidence:check");
+    runShellCommand("pnpm run pilot:m9:evidence:check");
   } catch (error) {
     const stderrText = String(error.stderr || "").trim();
     const stdoutText = String(error.stdout || "").trim();

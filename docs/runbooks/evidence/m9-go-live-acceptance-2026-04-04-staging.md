@@ -1,4 +1,4 @@
-# M9 Go-Live Acceptance Evidence
+﻿# M9 Go-Live Acceptance Evidence
 
 - Status: pass
 
@@ -6,7 +6,7 @@
 
 - Date: 2026-04-04
 - Environment: staging
-- Command reference: `npm run pilot:m9:golive:check`
+- Command reference: `pnpm run pilot:m9:golive:check`
 
 ## Acceptance Check Coverage
 
@@ -33,3 +33,4 @@
 - Product owner:
 - Engineering owner:
 - Operations owner:
+

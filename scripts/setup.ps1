@@ -1,5 +1,6 @@
-param(
-    [switch]$SkipNpmInstall,
+﻿param(
+    [Alias('SkipNpmInstall')]
+    [switch]$SkipInstall,
     [switch]$NoBuild,
     [switch]$SkipComposeUp
 )
@@ -31,8 +32,18 @@ try {
         throw 'Docker is not installed or not available in PATH.'
     }
 
-    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        throw 'npm is not installed or not available in PATH.'
+    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+        if (-not (Get-Command corepack -ErrorAction SilentlyContinue)) {
+            throw 'pnpm is not available and corepack is missing. Install Node.js 22+ and enable corepack.'
+        }
+
+        Write-Host 'pnpm not found. Enabling corepack and activating pnpm 9.15.0...'
+        Invoke-CheckedCommand -Description 'corepack enable' -Command {
+            corepack enable
+        }
+        Invoke-CheckedCommand -Description 'corepack prepare pnpm@9.15.0 --activate' -Command {
+            corepack prepare pnpm@9.15.0 --activate
+        }
     }
 
     Invoke-CheckedCommand -Description 'Docker engine connectivity check' -Command {
@@ -43,19 +54,14 @@ try {
         docker compose version | Out-Null
     }
 
-    if (-not $SkipNpmInstall) {
-        Write-Host 'Installing root dependencies with npm ci...'
-        Invoke-CheckedCommand -Description 'npm ci (root)' -Command {
-            npm ci
-        }
-
-        Write-Host 'Installing app dependencies...'
-        Invoke-CheckedCommand -Description 'npm run install:apps' -Command {
-            npm run install:apps
+    if (-not $SkipInstall) {
+        Write-Host 'Installing workspace dependencies with pnpm...'
+        Invoke-CheckedCommand -Description 'pnpm install --frozen-lockfile' -Command {
+            pnpm install --frozen-lockfile
         }
     }
     else {
-        Write-Host 'Skipping npm installs because -SkipNpmInstall was provided.'
+        Write-Host 'Skipping dependency installation because -SkipInstall was provided.'
     }
 
     $envExamplePath = Join-Path $projectRoot '.env.example'
@@ -88,11 +94,11 @@ try {
     Write-Host ''
     Write-Host 'Setup completed successfully.'
     Write-Host 'Next commands:'
-    Write-Host '  npm run start:auth'
-    Write-Host '  npm run start:notification'
-    Write-Host '  npm run start:appointment'
-    Write-Host '  npm run start:operations:dev'
-    Write-Host '  npm run test:smoke'
+    Write-Host '  pnpm run start:auth'
+    Write-Host '  pnpm run start:notification'
+    Write-Host '  pnpm run start:appointment'
+    Write-Host '  pnpm run start:operations:dev'
+    Write-Host '  pnpm run test:smoke'
 }
 finally {
     Pop-Location

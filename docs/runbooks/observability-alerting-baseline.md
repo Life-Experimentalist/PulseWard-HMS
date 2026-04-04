@@ -1,4 +1,4 @@
-# Observability and Alerting Baseline
+﻿# Observability and Alerting Baseline
 
 This runbook defines the M7 baseline for reliability dashboards and alert routing.
 
@@ -22,7 +22,7 @@ The baseline covers the first-pass operational controls required for M7:
 Run the baseline verification from repository root:
 
 ```powershell
-npm run ops:observability:check
+pnpm run ops:observability:check
 ```
 
 This command verifies:
@@ -53,3 +53,4 @@ This command verifies:
 ## Evidence Recording
 
 For each alerting-policy update, attach command output from ops:observability:check to roadmap or release evidence notes.
+

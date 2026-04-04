@@ -1,4 +1,4 @@
-# PulseWard HMS Documentation
+﻿# PulseWard HMS Documentation
 
 This directory is the primary source of truth for architecture, API behavior, delivery process, operations, and release evidence for PulseWard HMS.
 
@@ -20,6 +20,7 @@ This directory is the primary source of truth for architecture, API behavior, de
 	- `docs/api/error-model.md`
 	- `docs/api/versioning-policy.md`
 	- `docs/api/abha/`
+	- `postman/README.md` and importable Postman suite artifacts in `postman/`
 - Architecture and platform:
 	- `docs/architecture/system-context.md`
 	- `docs/architecture/container-diagram.md`
@@ -51,10 +52,10 @@ For every functional change:
 Run from repository root:
 
 ```powershell
-npm run contracts:check -- --strict
-npm run test:routes
-npm run test
-npm run test:smoke
+pnpm run contracts:check -- --strict
+pnpm run test:routes
+pnpm run test
+pnpm run test:smoke
 ```
 
 ## Notes
@@ -62,3 +63,4 @@ npm run test:smoke
 - Keep examples free of patient-identifying data.
 - Keep provider-specific behavior isolated to adapters and integration modules.
 - Treat docs in this directory as release artifacts, not optional commentary.
+

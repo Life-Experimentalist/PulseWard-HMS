@@ -1,4 +1,4 @@
-# M8 Load Validation Baseline
+﻿# M8 Load Validation Baseline
 
 ## Objective
 
@@ -24,7 +24,7 @@ The M8 load validation baseline covers these API paths:
 Run from repository root:
 
 ```powershell
-npm run perf:m8:check
+pnpm run perf:m8:check
 ```
 
 Expected output:

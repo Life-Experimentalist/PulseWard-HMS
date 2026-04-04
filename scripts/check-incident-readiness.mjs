@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+﻿import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const workspaceRoot = process.cwd();
@@ -92,15 +92,23 @@ if (!existsSync(runbookAbsolute)) {
     }
   }
 
-  const requiredAnchors = [
-    "config/operations/incident-severity-matrix.json",
-    "npm run ops:incident:check",
-    "npm run ops:oncall:check",
-  ];
+  const requiredAnchors = ["config/operations/incident-severity-matrix.json"];
 
   for (const anchor of requiredAnchors) {
     if (!runbookContent.includes(anchor)) {
       failures.push(`Incident runbook missing anchor: ${anchor}`);
+    }
+  }
+
+  const commandAnchorAlternatives = [
+    ["pnpm run ops:incident:check", "npm run ops:incident:check"],
+    ["pnpm run ops:oncall:check", "npm run ops:oncall:check"],
+  ];
+
+  for (const alternatives of commandAnchorAlternatives) {
+    const found = alternatives.some((anchor) => runbookContent.includes(anchor));
+    if (!found) {
+      failures.push(`Incident runbook missing one of anchors: ${alternatives.join(" OR ")}`);
     }
   }
 }

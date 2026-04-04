@@ -1,4 +1,4 @@
-# M9 Pilot and Cutover Readiness Baseline
+﻿# M9 Pilot and Cutover Readiness Baseline
 
 ## Objective
 
@@ -15,7 +15,7 @@ Define and validate the minimum pilot cohort, cutover checklist, and hypercare c
 Run from repository root:
 
 ```powershell
-npm run pilot:m9:check
+pnpm run pilot:m9:check
 ```
 
 Expected output:
@@ -28,7 +28,7 @@ Expected output:
 Run this command to execute the M9 pilot readiness gate and write a dated evidence artifact:
 
 ```powershell
-npm run runbook:m9:pilot:evidence -- --environment staging --tenant citycare-hospital --operator platform-operations
+pnpm run runbook:m9:pilot:evidence -- --environment staging --tenant citycare-hospital --operator platform-operations
 ```
 
 Artifact output path pattern:
@@ -42,10 +42,10 @@ During evidence generation, the pilot readiness gate bypasses only the evidence-
 - Validate the latest pilot/cutover evidence artifact before signoff:
 
 ```powershell
-npm run pilot:m9:evidence:check
+pnpm run pilot:m9:evidence:check
 ```
 
-- The pilot readiness gate (`npm run pilot:m9:check`) includes this evidence-presence check by default.
+- The pilot readiness gate (`pnpm run pilot:m9:check`) includes this evidence-presence check by default.
 
 ## Pilot Cohort Scope
 

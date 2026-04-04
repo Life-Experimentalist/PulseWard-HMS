@@ -1,4 +1,4 @@
-# M9 Production Readiness Gate
+﻿# M9 Production Readiness Gate
 
 ## Objective
 
@@ -16,7 +16,7 @@ Provide a single milestone-closeout command to validate pilot readiness, cutover
 Run from repository root:
 
 ```powershell
-npm run pilot:m9:final:check
+pnpm run pilot:m9:final:check
 ```
 
 Expected output:
@@ -28,12 +28,12 @@ Expected output:
 
 The M9 final gate executes these commands:
 
-- `npm run pilot:m9:evidence:check`
-- `npm run pilot:m9:rehearsal:evidence:check`
-- `npm run pilot:m9:golive:evidence:check`
-- `npm run pilot:m9:check`
-- `npm run pilot:m9:rehearsal:check`
-- `npm run pilot:m9:golive:check`
+- `pnpm run pilot:m9:evidence:check`
+- `pnpm run pilot:m9:rehearsal:evidence:check`
+- `pnpm run pilot:m9:golive:evidence:check`
+- `pnpm run pilot:m9:check`
+- `pnpm run pilot:m9:rehearsal:check`
+- `pnpm run pilot:m9:golive:check`
 
 ## Evidence Requirements
 
@@ -52,3 +52,4 @@ Each latest artifact must include:
 
 - Run this gate before marking M9 complete in roadmap accounting.
 - Attach command output summary to milestone ledger evidence notes.
+

@@ -1,4 +1,4 @@
-# PulseWard Quality Gates
+﻿# PulseWard Quality Gates
 
 ## Purpose
 
@@ -9,11 +9,11 @@ Quality gates define the minimum evidence required before merging and before rel
 Run from repository root:
 
 ```powershell
-npm run lint
-npm run format:check
-npm run test:routes
-npm run test
-npm run contracts:check -- --strict
+pnpm run lint
+pnpm run format:check
+pnpm run test:routes
+pnpm run test
+pnpm run contracts:check -- --strict
 ```
 
 Required outcomes:
@@ -27,17 +27,17 @@ Required outcomes:
 
 | Gate Command                          | Primary Config Source                                            |
 | ------------------------------------- | ---------------------------------------------------------------- |
-| `npm run lint`                        | `.eslintrc*` in repo root (and service overrides where present)  |
-| `npm run format:check`                | `.prettierrc*` in repo root                                      |
-| `npm run test:routes`                 | Route module entrypoints loaded via `package.json` script        |
-| `npm run test`                        | `jest.config.cjs`                                                |
-| `npm run contracts:check -- --strict` | `scripts/check-contract-coverage.mjs` plus service OpenAPI specs |
-| `npm run build:types`                 | `tsconfig.json`                                                  |
+| `pnpm run lint`                        | `.eslintrc*` in repo root (and service overrides where present)  |
+| `pnpm run format:check`                | `.prettierrc*` in repo root                                      |
+| `pnpm run test:routes`                 | Route module entrypoints loaded via `package.json` script        |
+| `pnpm run test`                        | `jest.config.cjs`                                                |
+| `pnpm run contracts:check -- --strict` | `scripts/check-contract-coverage.mjs` plus service OpenAPI specs |
+| `pnpm run build:types`                 | `tsconfig.json`                                                  |
 
 TypeScript config troubleshooting:
 
 ```powershell
-npm run build:types:show-config
+pnpm run build:types:show-config
 ```
 
 Use resolved config output to verify include/exclude behavior when local and CI typecheck results differ.
@@ -45,8 +45,8 @@ Use resolved config output to verify include/exclude behavior when local and CI 
 ## Integration Gate (Required for Service-Integration Changes)
 
 ```powershell
-npm run integrations:validate
-npm run test:smoke
+pnpm run integrations:validate
+pnpm run test:smoke
 ```
 
 Required outcomes:
@@ -90,3 +90,4 @@ Required outcomes:
 - Never merge changes that expose credentials or patient identifiers in logs, fixtures, or docs.
 - Keep provider-specific logic in adapter modules, not domain cores.
 - Prefer additive API changes; if breaking behavior is unavoidable, include migration and rollback guidance.
+

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+﻿import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
@@ -66,7 +66,7 @@ let status = "pass";
 let outputTail = "";
 
 try {
-  const stdout = execSync("npm run perf:m8:rc:check", {
+  const stdout = execSync("pnpm run perf:m8:rc:check", {
     cwd: workspaceRoot,
     shell: true,
     env: {
@@ -90,7 +90,7 @@ const content = `# M8 Release Candidate Gate Evidence (${dateStamp})
 - Operator: ${operator}
 - Commit SHA: ${commitSha}
 - Executed at: ${now.toISOString()}
-- Command: npm run perf:m8:rc:check
+- Command: pnpm run perf:m8:rc:check
 
 ## Gate Status
 
@@ -128,3 +128,4 @@ if (status === "fail") {
 }
 
 console.log(`M8 RC gate evidence generated: ${path.relative(workspaceRoot, outputPath)}`);
+

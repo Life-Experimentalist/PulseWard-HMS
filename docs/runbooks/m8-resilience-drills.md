@@ -1,4 +1,4 @@
-# M8 Resilience Drill Baseline
+﻿# M8 Resilience Drill Baseline
 
 ## Objective
 
@@ -22,7 +22,7 @@ The baseline covers three required resilience drills:
 Run from repository root:
 
 ```powershell
-npm run perf:m8:resilience:check
+pnpm run perf:m8:resilience:check
 ```
 
 Expected output:

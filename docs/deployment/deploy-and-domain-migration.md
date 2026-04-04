@@ -1,4 +1,4 @@
-# Deployment and Domain Migration Guide
+﻿# Deployment and Domain Migration Guide
 
 This guide keeps deployment practical: start cheap, keep API stable at `/api/v1`, and migrate domains without tenant leakage.
 
@@ -11,7 +11,7 @@ This guide keeps deployment practical: start cheap, keep API stable at `/api/v1`
 ## Prerequisites
 
 - Node.js 20+
-- npm 10+
+- pnpm 9.15.0+ (via Corepack or npm global install)
 - Docker Desktop
 - Cloudflare account (recommended for DNS/TLS/WAF)
 
@@ -20,7 +20,7 @@ This guide keeps deployment practical: start cheap, keep API stable at `/api/v1`
 Install dependencies:
 
 ```powershell
-npm ci
+pnpm install --frozen-lockfile
 ```
 
 Prepare environment:
@@ -32,35 +32,35 @@ Copy-Item .env.example .env
 Start supporting stack:
 
 ```powershell
-npm run demo:up
+pnpm run demo:up
 ```
 
 Start services in separate terminals:
 
 ```powershell
-npm run start:auth
+pnpm run start:auth
 ```
 
 ```powershell
-npm run start:notification
+pnpm run start:notification
 ```
 
 ```powershell
-npm run start:appointment
+pnpm run start:appointment
 ```
 
 Start landing page:
 
 ```powershell
-npm run start:landing
+pnpm run start:landing
 ```
 
 Validate:
 
 ```powershell
-npm run integrations:validate
-npm run test:routes
-npm run test:smoke
+pnpm run integrations:validate
+pnpm run test:routes
+pnpm run test:smoke
 ```
 
 ## 2) Configure Tenant Domains
@@ -143,8 +143,9 @@ If migration fails:
 4. Re-run:
 
 ```powershell
-npm run integrations:validate
-npm run test:smoke
+pnpm run integrations:validate
+pnpm run test:smoke
 ```
 
 5. Record incident and rollback evidence in GitHub issues.
+

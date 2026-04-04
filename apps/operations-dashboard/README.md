@@ -1,4 +1,4 @@
-# PulseWard Operations Dashboard
+﻿# PulseWard Operations Dashboard
 
 Framework-based operations control surface built with React + Vite.
 
@@ -15,8 +15,8 @@ Framework-based operations control surface built with React + Vite.
 From repository root:
 
 ```powershell
-npm run install:operations
-npm run start:operations:dev
+pnpm run install:operations
+pnpm run start:operations:dev
 ```
 
 Default Vite dev host runs with automatic port selection near `4312`.
@@ -77,8 +77,8 @@ Safety notes:
 From repository root:
 
 ```powershell
-npm run build:operations
-npm run start:operations
+pnpm run build:operations
+pnpm run start:operations
 ```
 
 `start:operations` serves prebuilt static output from `dist` and avoids runtime bundling.
@@ -89,3 +89,4 @@ Default static port is `4182` with automatic fallback to the next available port
 - API catalog: `../../docs/api/api-catalog.md`
 - Governance charter: `../../governance/project-management-charter.md`
 - Operations runbooks: `../../docs/runbooks/`
+

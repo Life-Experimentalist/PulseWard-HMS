@@ -1,4 +1,4 @@
-# PulseWard Mobile Notifications (Expo)
+﻿# PulseWard Mobile Notifications (Expo)
 
 This app provides the M6 mobile-notification baseline for PulseWard using Expo managed workflow.
 
@@ -23,15 +23,15 @@ $env:EXPO_PUBLIC_PULSEWARD_API_BASE_URL = "http://127.0.0.1:5102"
 ## Run
 
 ```powershell
-npm install
-npm run start
+pnpm install
+pnpm run start
 ```
 
 Or from repository root:
 
 ```powershell
-npm run install:mobile
-npm run start:mobile
+pnpm run install:mobile
+pnpm run start:mobile
 ```
 
 ## API Path Used
@@ -42,3 +42,4 @@ npm run start:mobile
 
 - This app is intentionally minimal for milestone closeout evidence.
 - It can be extended with auth session handling and push notification registration in M7+.
+

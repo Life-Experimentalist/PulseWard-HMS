@@ -16,10 +16,10 @@ This document maps the current implementation stack for each PulseWard app and s
 
 | App                         | UI Framework        | Build/Dev Tooling                              | Entry/Config Notes                                                                      |
 | --------------------------- | ------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `apps/admin-console`        | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0               | `src/main.jsx`, `vite.config.js`, env-driven port (`ADMIN_CONSOLE_PORT`, default 4180). |
-| `apps/clinician-portal`     | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0               | `src/main.jsx`, `vite.config.js`, default dev port 4311.                                |
-| `apps/operations-dashboard` | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0               | `src/main.jsx`, `vite.config.js`, default dev port 4312.                                |
-| `apps/patient-portal`       | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0               | `src/main.jsx`, `vite.config.js`, default dev port 4313.                                |
+| `apps/admin-console`        | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0                | `src/main.jsx`, `vite.config.js`, env-driven port (`ADMIN_CONSOLE_PORT`, default 4180). |
+| `apps/clinician-portal`     | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0                | `src/main.jsx`, `vite.config.js`, default dev port 4311.                                |
+| `apps/operations-dashboard` | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0                | `src/main.jsx`, `vite.config.js`, default dev port 4312.                                |
+| `apps/patient-portal`       | React 18.3.1        | Vite 7.3.1 + plugin-react 5.2.0                | `src/main.jsx`, `vite.config.js`, default dev port 4313.                                |
 | `apps/landing-page`         | Vanilla HTML/CSS/JS | No Vite/React build pipeline (served directly) | `index.html`, `app.js`, `styles.css`, static multi-page demo under `pages/`.            |
 
 ## Backend Service Matrix
@@ -38,13 +38,13 @@ This document maps the current implementation stack for each PulseWard app and s
 
 ## Shared Engineering Tooling
 
-| Category                 | Current Tooling                                                          |
-| ------------------------ | ------------------------------------------------------------------------ |
-| Test framework           | Jest 30.3.0 (`pnpm run test`)                                            |
-| Linting                  | ESLint 8.57.1 (`pnpm run lint`)                                          |
-| Formatting               | Prettier 2.8.8 (`pnpm run format`)                                       |
-| Type checking            | TypeScript 4.9.5 (`pnpm run build:types`)                                |
-| Package manager strategy | pnpm workspace with lockfile-driven local and CI installs                |
+| Category                 | Current Tooling                                           |
+| ------------------------ | --------------------------------------------------------- |
+| Test framework           | Jest 30.3.0 (`pnpm run test`)                             |
+| Linting                  | ESLint 8.57.1 (`pnpm run lint`)                           |
+| Formatting               | Prettier 2.8.8 (`pnpm run format`)                        |
+| Type checking            | TypeScript 4.9.5 (`pnpm run build:types`)                 |
+| Package manager strategy | pnpm workspace with lockfile-driven local and CI installs |
 
 ## Context7 Reference Notes
 

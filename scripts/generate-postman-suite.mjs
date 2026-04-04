@@ -332,4 +332,6 @@ fs.writeFileSync(collectionPath, JSON.stringify(collection, null, 2) + "\n", "ut
 fs.writeFileSync(environmentPath, JSON.stringify(environment, null, 2) + "\n", "utf8");
 
 const totalRequests = collection.item.reduce((acc, folder) => acc + folder.item.length, 0);
-console.log(`Generated Postman suite with ${collection.item.length} folders and ${totalRequests} requests.`);
+console.log(
+  `Generated Postman suite with ${collection.item.length} folders and ${totalRequests} requests.`
+);

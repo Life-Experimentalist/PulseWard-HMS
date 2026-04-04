@@ -142,13 +142,13 @@ This project currently uses DB settings from `.env` and can be run with local co
 
 ### 5.1 Configure database keys in `.env`
 
-Set these keys:
+Set these keys (already present in .env.example):
 
-1. `DB_HOST`
-2. `DB_PORT`
-3. `DB_NAME`
-4. `DB_USER`
-5. `DB_PASSWORD`
+1. `DB_HOST` -> `localhost` for local Docker setup
+2. `DB_PORT` -> `5432` for local Docker setup
+3. `DB_NAME` -> `pulseward` for local Docker setup
+4. `DB_USER` -> `pulseward_local` for local Docker setup
+5. `DB_PASSWORD` -> `change_me_local_only` for local Docker setup
 
 ### 5.2 Start local Postgres and MongoDB containers
 

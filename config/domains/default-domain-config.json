@@ -8,15 +8,23 @@
   "tenants": [
     {
       "tenantKey": "default",
+      "displayName": "PulseWard General",
       "landingDomain": "https://life-experimentalist.github.io/pulseward-hms",
       "apiDomain": "https://api.pulseward.example.com",
-      "allowedOrigins": ["https://life-experimentalist.github.io", "https://pulseward.example.com"]
+      "allowedOrigins": [
+        "https://life-experimentalist.github.io",
+        "https://pulseward.example.com"
+      ]
     },
     {
       "tenantKey": "citycare-hospital",
+      "displayName": "CityCare Hospital",
       "landingDomain": "https://citycare.pulseward.example.com",
       "apiDomain": "https://citycare-api.pulseward.example.com",
-      "allowedOrigins": ["https://citycare.pulseward.example.com", "https://citycare.example.com"]
+      "allowedOrigins": [
+        "https://citycare.pulseward.example.com",
+        "https://citycare.example.com"
+      ]
     }
   ]
 }

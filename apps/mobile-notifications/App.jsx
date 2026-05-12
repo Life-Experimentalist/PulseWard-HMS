@@ -22,6 +22,7 @@ const DEFAULT_API_BASE_URL = "http://" + DEFAULT_NETWORK_HOST + ":5102";
 const DEFAULT_AUTH_BASE_URL = "http://" + DEFAULT_NETWORK_HOST + ":5101";
 const DEFAULT_TEST_PUSH_TITLE = "PulseWard Test Push";
 const DEFAULT_TEST_PUSH_BODY = "Your Android phone is connected to PulseWard push.";
+const STAFF_ROLES = ["doctor", "nurse", "admin", "frontdesk", "operations"];
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -153,12 +154,29 @@ function isExpoPushToken(value) {
   return /^ExponentPushToken\[[^\]]+\]$/.test(value) || /^ExpoPushToken\[[^\]]+\]$/.test(value);
 }
 
+function normalizeOrganization(entry) {
+  var record = entry || {};
+  var tenantKey = String(record.tenantKey || "").trim();
+  if (!tenantKey) {
+    return null;
+  }
+
+  return {
+    tenantKey: tenantKey,
+    displayName:
+      String(record.displayName || record.organizationName || tenantKey).trim() || tenantKey,
+    landingDomain: String(record.landingDomain || "").trim(),
+  };
+}
+
 function App() {
   const apiBaseUrl = useMemo(getApiBaseUrl, []);
   const authBaseUrl = useMemo(getAuthBaseUrl, []);
-  const [tenantKey, setTenantKey] = useState("citycare-hospital");
+  const [tenantKey, setTenantKey] = useState("default");
+  const [organizations, setOrganizations] = useState([]);
+  const [organizationStatus, setOrganizationStatus] = useState("");
   const [projectId, setProjectId] = useState(resolveProjectId);
-  const [email, setEmail] = useState("patient@citycare.example.com");
+  const [email, setEmail] = useState("patient@pulseward.local");
   const [password, setPassword] = useState("demo-password");
   const [role, setRole] = useState("patient");
   const [authToken, setAuthToken] = useState("");
@@ -175,6 +193,32 @@ function App() {
   const [lastNotification, setLastNotification] = useState(null);
   const receivedListener = useRef(null);
   const responseListener = useRef(null);
+  const normalizedRole = useMemo(
+    function normalizeCurrentRole() {
+      return (
+        String(role || "")
+          .trim()
+          .toLowerCase() || "patient"
+      );
+    },
+    [role]
+  );
+  const isStaffRole = useMemo(
+    function resolveStaffRole() {
+      return STAFF_ROLES.indexOf(normalizedRole) >= 0;
+    },
+    [normalizedRole]
+  );
+  const selectedOrganization = useMemo(
+    function resolveSelectedOrganization() {
+      return (
+        organizations.find(function (entry) {
+          return entry.tenantKey === tenantKey;
+        }) || null
+      );
+    },
+    [organizations, tenantKey]
+  );
 
   useEffect(function setupNotificationListeners() {
     receivedListener.current = Notifications.addNotificationReceivedListener(function (event) {
@@ -200,6 +244,73 @@ function App() {
     };
   }, []);
 
+  useEffect(
+    function loadOrganizationCatalog() {
+      var active = true;
+
+      async function loadCatalog() {
+        setOrganizationStatus("");
+        try {
+          var response = await fetch(apiBaseUrl + "/api/v1/integrations/tenants/catalog");
+          var payload = await response.json().catch(function () {
+            return null;
+          });
+
+          if (!response.ok) {
+            throw new Error((payload && payload.message) || "Unable to load organizations.");
+          }
+
+          var rawOrganizations =
+            (payload && Array.isArray(payload.organizations) && payload.organizations) || [];
+          var normalizedOrganizations = rawOrganizations
+            .map(normalizeOrganization)
+            .filter(function (entry) {
+              return Boolean(entry);
+            });
+
+          if (!active) {
+            return;
+          }
+
+          setOrganizations(normalizedOrganizations);
+          if (normalizedOrganizations.length === 0) {
+            setOrganizationStatus("No organizations were returned by the API.");
+            return;
+          }
+
+          setOrganizationStatus("Select your organization by name.");
+          var hasCurrentTenant = normalizedOrganizations.some(function (entry) {
+            return entry.tenantKey === String(tenantKey || "").trim();
+          });
+
+          if (!hasCurrentTenant) {
+            setTenantKey(normalizedOrganizations[0].tenantKey);
+          }
+        } catch (catalogError) {
+          if (!active) {
+            return;
+          }
+
+          setOrganizations([]);
+          setOrganizationStatus(
+            catalogError && catalogError.message
+              ? catalogError.message
+              : "Unable to load organizations from server."
+          );
+        }
+      }
+
+      loadCatalog().catch(function () {
+        return null;
+      });
+
+      return function cleanupCatalogRequest() {
+        active = false;
+      };
+    },
+    [apiBaseUrl]
+  );
+
   const login = useCallback(
     async function login() {
       var nextTenant = String(tenantKey || "").trim();
@@ -210,7 +321,11 @@ function App() {
         .toLowerCase();
 
       if (!nextTenant || !nextEmail || !nextPassword || !nextRole) {
-        setAuthStatus("Tenant, email, password, and role are required.");
+        setAuthStatus(
+          STAFF_ROLES.indexOf(nextRole) >= 0
+            ? "Tenant, email, password, and role are required for staff login."
+            : "Select organization, then provide email, password, and role."
+        );
         return;
       }
 
@@ -268,7 +383,11 @@ function App() {
         .toLowerCase();
 
       if (!nextTenant || !nextEmail || !nextPassword || !nextRole) {
-        setAuthStatus("Tenant, email, password, and role are required.");
+        setAuthStatus(
+          STAFF_ROLES.indexOf(nextRole) >= 0
+            ? "Tenant, email, password, and role are required for staff registration."
+            : "Select organization, then provide email, password, and role."
+        );
         return;
       }
 
@@ -461,12 +580,16 @@ function App() {
   const loadEvents = useCallback(async () => {
     const nextTenant = tenantKey.trim();
     if (!nextTenant) {
-      setError("Tenant key is required.");
+      setError(
+        isStaffRole
+          ? "Tenant key is required for staff workflows."
+          : "Select an organization first."
+      );
       return;
     }
 
     if (!authToken) {
-      setError("Login first to load tenant-scoped events.");
+      setError("Login first to load your organization-scoped events.");
       return;
     }
 
@@ -497,7 +620,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [apiBaseUrl, authToken, tenantKey]);
+  }, [apiBaseUrl, authToken, isStaffRole, tenantKey]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -509,7 +632,9 @@ function App() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>PulseWard Notifications</Text>
-          <Text style={styles.subtitle}>Tenant-scoped appointment event inbox</Text>
+          <Text style={styles.subtitle}>
+            Unified app for all organizations. Patients choose by name; staff can use tenant key.
+          </Text>
         </View>
 
         <View style={styles.controls}>
@@ -521,7 +646,7 @@ function App() {
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="patient@citycare.example.com"
+            placeholder="patient@pulseward.local"
             autoCapitalize="none"
             autoCorrect={false}
             style={styles.input}
@@ -547,6 +672,12 @@ function App() {
             autoCorrect={false}
             style={styles.input}
           />
+
+          <Text style={styles.meta}>
+            {isStaffRole
+              ? "Staff role detected: ensure tenant, assigned email, and password match your organization credentials."
+              : "Patient role detected: select organization by name below; no raw tenant key needed."}
+          </Text>
 
           <TouchableOpacity
             accessibilityRole="button"
@@ -577,15 +708,69 @@ function App() {
         </View>
 
         <View style={styles.controls}>
-          <Text style={styles.label}>Tenant key</Text>
-          <TextInput
-            value={tenantKey}
-            onChangeText={setTenantKey}
-            placeholder="citycare-hospital"
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
+          <Text style={styles.title2}>Organization</Text>
+          <Text style={styles.meta}>
+            {organizationStatus || "Choose the organization that owns your care records."}
+          </Text>
+
+          {organizations.length === 0 ? (
+            <Text style={styles.empty}>No organizations loaded yet.</Text>
+          ) : (
+            <View style={styles.organizationList}>
+              {organizations.map(function (organization) {
+                var selected = organization.tenantKey === tenantKey;
+                return (
+                  <TouchableOpacity
+                    key={organization.tenantKey}
+                    accessibilityRole="button"
+                    onPress={function () {
+                      setTenantKey(organization.tenantKey);
+                    }}
+                    style={selected ? styles.organizationOptionActive : styles.organizationOption}
+                  >
+                    <Text
+                      style={
+                        selected
+                          ? styles.organizationOptionTitleActive
+                          : styles.organizationOptionTitle
+                      }
+                    >
+                      {organization.displayName}
+                    </Text>
+                    <Text
+                      style={
+                        selected
+                          ? styles.organizationOptionMetaActive
+                          : styles.organizationOptionMeta
+                      }
+                    >
+                      {organization.landingDomain || "PulseWard organization"}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {isStaffRole ? (
+            <>
+              <Text style={styles.label}>Tenant key (staff required)</Text>
+              <TextInput
+                value={tenantKey}
+                onChangeText={setTenantKey}
+                placeholder="citycare-hospital"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.input}
+              />
+            </>
+          ) : (
+            <Text style={styles.meta}>
+              Selected organization:{" "}
+              {selectedOrganization ? selectedOrganization.displayName : "none"}
+            </Text>
+          )}
+
           <TouchableOpacity
             accessibilityRole="button"
             onPress={loadEvents}
@@ -682,7 +867,9 @@ function App() {
 
         <View style={styles.list}>
           {!loading && events.length === 0 ? (
-            <Text style={styles.empty}>No events loaded yet. Fetch events for a tenant.</Text>
+            <Text style={styles.empty}>
+              No events loaded yet. Choose an organization and fetch events.
+            </Text>
           ) : null}
 
           {events.map(function (item, index) {
@@ -758,6 +945,47 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: "#17324a",
+  },
+  organizationList: {
+    marginTop: 8,
+  },
+  organizationOption: {
+    borderWidth: 1,
+    borderColor: "#d1dde7",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    backgroundColor: "#ffffff",
+  },
+  organizationOptionActive: {
+    borderWidth: 1,
+    borderColor: "#0d6b52",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    backgroundColor: "#e9f5f1",
+  },
+  organizationOptionTitle: {
+    color: "#17324a",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  organizationOptionTitleActive: {
+    color: "#0d6b52",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  organizationOptionMeta: {
+    marginTop: 4,
+    color: "#587083",
+    fontSize: 12,
+  },
+  organizationOptionMetaActive: {
+    marginTop: 4,
+    color: "#1f7c62",
+    fontSize: 12,
   },
   button: {
     marginTop: 10,

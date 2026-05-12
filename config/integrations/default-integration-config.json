@@ -119,21 +119,34 @@
     {
       "channel": "patient-notification",
       "defaultProvider": "telegram-bot",
-      "fallbackProviders": ["email-smtp", "generic-webhook", "whatsapp-cloud-api"]
+      "fallbackProviders": [
+        "email-smtp",
+        "generic-webhook",
+        "whatsapp-cloud-api"
+      ]
     },
     {
       "channel": "staff-notification",
       "defaultProvider": "email-smtp",
-      "fallbackProviders": ["telegram-bot", "generic-webhook"]
+      "fallbackProviders": [
+        "telegram-bot",
+        "generic-webhook"
+      ]
     },
     {
       "channel": "website-hook",
       "defaultProvider": "generic-webhook",
-      "fallbackProviders": ["whatsapp-cloud-api"]
+      "fallbackProviders": [
+        "whatsapp-cloud-api"
+      ]
     }
   ],
   "calendarRouting": {
     "defaultProvider": "google-calendar",
-    "fallbackProviders": ["apple-calendar", "outlook-calendar", "ics-calendar"]
+    "fallbackProviders": [
+      "apple-calendar",
+      "outlook-calendar",
+      "ics-calendar"
+    ]
   }
 }

@@ -349,7 +349,13 @@ All connector env values are JSON strings in `.env`.
 
 1. Cost/ease: free and easiest to start.
 2. Get token from `@BotFather`.
-3. Env value:
+3. Preferred PulseWard-wide env value (shared bot across tenants):
+
+```dotenv
+INTEGRATION_TELEGRAM_BOT_TOKEN=<bot_token>
+```
+
+4. Alternate credentials JSON value:
 
 ```dotenv
 INTEGRATION_TELEGRAM_CREDENTIALS={"botToken":"<bot_token>","chatId":"<chat_or_channel_id>"}
@@ -644,7 +650,10 @@ Startup behavior note:
 
 1. Services now bind to their expected default ports and fail fast on conflicts.
 2. They do not auto-shift to other ports anymore.
-3. If you rerun a start command and see `port <x> is already in use`, it means an instance is already active on the correct port.
+3. `pnpm run start:notification` now checks port ownership before startup.
+4. If the same notification-service already owns the port, it prompts whether to stop that process and continue here.
+5. If a different process owns the port, it will not kill it and exits with a clear error.
+6. If needed for automation, use `pnpm run start:notification:raw`.
 
 Demo messaging note:
 
@@ -662,13 +671,26 @@ $token = (Invoke-RestMethod -Method Post -Uri 'http://localhost:5101/api/v1/auth
 6. Link Telegram chat to this authenticated user (doctor):
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ tenantKey='citycare-hospital'; chatId='8654870262' } | ConvertTo-Json)
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link' -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body (@{ chatId='8654870262' } | ConvertTo-Json)
 ```
+
+One-tap auth -> auto-link -> redirect back to Telegram (recommended):
+
+```powershell
+Start-Process 'http://localhost:5102/api/v1/integrations/messaging/telegram/link/auth?chatId=8654870262'
+```
+
+Common sign-in behavior in this page:
+
+1. Single tenant-independent URL for all organizations.
+2. Organization selector is shown first.
+3. Shared provider entry (Email Password active, Google start integrated, generic provider-style placeholder).
+4. After successful login, the page shows organization branding context and then redirects back to Telegram.
 
 Optional guided onboarding URL (useful from `/start` output):
 
 ```powershell
-Invoke-RestMethod -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link/bootstrap?tenantKey=citycare-hospital&chatId=8654870262'
+Invoke-RestMethod -Uri 'http://localhost:5102/api/v1/integrations/messaging/telegram/link/bootstrap?chatId=8654870262'
 ```
 
 Full endpoint URL:
@@ -677,9 +699,12 @@ Full endpoint URL:
 
 What this does:
 
-1. Links current authenticated user to provided Telegram `chatId` for the same tenant.
-2. Pushes role-based command menu to that chat.
-3. Doctors will not see `/book` in menu anymore.
+1. Links current authenticated user to provided Telegram `chatId`.
+2. Same PulseWard Telegram bot can be used for all tenants.
+3. If chat was already linked, latest link replaces older chat binding safely.
+4. Staff may still pass `tenantKey` explicitly when needed.
+5. Pushes role-based command menu to that chat.
+6. Doctors will not see `/book` in menu anymore.
 
 Tenant time defaults for Telegram summaries:
 
@@ -699,7 +724,25 @@ Public URL settings for Telegram onboarding messages:
 
 1. `INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL` (example: `https://api.yourdomain.com`)
 2. `INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL` (example: `https://auth.yourdomain.com`)
-3. If unset, local defaults are used (`http://localhost:5102` and `http://localhost:5101`).
+3. `PULSEWARD_LAN_HOST` (example: `192.168.1.50`) to auto-generate Wi-Fi URLs.
+4. `INTEGRATION_TELEGRAM_BOT_USERNAME` (example: `pulseward_bot`) for Telegram redirect target.
+5. If public URL vars are unset but `PULSEWARD_LAN_HOST` is set, onboarding links use `http://<lan-host>:5102` and `http://<lan-host>:5101`.
+6. If all are unset, localhost defaults are used.
+
+Domain-ready progression:
+
+1. Use `PULSEWARD_LAN_HOST` during local Wi-Fi rollout.
+2. Later switch to real domains by setting `INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL` and `INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL`.
+3. No code change required for this switch.
+
+Wi-Fi LAN example (same network devices):
+
+```powershell
+$env:PULSEWARD_LAN_HOST = "192.168.1.50"
+$env:INTEGRATION_TELEGRAM_BOT_USERNAME = "your_bot_username"
+```
+
+Then restart notification-service so `/start` messages contain LAN URLs.
 
 7. Publish Telegram bot commands (admin or operations token):
 
@@ -737,9 +780,15 @@ Patient chat menu:
 
 Unlinked chat onboarding behavior:
 
-1. `/start` returns an onboarding intro with tenant and detected `chatId`.
-2. The message includes concrete login + link URLs and a bootstrap guide URL.
-3. After linking, run `/help` to see role-specific commands.
+1. `/start` returns an onboarding intro with detected `chatId` and shared-bot guidance.
+2. The message includes a one-tap auth URL that opens browser login, then auto-links chat.
+3. After successful login/link, browser redirects back to Telegram bot URL.
+4. Bootstrap response also includes organization list for patient-friendly selection.
+5. After linking, run `/help` to see role-specific commands.
+6. One-tap page uses a common pre-login experience; org-specific branding context is shown after login success.
+7. Unlinked onboarding now also includes Telegram inline action buttons for direct tapping:
+	- Open Login + Link Page
+	- Open Setup Guide JSON
 
 Cross-platform note (Windows, Docker, Linux):
 
@@ -761,9 +810,10 @@ pnpm --dir apps/mobile-notifications start:lan
 
 In app:
 
-1. Login with same tenant/email/role.
-2. Enable push and get token.
-3. Send test push.
+1. Select organization by display name (patients) or set tenant key directly (staff).
+2. Login with assigned email/password/role.
+3. Enable push and get token.
+4. Send test push.
 
 11. If you want an installable APK, choose one path:
 
@@ -820,11 +870,12 @@ The server uses authenticated identity context, not random broadcast.
 
 1. Login token from auth-service includes user subject (`sub`) and `tenantKey`.
 2. Telegram mapping is created by `POST /api/v1/integrations/messaging/telegram/link`.
-3. Mapping key is `(tenantKey + subject)` and value is `chatId`.
+3. Mapping stores `(tenantKey + subject)` with `chatId`, and chat-level routing always resolves the latest linked account.
 4. Mobile mapping is created by `POST /api/v1/integrations/mobile/push/register`.
 5. Mapping key is `(tenantKey + subject)` and value is Expo push token.
 6. `POST /api/v1/integrations/messaging/test` and `POST /api/v1/integrations/mobile/push/test` use the authenticated subject to resolve destination.
 7. Tenant mismatch is blocked with `403`.
+8. Patient-facing organization picker can use `GET /api/v1/integrations/tenants/catalog`.
 
 Current demo note:
 

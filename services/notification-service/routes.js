@@ -1,11 +1,15 @@
 var crypto = require("crypto");
 var express = require("express");
+var fs = require("fs");
 var jwt = require("jsonwebtoken");
+var os = require("os");
+var path = require("path");
 var randomUUID = crypto.randomUUID;
 var sendNotificationWithRouting =
   require("./integrations/send-notification-with-routing").sendNotificationWithRouting;
 var loadTenantIntegrationConfig =
   require("../../packages/shared-utils/load-tenant-integration-config").loadTenantIntegrationConfig;
+var loadDomainConfig = require("../../packages/shared-utils/load-domain-config").loadDomainConfig;
 var resolveSecretRef = require("../../packages/shared-utils/resolve-secret-ref").resolveSecretRef;
 
 var router = express.Router();
@@ -30,6 +34,20 @@ var TELEGRAM_TENANT_DEFAULT_TIMEZONE = "UTC";
 var TELEGRAM_TENANT_DEFAULT_LOCALE = "en-IN";
 var TELEGRAM_PUBLIC_NOTIFICATION_BASE_URL_DEFAULT = "http://localhost:5102";
 var TELEGRAM_PUBLIC_AUTH_BASE_URL_DEFAULT = "http://localhost:5101";
+var detectedPrivateLanHost = null;
+var DEFAULT_BRANDING_CONFIG_PATH = path.resolve(
+  __dirname,
+  "../../config/branding/default-branding.json"
+);
+var TELEGRAM_LINK_ALLOWED_ROLES = [
+  "admin",
+  "doctor",
+  "nurse",
+  "patient",
+  "frontdesk",
+  "operations",
+];
+var TELEGRAM_LINK_DEFAULT_ROLE = "patient";
 var messagingFaultInjectionEvents = [];
 var maxMessagingFaultInjectionEvents = parseRetryInt(
   process.env.INTEGRATION_FAULT_INJECTION_RETENTION_MAX,
@@ -383,6 +401,10 @@ function normalizeTenantKey(value, fallback) {
   return normalized;
 }
 
+function normalizeOptionalTenantKey(value) {
+  return String(value || "").trim();
+}
+
 function extractBearerToken(req) {
   var headerValue = String((req.headers && req.headers.authorization) || "").trim();
   if (!headerValue) {
@@ -490,7 +512,7 @@ function maskPushToken(pushToken) {
   return token.slice(0, 12) + "..." + token.slice(-4);
 }
 
-function getTelegramBotToken(config) {
+function getTelegramBotTokenFromConfig(config) {
   var provider = findMessagingProvider(config, "telegram-bot");
   var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_TELEGRAM_CREDENTIALS");
   if (!secretStatus || !secretStatus.parsed || !secretStatus.parsed.botToken) {
@@ -498,6 +520,30 @@ function getTelegramBotToken(config) {
   }
 
   return String(secretStatus.parsed.botToken).trim();
+}
+
+function getTelegramBotToken(config, tenantKey) {
+  var globalToken = String(
+    process.env.INTEGRATION_TELEGRAM_BOT_TOKEN || process.env.PULSEWARD_TELEGRAM_BOT_TOKEN || ""
+  ).trim();
+  if (globalToken) {
+    return globalToken;
+  }
+
+  var directToken = getTelegramBotTokenFromConfig(config);
+  if (directToken) {
+    return directToken;
+  }
+
+  var normalizedTenant = normalizeTenantKey(tenantKey, "");
+  if (normalizedTenant && normalizedTenant !== "default") {
+    var defaultToken = getTelegramBotTokenFromConfig(loadTenantIntegrationConfig("default"));
+    if (defaultToken) {
+      return defaultToken;
+    }
+  }
+
+  return "";
 }
 
 async function fetchTelegramChatCandidates(botToken) {
@@ -570,24 +616,216 @@ function normalizePublicBaseUrl(value, fallbackValue) {
   return candidate.replace(/\/+$/, "");
 }
 
+function normalizeNetworkHostCandidate(value) {
+  var raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    var source = raw.indexOf("://") >= 0 ? raw : "http://" + raw;
+    var parsed = new URL(source);
+    var host = String(parsed.hostname || "").trim();
+    if (!host) {
+      return "";
+    }
+
+    if (
+      host === "localhost" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host === "[::1]" ||
+      host === "127.0.0.1" ||
+      host.startsWith("127.")
+    ) {
+      return "";
+    }
+
+    return host;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function buildHttpBaseUrlFromHost(host, port) {
+  var safeHost = normalizeNetworkHostCandidate(host);
+  if (!safeHost) {
+    return "";
+  }
+
+  return "http://" + safeHost + ":" + String(port || "");
+}
+
+function isPrivateIpv4Address(value) {
+  var ip = String(value || "").trim();
+  if (!ip) {
+    return false;
+  }
+
+  if (ip.indexOf("192.168.") === 0 || ip.indexOf("10.") === 0) {
+    return true;
+  }
+
+  return /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
+}
+
+function isLikelyVirtualInterfaceName(name) {
+  return /(vEthernet|Hyper-V|VMware|Virtual|Loopback|vbox|docker|wsl|warp|tailscale)/i.test(
+    String(name || "")
+  );
+}
+
+function detectPrivateLanHost() {
+  if (detectedPrivateLanHost) {
+    return detectedPrivateLanHost;
+  }
+
+  var interfaces = os.networkInterfaces();
+  var bestCandidate = "";
+  var bestScore = -100000;
+
+  Object.keys(interfaces || {}).forEach(function (interfaceName) {
+    var records = Array.isArray(interfaces[interfaceName]) ? interfaces[interfaceName] : [];
+    records.forEach(function (record) {
+      if (!record || record.family !== "IPv4" || record.internal) {
+        return;
+      }
+
+      var address = String(record.address || "").trim();
+      if (!isPrivateIpv4Address(address)) {
+        return;
+      }
+
+      var score = 0;
+      if (!isLikelyVirtualInterfaceName(interfaceName)) {
+        score += 100;
+      }
+      if (/wi-?fi|wlan/i.test(interfaceName)) {
+        score += 40;
+      }
+      if (/ethernet|eth/i.test(interfaceName)) {
+        score += 25;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = address;
+      }
+    });
+  });
+
+  detectedPrivateLanHost = normalizeNetworkHostCandidate(bestCandidate);
+  return detectedPrivateLanHost;
+}
+
+function resolvePulseWardLanHost() {
+  var explicitHost = normalizeNetworkHostCandidate(
+    process.env.INTEGRATION_TELEGRAM_PUBLIC_LAN_HOST ||
+      process.env.PULSEWARD_PUBLIC_LAN_HOST ||
+      process.env.PULSEWARD_LAN_HOST ||
+      process.env.EXPO_PUBLIC_PULSEWARD_HOST
+  );
+  if (explicitHost) {
+    return explicitHost;
+  }
+
+  return detectPrivateLanHost();
+}
+
 function buildAbsoluteApiUrl(baseUrl, apiPath) {
   return normalizePublicBaseUrl(baseUrl, "") + String(apiPath || "");
 }
 
 function getTelegramPublicNotificationBaseUrl() {
+  var lanBaseUrl = buildHttpBaseUrlFromHost(resolvePulseWardLanHost(), 5102);
   return normalizePublicBaseUrl(
     process.env.INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL ||
       process.env.PULSEWARD_PUBLIC_NOTIFICATION_BASE_URL,
-    TELEGRAM_PUBLIC_NOTIFICATION_BASE_URL_DEFAULT
+    lanBaseUrl || TELEGRAM_PUBLIC_NOTIFICATION_BASE_URL_DEFAULT
   );
 }
 
 function getTelegramPublicAuthBaseUrl() {
+  var lanBaseUrl = buildHttpBaseUrlFromHost(resolvePulseWardLanHost(), 5101);
   return normalizePublicBaseUrl(
     process.env.INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL ||
       process.env.PULSEWARD_PUBLIC_AUTH_BASE_URL,
-    TELEGRAM_PUBLIC_AUTH_BASE_URL_DEFAULT
+    lanBaseUrl || TELEGRAM_PUBLIC_AUTH_BASE_URL_DEFAULT
   );
+}
+
+function getAuthServiceInternalBaseUrl() {
+  return normalizePublicBaseUrl(process.env.AUTH_SERVICE_BASE_URL, "http://127.0.0.1:5101");
+}
+
+function isSafeTelegramReturnUrl(value) {
+  var raw = String(value || "").trim();
+  if (!raw) {
+    return false;
+  }
+
+  if (raw.toLowerCase().indexOf("tg://") === 0) {
+    return true;
+  }
+
+  try {
+    var parsed = new URL(raw);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function getTelegramBotReturnUrl() {
+  var explicitUrl = String(
+    process.env.INTEGRATION_TELEGRAM_BOT_DEEP_LINK ||
+      process.env.PULSEWARD_TELEGRAM_BOT_DEEP_LINK ||
+      ""
+  ).trim();
+  if (isSafeTelegramReturnUrl(explicitUrl)) {
+    return explicitUrl;
+  }
+
+  var botUsername = String(
+    process.env.INTEGRATION_TELEGRAM_BOT_USERNAME ||
+      process.env.PULSEWARD_TELEGRAM_BOT_USERNAME ||
+      ""
+  )
+    .trim()
+    .replace(/^@+/, "");
+  if (botUsername) {
+    return "https://t.me/" + botUsername;
+  }
+
+  return "https://t.me";
+}
+
+function normalizeTelegramReturnUrl(value) {
+  if (isSafeTelegramReturnUrl(value)) {
+    return String(value).trim();
+  }
+
+  return getTelegramBotReturnUrl();
+}
+
+function normalizeTelegramLinkRole(value) {
+  var normalized = String(value || TELEGRAM_LINK_DEFAULT_ROLE)
+    .trim()
+    .toLowerCase();
+  if (TELEGRAM_LINK_ALLOWED_ROLES.indexOf(normalized) < 0) {
+    return "";
+  }
+
+  return normalized;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function toTenantEnvKeySuffix(tenantKey) {
@@ -595,6 +833,103 @@ function toTenantEnvKeySuffix(tenantKey) {
     .replace(/[^a-zA-Z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .toUpperCase();
+}
+
+function buildTenantDisplayName(tenantKey) {
+  var normalized = normalizeTenantKey(tenantKey, "default");
+  if (normalized === "default") {
+    return "PulseWard";
+  }
+
+  return normalized
+    .split(/[-_\s]+/)
+    .filter(function (part) {
+      return Boolean(part);
+    })
+    .map(function (part) {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ");
+}
+
+function getPulseWardTenantCatalog() {
+  try {
+    var domainConfig = loadDomainConfig();
+    var tenants = Array.isArray(domainConfig && domainConfig.tenants) ? domainConfig.tenants : [];
+
+    if (tenants.length === 0) {
+      return [{ tenantKey: "default", displayName: "PulseWard" }];
+    }
+
+    return tenants.map(function (tenant) {
+      var tenantKey = normalizeTenantKey(tenant && tenant.tenantKey, "default");
+      return {
+        tenantKey: tenantKey,
+        displayName:
+          String(
+            (tenant && (tenant.displayName || tenant.organizationName || tenant.orgName)) || ""
+          ).trim() || buildTenantDisplayName(tenantKey),
+        landingDomain: String((tenant && tenant.landingDomain) || "").trim(),
+      };
+    });
+  } catch (_error) {
+    return [{ tenantKey: "default", displayName: "PulseWard" }];
+  }
+}
+
+function getPulseWardDefaultBranding() {
+  try {
+    var raw = fs.readFileSync(DEFAULT_BRANDING_CONFIG_PATH, "utf8");
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+
+    return parsed;
+  } catch (_error) {
+    return {};
+  }
+}
+
+function getTenantBrandingContext(tenantKey) {
+  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var catalog = getPulseWardTenantCatalog();
+  var organization = catalog.find(function (item) {
+    return normalizeTenantKey(item && item.tenantKey, "default") === normalizedTenant;
+  }) ||
+    catalog[0] || {
+      tenantKey: normalizedTenant,
+      displayName: buildTenantDisplayName(normalizedTenant),
+    };
+  var defaults = getPulseWardDefaultBranding();
+  var colors = (defaults && defaults.colors && typeof defaults.colors === "object"
+    ? defaults.colors
+    : {
+        primary: "#0f4c5c",
+        accent: "#ea8f3b",
+        surface: "#f7faf9",
+        text: "#1f2933",
+      }) || {
+    primary: "#0f4c5c",
+    accent: "#ea8f3b",
+    surface: "#f7faf9",
+    text: "#1f2933",
+  };
+
+  return {
+    tenantKey: normalizeTenantKey(organization.tenantKey, normalizedTenant),
+    organizationDisplayName:
+      String(organization.displayName || "").trim() || buildTenantDisplayName(normalizedTenant),
+    platformDisplayName:
+      String((defaults && defaults.displayName) || "PulseWard").trim() || "PulseWard",
+    tagline: String((defaults && defaults.tagline) || "").trim() || "Reliable care operations",
+    colors: {
+      primary: String(colors.primary || "#0f4c5c"),
+      accent: String(colors.accent || "#ea8f3b"),
+      surface: String(colors.surface || "#f7faf9"),
+      text: String(colors.text || "#1f2933"),
+    },
+  };
 }
 
 function normalizeTenantTimeZone(value) {
@@ -736,21 +1071,17 @@ function resolvePatientDescriptor(item) {
   var patientId = String(record.patientId || "").trim();
   var patientName =
     String(
-      record.patientName ||
-        record.patientDisplayName ||
-        record.patientFullName ||
-        record.name ||
-        ""
+      record.patientName || record.patientDisplayName || record.patientFullName || record.name || ""
     ).trim() || toDisplayNameFromIdentifier(patientId);
 
   var ageCandidate =
     record.patientAge !== undefined
       ? record.patientAge
       : record.age !== undefined
-        ? record.age
-        : record.patient && record.patient.age !== undefined
-          ? record.patient.age
-          : "";
+      ? record.age
+      : record.patient && record.patient.age !== undefined
+      ? record.patient.age
+      : "";
   var numericAge = Number(ageCandidate);
   var ageText = Number.isFinite(numericAge) && numericAge > 0 ? String(Math.floor(numericAge)) : "";
 
@@ -762,29 +1093,58 @@ function resolvePatientDescriptor(item) {
 }
 
 function buildTelegramOnboardingEndpoints(tenantKey, chatId) {
-  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var normalizedTenant = normalizeOptionalTenantKey(tenantKey);
   var normalizedChatId = String(chatId || "").trim();
   var notificationBaseUrl = getTelegramPublicNotificationBaseUrl();
   var authBaseUrl = getTelegramPublicAuthBaseUrl();
+  var returnToUrl = getTelegramBotReturnUrl();
+  var bootstrapQuery = [];
+  var authLinkQuery = [];
+
+  if (normalizedTenant) {
+    bootstrapQuery.push("tenantKey=" + encodeURIComponent(normalizedTenant));
+    authLinkQuery.push("tenantKey=" + encodeURIComponent(normalizedTenant));
+  }
+
+  if (normalizedChatId) {
+    bootstrapQuery.push("chatId=" + encodeURIComponent(normalizedChatId));
+    authLinkQuery.push("chatId=" + encodeURIComponent(normalizedChatId));
+  }
+
+  authLinkQuery.push("returnTo=" + encodeURIComponent(returnToUrl));
+
+  var bootstrapUrl = buildAbsoluteApiUrl(
+    notificationBaseUrl,
+    "/api/v1/integrations/messaging/telegram/link/bootstrap"
+  );
+  if (bootstrapQuery.length > 0) {
+    bootstrapUrl += "?" + bootstrapQuery.join("&");
+  }
+
+  var authLinkUrl = buildAbsoluteApiUrl(
+    notificationBaseUrl,
+    "/api/v1/integrations/messaging/telegram/link/auth"
+  );
+  if (authLinkQuery.length > 0) {
+    authLinkUrl += "?" + authLinkQuery.join("&");
+  }
 
   return {
+    tenantKey: normalizedTenant,
     notificationBaseUrl: notificationBaseUrl,
     authBaseUrl: authBaseUrl,
     loginUrl: buildAbsoluteApiUrl(authBaseUrl, "/api/v1/auth/login"),
-    linkUrl: buildAbsoluteApiUrl(notificationBaseUrl, "/api/v1/integrations/messaging/telegram/link"),
+    linkUrl: buildAbsoluteApiUrl(
+      notificationBaseUrl,
+      "/api/v1/integrations/messaging/telegram/link"
+    ),
     commandSetupUrl: buildAbsoluteApiUrl(
       notificationBaseUrl,
       "/api/v1/integrations/messaging/telegram/commands/setup"
     ),
-    bootstrapUrl:
-      buildAbsoluteApiUrl(
-        notificationBaseUrl,
-        "/api/v1/integrations/messaging/telegram/link/bootstrap"
-      ) +
-      "?tenantKey=" +
-      encodeURIComponent(normalizedTenant) +
-      "&chatId=" +
-      encodeURIComponent(normalizedChatId),
+    authLinkUrl: authLinkUrl,
+    returnToUrl: returnToUrl,
+    bootstrapUrl: bootstrapUrl,
   };
 }
 
@@ -796,10 +1156,19 @@ function getTelegramCommandSetupFingerprint(botToken) {
     .slice(0, 16);
 }
 
+function toTelegramCommandOffsetStateKey(tenantKey, botToken) {
+  var token = String(botToken || "").trim();
+  if (token) {
+    return "bot::" + getTelegramCommandSetupFingerprint(token);
+  }
+
+  return "tenant::" + normalizeTenantKey(tenantKey, "default");
+}
+
 async function ensureTelegramCommandsConfigured(tenantKey, botToken) {
   var normalizedTenant = normalizeTenantKey(tenantKey, "default");
   var tokenFingerprint = getTelegramCommandSetupFingerprint(botToken);
-  var existing = telegramCommandSetupApplied.get(normalizedTenant);
+  var existing = telegramCommandSetupApplied.get(tokenFingerprint);
 
   if (existing && typeof existing === "object" && existing.tokenFingerprint === tokenFingerprint) {
     return {
@@ -809,9 +1178,10 @@ async function ensureTelegramCommandsConfigured(tenantKey, botToken) {
   }
 
   await setTelegramCommands(botToken, buildTelegramCommandDefinitions());
-  telegramCommandSetupApplied.set(normalizedTenant, {
+  telegramCommandSetupApplied.set(tokenFingerprint, {
     tokenFingerprint: tokenFingerprint,
     updatedAt: new Date().toISOString(),
+    tenantKey: normalizedTenant,
     commandCount: buildTelegramCommandDefinitions().length,
   });
 
@@ -962,14 +1332,14 @@ function buildTelegramLinkedStartMessage(binding) {
 }
 
 function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
-  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+  var normalizedTenant = normalizeOptionalTenantKey(tenantKey);
   var normalizedChatId = String(chatId || "").trim() || "<chat_id>";
   var normalizedCommand = normalizeTelegramCommandName(commandName);
   var endpoints = buildTelegramOnboardingEndpoints(normalizedTenant, normalizedChatId);
   var lines = [
     "Welcome to PulseWard Telegram Assistant.",
     "This chat is not linked to an account yet.",
-    "tenant: " + normalizedTenant,
+    "single bot mode: this same bot works across all PulseWard organizations.",
     "chatId: " + normalizedChatId,
     "",
   ];
@@ -981,22 +1351,31 @@ function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
   }
 
   lines.push("Link flow:");
-  lines.push("1) Login and copy your Bearer token:");
+  lines.push("1) One-tap auth and auto-link (recommended):");
+  lines.push(endpoints.authLinkUrl);
+  lines.push("2) Manual API login + link (advanced):");
   lines.push(endpoints.loginUrl);
-  lines.push("2) Link this chat from your authenticated session:");
+  lines.push("3) Link this chat from your authenticated session:");
   lines.push(endpoints.linkUrl);
-  lines.push('Body: {"tenantKey":"' + normalizedTenant + '","chatId":"' + normalizedChatId + '"}');
+  lines.push('Body: {"chatId":"' + normalizedChatId + '"}');
+  if (normalizedTenant) {
+    lines.push(
+      'Optional tenant override (staff only): {"tenantKey":"' +
+        normalizedTenant +
+        '","chatId":"' +
+        normalizedChatId +
+        '"}'
+    );
+  }
   lines.push("");
-  lines.push("Quick setup JSON guide URL:");
+  lines.push("Quick setup JSON guide URL (includes organization list and examples):");
   lines.push(endpoints.bootstrapUrl);
   lines.push("");
   lines.push("PowerShell example:");
   lines.push(
     "Invoke-RestMethod -Method Post -Uri '" +
       endpoints.linkUrl +
-      "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
-      normalizedTenant +
-      "'; chatId='" +
+      "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ chatId='" +
       normalizedChatId +
       "' } | ConvertTo-Json)"
   );
@@ -1006,6 +1385,84 @@ function buildTelegramUnlinkedMessage(tenantKey, chatId, commandName) {
   lines.push("Then use /help for your command menu.");
 
   return lines.join("\n");
+}
+
+function buildTelegramUnlinkedMessageHtml(tenantKey, chatId, commandName) {
+  var normalizedTenant = normalizeOptionalTenantKey(tenantKey);
+  var normalizedChatId = String(chatId || "").trim() || "<chat_id>";
+  var normalizedCommand = normalizeTelegramCommandName(commandName);
+  var endpoints = buildTelegramOnboardingEndpoints(normalizedTenant, normalizedChatId);
+  var sections = [
+    "<b>Welcome to PulseWard Telegram Assistant.</b>",
+    "This chat is not linked to an account yet.",
+    "single bot mode: this same bot works across all PulseWard organizations.",
+    "chatId: <code>" + escapeHtml(normalizedChatId) + "</code>",
+    "",
+  ];
+
+  if (normalizedCommand && normalizedCommand !== "start" && normalizedCommand !== "help") {
+    sections.push("Received command: <code>/" + escapeHtml(normalizedCommand) + "</code>");
+    sections.push("Run <code>/start</code> anytime to see this onboarding guide again.");
+    sections.push("");
+  }
+
+  sections.push("<b>Link flow:</b>");
+  sections.push(
+    '1) One-tap auth and auto-link (recommended): <a href="' +
+      escapeHtml(endpoints.authLinkUrl) +
+      '">Open Login + Link Page</a>'
+  );
+  sections.push(
+    '2) Manual API login + link (advanced): <a href="' +
+      escapeHtml(endpoints.loginUrl) +
+      '">Open Login API</a>'
+  );
+  sections.push(
+    '3) Link endpoint: <a href="' + escapeHtml(endpoints.linkUrl) + '">Open Link API</a>'
+  );
+  sections.push('Body: <code>{"chatId":"' + escapeHtml(normalizedChatId) + '"}</code>');
+  if (normalizedTenant) {
+    sections.push(
+      'Optional tenant override (staff only): <code>{"tenantKey":"' +
+        escapeHtml(normalizedTenant) +
+        '","chatId":"' +
+        escapeHtml(normalizedChatId) +
+        '"}</code>'
+    );
+  }
+
+  sections.push("");
+  sections.push(
+    'Quick setup JSON guide: <a href="' +
+      escapeHtml(endpoints.bootstrapUrl) +
+      '">Open Bootstrap Guide</a>'
+  );
+  sections.push("");
+  sections.push("If command menu is missing after linking, ask admin to run:");
+  sections.push(
+    '<a href="' + escapeHtml(endpoints.commandSetupUrl) + '">Telegram Commands Setup</a>'
+  );
+  sections.push("Then use <code>/help</code> for your command menu.");
+
+  return sections.join("\n");
+}
+
+function buildTelegramUnlinkedQuickActions(chatId) {
+  var endpoints = buildTelegramOnboardingEndpoints("", chatId);
+  return [
+    [
+      {
+        text: "Open Login + Link Page",
+        url: endpoints.authLinkUrl,
+      },
+    ],
+    [
+      {
+        text: "Open Setup Guide JSON",
+        url: endpoints.bootstrapUrl,
+      },
+    ],
+  ];
 }
 
 function normalizeTelegramCommandName(rawName) {
@@ -1040,29 +1497,482 @@ function parseTelegramCommandInput(text) {
   };
 }
 
-function findTelegramBindingByChatId(tenantKey, chatId) {
-  var normalizedTenant = normalizeTenantKey(tenantKey, "default");
+function findTelegramBindingByChatId(chatId) {
   var normalizedChatId = String(chatId || "").trim();
   if (!normalizedChatId) {
     return null;
   }
 
   var iterator = telegramUserChatBindings.values();
+  var resolved = null;
+  var resolvedUpdatedAt = 0;
   for (var item = iterator.next(); item && item.done !== true; item = iterator.next()) {
     var binding = item.value;
-    if (!binding) {
+    if (!binding || String(binding.chatId || "").trim() !== normalizedChatId) {
       continue;
     }
 
-    if (
-      normalizeTenantKey(binding.tenantKey, "default") === normalizedTenant &&
-      String(binding.chatId || "").trim() === normalizedChatId
-    ) {
-      return binding;
+    var updatedAt = new Date(String(binding.updatedAt || "")).getTime();
+    var safeUpdatedAt = Number.isFinite(updatedAt) ? updatedAt : 0;
+    if (!resolved || safeUpdatedAt >= resolvedUpdatedAt) {
+      resolved = binding;
+      resolvedUpdatedAt = safeUpdatedAt;
     }
   }
 
-  return null;
+  return resolved;
+}
+
+function removeTelegramBindingsByChatId(chatId) {
+  var normalizedChatId = String(chatId || "").trim();
+  if (!normalizedChatId) {
+    return [];
+  }
+
+  var removed = [];
+  var iterator = telegramUserChatBindings.entries();
+  for (var item = iterator.next(); item && item.done !== true; item = iterator.next()) {
+    var entry = item.value;
+    var key = entry[0];
+    var binding = entry[1];
+    if (!binding || String(binding.chatId || "").trim() !== normalizedChatId) {
+      continue;
+    }
+
+    telegramUserChatBindings.delete(key);
+    removed.push(binding);
+  }
+
+  return removed;
+}
+
+function toAuthenticatedSessionFromToken(token) {
+  var rawToken = String(token || "").trim();
+  if (!rawToken) {
+    return null;
+  }
+
+  try {
+    var decoded = jwt.verify(rawToken, process.env.JWT_SECRET || "dev-secret");
+    var subject = String((decoded && decoded.sub) || "").trim();
+    if (!subject) {
+      return null;
+    }
+
+    return {
+      subject: subject,
+      tenantKey: normalizeTenantKey(decoded && decoded.tenantKey, "default"),
+      role: String((decoded && decoded.role) || "")
+        .trim()
+        .toLowerCase(),
+      provider: String((decoded && decoded.provider) || "").trim(),
+      token: rawToken,
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function loginForTelegramLinking(payload) {
+  var input = payload || {};
+  var tenantKey = normalizeTenantKey(input.tenantKey, "default");
+  var role = normalizeTelegramLinkRole(input.role);
+  var email = String(input.email || "").trim();
+  var password = String(input.password || "");
+
+  if (!email || !password || !role) {
+    return {
+      accepted: false,
+      statusCode: 400,
+      code: "AUTH_LOGIN_INPUT_INVALID",
+      message: "tenantKey, email, password, and supported role are required",
+    };
+  }
+
+  var response;
+  var responseBody = null;
+
+  try {
+    response = await fetch(getAuthServiceInternalBaseUrl() + "/api/v1/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantKey: tenantKey,
+        email: email,
+        password: password,
+        role: role,
+      }),
+    });
+    responseBody = await response.json().catch(function () {
+      return null;
+    });
+  } catch (error) {
+    return {
+      accepted: false,
+      statusCode: 502,
+      code: "AUTH_SERVICE_UNREACHABLE",
+      message: "Unable to reach auth-service",
+      detail: error && error.message ? error.message : "Unknown auth-service error",
+    };
+  }
+
+  if (!response.ok || !responseBody || !responseBody.token) {
+    return {
+      accepted: false,
+      statusCode: Number(response && response.status) || 401,
+      code: (responseBody && responseBody.code) || "AUTH_LOGIN_FAILED",
+      message: (responseBody && responseBody.message) || "Login failed",
+      detail: responseBody,
+    };
+  }
+
+  return {
+    accepted: true,
+    statusCode: 200,
+    token: String(responseBody.token || "").trim(),
+    login: responseBody,
+  };
+}
+
+async function linkTelegramChatForSession(authSession, payload) {
+  var input = payload || {};
+  var requestedTenant = normalizeTenantKey(input.tenantKey, authSession.tenantKey || "default");
+  var tokenTenant = normalizeTenantKey(authSession && authSession.tenantKey, "default");
+  if (requestedTenant !== tokenTenant) {
+    return {
+      accepted: false,
+      statusCode: 403,
+      code: "AUTH_TENANT_MISMATCH",
+      message: "Tenant mismatch between token and request",
+      details: {
+        tokenTenantKey: tokenTenant,
+        requestedTenantKey: requestedTenant,
+      },
+    };
+  }
+
+  var tenantKey = requestedTenant;
+  var chatId = String(input.chatId || "").trim();
+  var config = loadTenantIntegrationConfig(tenantKey);
+
+  if (!chatId) {
+    var botTokenFromConfig = getTelegramBotToken(config, tenantKey);
+    if (!botTokenFromConfig) {
+      return {
+        accepted: false,
+        statusCode: 400,
+        code: "TELEGRAM_BOT_TOKEN_MISSING",
+        message: "Telegram bot token is not configured for this PulseWard deployment",
+      };
+    }
+
+    try {
+      var candidates = await fetchTelegramChatCandidates(botTokenFromConfig);
+      if (candidates.length === 1) {
+        chatId = candidates[0].chatId;
+      } else {
+        return {
+          accepted: false,
+          statusCode: 409,
+          code: "TELEGRAM_CHAT_SELECTION_REQUIRED",
+          message: "Provide chatId explicitly or ensure only one candidate chat exists",
+          candidates: candidates,
+        };
+      }
+    } catch (error) {
+      return {
+        accepted: false,
+        statusCode: 502,
+        code: "TELEGRAM_UPDATES_FETCH_FAILED",
+        message: "Unable to fetch Telegram updates",
+        detail: error && error.message ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  var key = toTelegramBindingKey(tenantKey, authSession.subject);
+  var replacedBindings = removeTelegramBindingsByChatId(chatId);
+  var bindingRecord = {
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    role: authSession.role || "",
+    provider: authSession.provider || "",
+    chatId: chatId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  telegramUserChatBindings.set(key, bindingRecord);
+
+  var commandMenuSync = {
+    accepted: false,
+    reason: "bot-token-missing",
+  };
+  var botTokenForCommandMenu = getTelegramBotToken(config, tenantKey);
+  if (botTokenForCommandMenu) {
+    try {
+      commandMenuSync = await syncTelegramCommandsForRoleChat(
+        botTokenForCommandMenu,
+        bindingRecord.role,
+        chatId
+      );
+    } catch (menuSyncError) {
+      commandMenuSync = {
+        accepted: false,
+        reason: "menu-sync-failed",
+        detail: menuSyncError && menuSyncError.message ? menuSyncError.message : "Unknown error",
+      };
+    }
+  }
+
+  return {
+    accepted: true,
+    statusCode: 201,
+    tenantKey: tenantKey,
+    subject: authSession.subject,
+    role: bindingRecord.role,
+    chatId: chatId,
+    replacedBindings: replacedBindings.map(function (binding) {
+      return {
+        tenantKey: normalizeTenantKey(binding.tenantKey, "default"),
+        subject: String(binding.subject || ""),
+        role: String(binding.role || ""),
+      };
+    }),
+    visibleCommands: buildTelegramCommandDefinitionsForRole(bindingRecord.role),
+    commandMenuSync: commandMenuSync,
+    updatedAt: bindingRecord.updatedAt,
+    detail: "Telegram chat linked for authenticated user",
+  };
+}
+
+function renderTelegramLinkAuthPage(model) {
+  var payload = model || {};
+  var bootstrap = JSON.stringify(payload).replace(/</g, "\\u003c");
+
+  return [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8" />',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "  <title>PulseWard Telegram Link</title>",
+    "  <style>",
+    "    :root { --pw-primary: #0f4c5c; --pw-accent: #ea8f3b; --pw-surface: #f7faf9; --pw-text: #1f2933; }",
+    "    body { font-family: Segoe UI, Arial, sans-serif; background: linear-gradient(160deg, #e8f1f6, #f5fbf8); margin: 0; padding: 20px; color: var(--pw-text); }",
+    "    .card { max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #d7e1ea; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(16, 44, 62, 0.08); }",
+    "    .brand-banner { border-radius: 12px; padding: 14px; background: var(--pw-primary); color: #ffffff; margin-bottom: 14px; }",
+    "    .brand-platform { font-size: 12px; opacity: 0.88; text-transform: uppercase; letter-spacing: 0.06em; }",
+    "    .brand-org { margin-top: 4px; font-size: 20px; font-weight: 700; }",
+    "    .brand-tagline { margin-top: 6px; font-size: 13px; opacity: 0.94; }",
+    "    h1 { margin: 0 0 8px; font-size: 22px; }",
+    "    p { margin: 6px 0; line-height: 1.45; }",
+    "    .providers { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }",
+    "    .provider-btn { flex: 1; min-width: 140px; border: 1px solid #c5d7e4; background: #ffffff; color: #17324a; border-radius: 10px; padding: 9px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }",
+    "    .provider-btn.active { border-color: var(--pw-primary); color: var(--pw-primary); background: #eff8f8; }",
+    "    .provider-note { font-size: 12px; color: #5a7489; margin-bottom: 8px; }",
+    "    label { display: block; margin-top: 12px; font-size: 13px; color: #34546b; }",
+    "    input, select { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border-radius: 10px; border: 1px solid #c4d4e0; font-size: 14px; }",
+    "    button.primary { width: 100%; margin-top: 16px; background: var(--pw-primary); color: #fff; border: 0; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }",
+    "    button.primary:disabled { opacity: 0.7; cursor: wait; }",
+    "    .sso-block { display: none; margin-top: 10px; padding: 12px; border-radius: 10px; background: #f4f8fb; border: 1px solid #dae7f0; }",
+    "    .sso-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }",
+    "    .sso-actions button { border: 1px solid #bdd1e2; background: #fff; color: #1f3f57; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 12px; }",
+    "    .status { margin-top: 12px; font-size: 13px; min-height: 18px; }",
+    "    .meta { margin-top: 10px; font-size: 12px; color: #567086; }",
+    "    .meta a { color: var(--pw-primary); }",
+    "  </style>",
+    "</head>",
+    "<body>",
+    '  <div class="card">',
+    '    <div class="brand-banner" id="brandBanner">',
+    '      <div class="brand-platform" id="brandPlatform">PulseWard</div>',
+    '      <div class="brand-org" id="brandOrganization">Organization</div>',
+    '      <div class="brand-tagline" id="brandTagline">Secure sign-in and Telegram linking</div>',
+    "    </div>",
+    "    <h1>Link Telegram to PulseWard</h1>",
+    "    <p>This is a common login page for all organizations. Your selected organization branding is applied after sign-in.</p>",
+    '    <div class="providers">',
+    '      <button class="provider-btn active" id="providerEmail" type="button">Email Password</button>',
+    '      <button class="provider-btn" id="providerGoogle" type="button">Google</button>',
+    '      <button class="provider-btn" id="providerOther" type="button">Other SSO Style</button>',
+    "    </div>",
+    '    <div class="provider-note" id="providerNote">Email-password flow is active. Google uses auth-service OAuth start. Other providers can use the same shared page flow later.</div>',
+    '    <form id="telegram-link-form">',
+    '      <label for="tenantKey">Organization</label>',
+    '      <select id="tenantKey" name="tenantKey" required></select>',
+    '      <label for="role">Role</label>',
+    '      <select id="role" name="role" required>',
+    '        <option value="patient">patient</option>',
+    '        <option value="doctor">doctor</option>',
+    '        <option value="nurse">nurse</option>',
+    '        <option value="frontdesk">frontdesk</option>',
+    '        <option value="operations">operations</option>',
+    '        <option value="admin">admin</option>',
+    "      </select>",
+    '      <label for="email">Email</label>',
+    '      <input id="email" name="email" type="email" autocomplete="username" required />',
+    '      <label for="password">Password</label>',
+    '      <input id="password" name="password" type="password" autocomplete="current-password" required />',
+    '      <label for="chatId">Telegram Chat ID</label>',
+    '      <input id="chatId" name="chatId" type="text" required />',
+    '      <button class="primary" type="submit" id="submitBtn">Login and Link Chat</button>',
+    '      <div class="sso-block" id="ssoBlock">',
+    "        Use unified SSO start endpoints while keeping this shared organization selector.",
+    '        <div class="sso-actions">',
+    '          <button type="button" id="ssoGoogleBtn">Continue with Google</button>',
+    '          <button type="button" id="ssoOtherBtn">Other SSO Style (placeholder)</button>',
+    "        </div>",
+    "      </div>",
+    '      <div class="status" id="status"></div>',
+    "    </form>",
+    '    <div class="meta" id="meta"></div>',
+    "  </div>",
+    "  <script>",
+    "    (function () {",
+    "      var model = " + bootstrap + ";",
+    "      var form = document.getElementById('telegram-link-form');",
+    "      var tenantSelect = document.getElementById('tenantKey');",
+    "      var roleSelect = document.getElementById('role');",
+    "      var chatInput = document.getElementById('chatId');",
+    "      var submitBtn = document.getElementById('submitBtn');",
+    "      var providerEmail = document.getElementById('providerEmail');",
+    "      var providerGoogle = document.getElementById('providerGoogle');",
+    "      var providerOther = document.getElementById('providerOther');",
+    "      var providerNote = document.getElementById('providerNote');",
+    "      var ssoBlock = document.getElementById('ssoBlock');",
+    "      var ssoGoogleBtn = document.getElementById('ssoGoogleBtn');",
+    "      var ssoOtherBtn = document.getElementById('ssoOtherBtn');",
+    "      var brandPlatform = document.getElementById('brandPlatform');",
+    "      var brandOrganization = document.getElementById('brandOrganization');",
+    "      var brandTagline = document.getElementById('brandTagline');",
+    "      var statusEl = document.getElementById('status');",
+    "      var metaEl = document.getElementById('meta');",
+    "      var organizations = Array.isArray(model.organizations) ? model.organizations : [];",
+    "      var organizationBranding = model.organizationBrandingByTenant || {};",
+    "      var activeProvider = 'email';",
+    "      organizations.forEach(function (org) {",
+    "        var opt = document.createElement('option');",
+    "        opt.value = String(org.tenantKey || 'default');",
+    "        opt.textContent = String(org.displayName || opt.value);",
+    "        tenantSelect.appendChild(opt);",
+    "      });",
+    "      if (!tenantSelect.value) { tenantSelect.value = model.tenantKey || 'default'; }",
+    "      roleSelect.value = model.role || 'patient';",
+    "      chatInput.value = model.chatId || '';",
+    "",
+    "      function updateBrandingContext() {",
+    "        var tenant = String(tenantSelect.value || 'default');",
+    "        var context = organizationBranding[tenant] || organizationBranding.default || {};",
+    "        var colors = context.colors || {};",
+    "        if (colors.primary) { document.documentElement.style.setProperty('--pw-primary', colors.primary); }",
+    "        if (colors.accent) { document.documentElement.style.setProperty('--pw-accent', colors.accent); }",
+    "        if (colors.surface) { document.documentElement.style.setProperty('--pw-surface', colors.surface); }",
+    "        if (colors.text) { document.documentElement.style.setProperty('--pw-text', colors.text); }",
+    "",
+    "        brandPlatform.textContent = context.platformDisplayName || 'PulseWard';",
+    "        brandOrganization.textContent = context.organizationDisplayName || tenant;",
+    "        brandTagline.textContent = context.tagline || 'Reliable care operations';",
+    "      }",
+    "",
+    "      function setProvider(nextProvider) {",
+    "        activeProvider = nextProvider;",
+    "        var emailActive = nextProvider === 'email';",
+    "        providerEmail.classList.toggle('active', emailActive);",
+    "        providerGoogle.classList.toggle('active', nextProvider === 'google');",
+    "        providerOther.classList.toggle('active', nextProvider === 'other');",
+    "        submitBtn.style.display = emailActive ? 'block' : 'none';",
+    "        ssoBlock.style.display = emailActive ? 'none' : 'block';",
+    "        if (emailActive) {",
+    "          providerNote.textContent = 'Email-password flow is active. Google uses auth-service OAuth start. Other providers can use the same shared page flow later.';",
+    "        } else if (nextProvider === 'google') {",
+    "          providerNote.textContent = 'Google flow starts from auth-service and keeps the same organization context.';",
+    "        } else {",
+    "          providerNote.textContent = 'This is a provider-style placeholder only. No additional SSO provider is enforced right now.';",
+    "        }",
+    "      }",
+    "",
+    "      providerEmail.addEventListener('click', function () { setProvider('email'); });",
+    "      providerGoogle.addEventListener('click', function () { setProvider('google'); });",
+    "      providerOther.addEventListener('click', function () { setProvider('other'); });",
+    "",
+    "      ssoGoogleBtn.addEventListener('click', async function () {",
+    "        var tenant = String(tenantSelect.value || 'default');",
+    "        var role = String(roleSelect.value || 'patient');",
+    "        statusEl.style.color = '#2f495c';",
+    "        statusEl.textContent = 'Preparing Google sign-in...';",
+    "        try {",
+    "          var response = await fetch(model.authBaseUrl + '/api/v1/auth/oauth/google/start?tenantKey=' + encodeURIComponent(tenant) + '&role=' + encodeURIComponent(role));",
+    "          var body = await response.json().catch(function () { return null; });",
+    "          if (!response.ok || !body || !body.oauthUrl) {",
+    "            throw new Error((body && body.message) || 'Google sign-in is not configured for this environment.');",
+    "          }",
+    "          window.location.href = body.oauthUrl;",
+    "        } catch (error) {",
+    "          statusEl.style.color = '#b13535';",
+    "          statusEl.textContent = error && error.message ? error.message : 'Unable to start Google sign-in.';",
+    "        }",
+    "      });",
+    "",
+    "      ssoOtherBtn.addEventListener('click', function () {",
+    "        statusEl.style.color = '#2f495c';",
+    "        statusEl.textContent = 'Provider-style placeholder: keep this same shared page and plug your provider later if needed.';",
+    "      });",
+    "",
+    "      tenantSelect.addEventListener('change', updateBrandingContext);",
+    "      updateBrandingContext();",
+    "      setProvider('email');",
+    "      metaEl.textContent = 'After success, you will be redirected to Telegram:';",
+    "      var returnLink = document.createElement('a');",
+    "      returnLink.href = model.returnToUrl;",
+    "      returnLink.textContent = model.returnToUrl;",
+    "      returnLink.style.marginLeft = '6px';",
+    "      metaEl.appendChild(returnLink);",
+    "",
+    "      form.addEventListener('submit', async function (event) {",
+    "        event.preventDefault();",
+    "        statusEl.style.color = '#2f495c';",
+    "        statusEl.textContent = 'Signing in and linking chat...';",
+    "        submitBtn.disabled = true;",
+    "",
+    "        var payload = {",
+    "          tenantKey: tenantSelect.value,",
+    "          role: roleSelect.value,",
+    "          email: String(document.getElementById('email').value || '').trim(),",
+    "          password: String(document.getElementById('password').value || ''),",
+    "          chatId: String(chatInput.value || '').trim(),",
+    "          returnTo: model.returnToUrl",
+    "        };",
+    "",
+    "        try {",
+    "          var response = await fetch(model.completeUrl, {",
+    "            method: 'POST',",
+    "            headers: { 'Content-Type': 'application/json' },",
+    "            body: JSON.stringify(payload)",
+    "          });",
+    "          var body = await response.json().catch(function () { return null; });",
+    "          if (!response.ok || !body || body.accepted !== true) {",
+    "            throw new Error((body && (body.message || body.detail)) || 'Unable to link Telegram chat.');",
+    "          }",
+    "",
+    "          statusEl.style.color = '#0d6b52';",
+    "          var brandName = body.branding && body.branding.organizationDisplayName ? body.branding.organizationDisplayName : (body.link && body.link.tenantKey ? body.link.tenantKey : tenantSelect.value);",
+    "          statusEl.textContent = 'Linked successfully for ' + brandName + '. Redirecting to Telegram...';",
+    "          window.setTimeout(function () {",
+    "            window.location.href = body.redirectUrl || model.returnToUrl;",
+    "          }, 1200);",
+    "        } catch (error) {",
+    "          statusEl.style.color = '#b13535';",
+    "          statusEl.textContent = error && error.message ? error.message : 'Linking failed.';",
+    "          submitBtn.disabled = false;",
+    "        }",
+    "      });",
+    "    })();",
+    "  </script>",
+    "</body>",
+    "</html>",
+  ].join("\n");
 }
 
 function getTenantTelegramBindingCount(tenantKey) {
@@ -1234,12 +2144,29 @@ async function telegramApiPostJson(botToken, methodName, payload) {
   return body;
 }
 
-async function sendTelegramTextMessage(botToken, chatId, text) {
-  return telegramApiPostJson(botToken, "sendMessage", {
+async function sendTelegramTextMessage(botToken, chatId, text, options) {
+  var payload = {
     chat_id: String(chatId || "").trim(),
     text: String(text || "").slice(0, 4096),
     disable_web_page_preview: true,
-  });
+  };
+  var messageOptions = options && typeof options === "object" ? options : {};
+
+  if (messageOptions.disableWebPagePreview === false) {
+    payload.disable_web_page_preview = false;
+  }
+
+  if (Array.isArray(messageOptions.inlineKeyboard) && messageOptions.inlineKeyboard.length > 0) {
+    payload.reply_markup = {
+      inline_keyboard: messageOptions.inlineKeyboard,
+    };
+  }
+
+  if (typeof messageOptions.parseMode === "string" && messageOptions.parseMode.trim()) {
+    payload.parse_mode = messageOptions.parseMode.trim();
+  }
+
+  return telegramApiPostJson(botToken, "sendMessage", payload);
 }
 
 async function fetchTelegramUpdates(botToken, offset, limit) {
@@ -1582,7 +2509,11 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     var agendaAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
       clinicianId: agendaArgs.clinicianId,
     });
-    var agendaDay = filterAppointmentsByUtcDay(agendaAppointments, agendaArgs.dateToken, tenantPrefs);
+    var agendaDay = filterAppointmentsByUtcDay(
+      agendaAppointments,
+      agendaArgs.dateToken,
+      tenantPrefs
+    );
     if (!agendaDay.valid) {
       return "Invalid date format. Use YYYY-MM-DD or omit for today.";
     }
@@ -1624,9 +2555,7 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     });
 
     if (sortedAgenda.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
-      lines.push(
-        "Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " appointments."
-      );
+      lines.push("Showing first " + TELEGRAM_COMMAND_MAX_RESPONSE_LINES + " appointments.");
     }
 
     return lines.join("\n");
@@ -1641,7 +2570,11 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
     var patientAppointments = await fetchAppointmentCollectionForCommand(tenantKey, {
       clinicianId: patientArgs.clinicianId,
     });
-    var patientDay = filterAppointmentsByUtcDay(patientAppointments, patientArgs.dateToken, tenantPrefs);
+    var patientDay = filterAppointmentsByUtcDay(
+      patientAppointments,
+      patientArgs.dateToken,
+      tenantPrefs
+    );
     if (!patientDay.valid) {
       return "Invalid date format. Use YYYY-MM-DD or omit for today.";
     }
@@ -1674,9 +2607,14 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       "Patients:",
     ];
 
-    limitArray(patientEntries, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (entry, index) {
+    limitArray(patientEntries, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (
+      entry,
+      index
+    ) {
       var ageText = entry && entry.ageText ? " (age " + entry.ageText + ")" : "";
-      responseLines.push(String(index + 1) + ". " + String((entry && entry.name) || "Unknown") + ageText);
+      responseLines.push(
+        String(index + 1) + ". " + String((entry && entry.name) || "Unknown") + ageText
+      );
     });
 
     if (patientEntries.length > TELEGRAM_COMMAND_MAX_RESPONSE_LINES) {
@@ -1730,7 +2668,10 @@ async function executeTelegramCommandForBinding(binding, parsedCommand) {
       return myLines.join("\n");
     }
 
-    limitArray(filteredMyAppointments, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (item, index) {
+    limitArray(filteredMyAppointments, TELEGRAM_COMMAND_MAX_RESPONSE_LINES).forEach(function (
+      item,
+      index
+    ) {
       myLines.push(formatAppointmentForTelegram(item, tenantPrefs, index));
     });
 
@@ -1923,7 +2864,7 @@ function extractTelegramMessageUpdate(update) {
   return null;
 }
 
-async function processTelegramCommandUpdate(tenantKey, botToken, update) {
+async function processTelegramCommandUpdate(botToken, update) {
   var messageUpdate = extractTelegramMessageUpdate(update);
   if (!messageUpdate || !messageUpdate.chatId || !messageUpdate.text) {
     return {
@@ -1943,12 +2884,17 @@ async function processTelegramCommandUpdate(tenantKey, botToken, update) {
     };
   }
 
-  var binding = findTelegramBindingByChatId(tenantKey, messageUpdate.chatId);
+  var binding = findTelegramBindingByChatId(messageUpdate.chatId);
   if (!binding) {
     await sendTelegramTextMessage(
       botToken,
       messageUpdate.chatId,
-      buildTelegramUnlinkedMessage(tenantKey, messageUpdate.chatId, commandInput.command)
+      buildTelegramUnlinkedMessageHtml("", messageUpdate.chatId, commandInput.command),
+      {
+        parseMode: "HTML",
+        disableWebPagePreview: false,
+        inlineKeyboard: buildTelegramUnlinkedQuickActions(messageUpdate.chatId),
+      }
     );
     return {
       handled: true,
@@ -1976,6 +2922,7 @@ async function processTelegramCommandUpdate(tenantKey, botToken, update) {
     command: commandInput.command,
     updateId: messageUpdate.updateId,
     chatId: messageUpdate.chatId,
+    tenantKey: normalizeTenantKey(binding.tenantKey, "default"),
     subject: binding.subject,
     role: binding.role || "",
   };
@@ -2049,18 +2996,21 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
   );
   var config = loadTenantIntegrationConfig(normalizedTenant);
   var provider = findMessagingProvider(config, "telegram-bot");
-  if (!provider || !provider.enabled) {
+  var botToken = getTelegramBotToken(config, normalizedTenant);
+  var offsetStateKey = toTelegramCommandOffsetStateKey(normalizedTenant, botToken);
+
+  if ((!provider || !provider.enabled) && !botToken) {
     return {
       tenantKey: normalizedTenant,
       skipped: true,
       reason: "telegram-provider-disabled",
       fetchedUpdates: 0,
       handledCommands: 0,
-      nextOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+      nextOffset: Number(telegramCommandOffsets.get(offsetStateKey) || 0),
+      pollOffsetKey: offsetStateKey,
     };
   }
 
-  var botToken = getTelegramBotToken(config);
   if (!botToken) {
     return {
       tenantKey: normalizedTenant,
@@ -2068,7 +3018,8 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
       reason: "telegram-bot-token-missing",
       fetchedUpdates: 0,
       handledCommands: 0,
-      nextOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+      nextOffset: Number(telegramCommandOffsets.get(offsetStateKey) || 0),
+      pollOffsetKey: offsetStateKey,
     };
   }
 
@@ -2076,8 +3027,8 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
     await ensureTelegramCommandsConfigured(normalizedTenant, botToken);
   }
 
-  var offset = Number(telegramCommandOffsets.get(normalizedTenant) || 0);
-  var hadStoredOffset = telegramCommandOffsets.has(normalizedTenant) && offset > 0;
+  var offset = Number(telegramCommandOffsets.get(offsetStateKey) || 0);
+  var hadStoredOffset = telegramCommandOffsets.has(offsetStateKey) && offset > 0;
   var updates = await fetchTelegramUpdates(botToken, offset, options.limit);
   var handledCommands = 0;
   var failedCommands = 0;
@@ -2093,7 +3044,7 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
       }
     }
 
-    telegramCommandOffsets.set(normalizedTenant, highestUpdateId);
+    telegramCommandOffsets.set(offsetStateKey, highestUpdateId);
     var bootAlarmSummary = await dispatchDoctorDailyAlarmsForTenant(normalizedTenant, botToken);
 
     return {
@@ -2105,6 +3056,7 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
       failedCommands: 0,
       doctorDailyAlarms: bootAlarmSummary,
       nextOffset: highestUpdateId,
+      pollOffsetKey: offsetStateKey,
       processed: [],
     };
   }
@@ -2117,7 +3069,7 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
     }
 
     try {
-      var result = await processTelegramCommandUpdate(normalizedTenant, botToken, update);
+      var result = await processTelegramCommandUpdate(botToken, update);
       if (result && result.handled) {
         handledCommands += 1;
       }
@@ -2139,7 +3091,7 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
     }
   }
 
-  telegramCommandOffsets.set(normalizedTenant, nextOffset);
+  telegramCommandOffsets.set(offsetStateKey, nextOffset);
   var doctorAlarmSummary = await dispatchDoctorDailyAlarmsForTenant(normalizedTenant, botToken);
 
   return {
@@ -2151,6 +3103,7 @@ async function pollTelegramCommandsForTenant(tenantKey, options) {
     failedCommands: failedCommands,
     doctorDailyAlarms: doctorAlarmSummary,
     nextOffset: nextOffset,
+    pollOffsetKey: offsetStateKey,
     processed: processed,
   };
 }
@@ -5098,6 +6051,15 @@ router.get("/integrations/messaging/providers", function (req, res) {
   res.json(providers);
 });
 
+router.get("/integrations/tenants/catalog", function (_req, res) {
+  var organizations = getPulseWardTenantCatalog();
+  res.json({
+    accepted: true,
+    organizations: organizations,
+    total: organizations.length,
+  });
+});
+
 router.post("/integrations/messaging/test", function (req, res) {
   var authSession = requireAuthenticatedSession(req, res);
   if (!authSession) {
@@ -5152,17 +6114,21 @@ router.post("/integrations/messaging/test", function (req, res) {
 });
 
 router.get("/integrations/messaging/telegram/link/bootstrap", function (req, res) {
-  var tenantKey = normalizeTenantKey(req.query.tenantKey || "default", "default");
+  var tenantKey = normalizeOptionalTenantKey(req.query.tenantKey || "");
   var chatId = String(req.query.chatId || "").trim();
   var endpoints = buildTelegramOnboardingEndpoints(tenantKey, chatId);
+  var organizations = getPulseWardTenantCatalog();
 
   res.json({
     accepted: true,
-    tenantKey: tenantKey,
+    tenantKey: tenantKey || null,
     chatId: chatId || "<chat_id>",
     endpoints: endpoints,
+    organizations: organizations,
     steps: [
-      "Call login endpoint and obtain bearer token for same tenant and user role",
+      "Call login endpoint and obtain bearer token for your role (patient/staff)",
+      "Choose organization by display name in UI flows; staff can use explicit tenant key if required",
+      "Optional: open one-tap auth link URL to login and auto-link in browser",
       "Call link endpoint with bearer token and chatId from Telegram",
       "Admin/operations can publish command menu using commands/setup endpoint",
       "Use /start or /help in Telegram after linking",
@@ -5171,20 +6137,112 @@ router.get("/integrations/messaging/telegram/link/bootstrap", function (req, res
       powershell:
         "Invoke-RestMethod -Method Post -Uri '" +
         endpoints.linkUrl +
-        "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ tenantKey='" +
-        tenantKey +
-        "'; chatId='" +
+        "' -Headers @{ Authorization = 'Bearer <token>' } -ContentType 'application/json' -Body (@{ chatId='" +
         (chatId || "<chat_id>") +
         "' } | ConvertTo-Json)",
       bash:
         "curl -X POST '" +
         endpoints.linkUrl +
-        "' -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{\"tenantKey\":\"" +
-        tenantKey +
-        "\",\"chatId\":\"" +
+        "' -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{\"chatId\":\"" +
         (chatId || "<chat_id>") +
         "\"}'",
+      oneTapBrowser: endpoints.authLinkUrl,
     },
+  });
+});
+
+router.get("/integrations/messaging/telegram/link/auth", function (req, res) {
+  var tenantKey = normalizeOptionalTenantKey(req.query.tenantKey || "");
+  var tenantKeyForPage = tenantKey || "default";
+  var chatId = String(req.query.chatId || "").trim();
+  var role = normalizeTelegramLinkRole(req.query.role) || TELEGRAM_LINK_DEFAULT_ROLE;
+  var returnToUrl = normalizeTelegramReturnUrl(req.query.returnTo);
+  var endpoints = buildTelegramOnboardingEndpoints(tenantKey, chatId);
+  var organizations = getPulseWardTenantCatalog();
+  var completeUrl = "/api/v1/integrations/messaging/telegram/link/auth/complete";
+  var organizationBrandingByTenant = {};
+  organizations.forEach(function (organization) {
+    var orgTenantKey = normalizeTenantKey(organization && organization.tenantKey, "default");
+    organizationBrandingByTenant[orgTenantKey] = getTenantBrandingContext(orgTenantKey);
+  });
+  if (!organizationBrandingByTenant.default) {
+    organizationBrandingByTenant.default = getTenantBrandingContext("default");
+  }
+
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(
+    renderTelegramLinkAuthPage({
+      tenantKey: tenantKeyForPage,
+      chatId: chatId,
+      role: role,
+      returnToUrl: returnToUrl,
+      completeUrl: completeUrl,
+      authBaseUrl: endpoints.authBaseUrl,
+      organizations: organizations,
+      organizationBrandingByTenant: organizationBrandingByTenant,
+    })
+  );
+});
+
+router.post("/integrations/messaging/telegram/link/auth/complete", async function (req, res) {
+  var payload = req.body || {};
+  var tenantKey = normalizeTenantKey(payload.tenantKey || "default", "default");
+  var role = normalizeTelegramLinkRole(payload.role);
+  var email = String(payload.email || "").trim();
+  var password = String(payload.password || "");
+  var chatId = String(payload.chatId || "").trim();
+  var returnToUrl = normalizeTelegramReturnUrl(payload.returnTo);
+
+  if (!chatId || !email || !password || !role) {
+    res.status(400).json({
+      accepted: false,
+      code: "TELEGRAM_AUTH_LINK_INPUT_INVALID",
+      message: "tenantKey, role, email, password, and chatId are required",
+    });
+    return;
+  }
+
+  var loginResult = await loginForTelegramLinking({
+    tenantKey: tenantKey,
+    role: role,
+    email: email,
+    password: password,
+  });
+  if (!loginResult.accepted) {
+    res.status(loginResult.statusCode || 401).json(loginResult);
+    return;
+  }
+
+  var authSession = toAuthenticatedSessionFromToken(loginResult.token);
+  if (!authSession) {
+    res.status(401).json({
+      accepted: false,
+      code: "AUTH_TOKEN_INVALID",
+      message: "Login succeeded but issued token could not be validated",
+    });
+    return;
+  }
+
+  var linkResult = await linkTelegramChatForSession(authSession, {
+    tenantKey: tenantKey,
+    chatId: chatId,
+  });
+  if (!linkResult.accepted) {
+    res.status(linkResult.statusCode || 400).json(linkResult);
+    return;
+  }
+
+  res.status(201).json({
+    accepted: true,
+    redirectUrl: returnToUrl,
+    branding: getTenantBrandingContext(authSession.tenantKey),
+    auth: {
+      tenantKey: authSession.tenantKey,
+      role: authSession.role,
+      subject: authSession.subject,
+    },
+    link: linkResult,
+    detail: "Login succeeded and Telegram chat was linked",
   });
 });
 
@@ -5194,94 +6252,13 @@ router.post("/integrations/messaging/telegram/link", async function (req, res) {
     return;
   }
 
-  var payload = req.body || {};
-  var tenantKey = enforceTenantScope(res, authSession, payload.tenantKey);
-  if (!tenantKey) {
+  var linkResult = await linkTelegramChatForSession(authSession, req.body || {});
+  if (!linkResult.accepted) {
+    res.status(linkResult.statusCode || 400).json(linkResult);
     return;
   }
 
-  var chatId = String(payload.chatId || "").trim();
-  var config = loadTenantIntegrationConfig(tenantKey);
-
-  if (!chatId) {
-    var botToken = getTelegramBotToken(config);
-    if (!botToken) {
-      res.status(400).json({
-        accepted: false,
-        code: "TELEGRAM_BOT_TOKEN_MISSING",
-        message: "Telegram bot token is not configured for this tenant",
-      });
-      return;
-    }
-
-    try {
-      var candidates = await fetchTelegramChatCandidates(botToken);
-      if (candidates.length === 1) {
-        chatId = candidates[0].chatId;
-      } else {
-        res.status(409).json({
-          accepted: false,
-          code: "TELEGRAM_CHAT_SELECTION_REQUIRED",
-          message: "Provide chatId explicitly or ensure only one candidate chat exists",
-          candidates: candidates,
-        });
-        return;
-      }
-    } catch (error) {
-      res.status(502).json({
-        accepted: false,
-        code: "TELEGRAM_UPDATES_FETCH_FAILED",
-        message: "Unable to fetch Telegram updates",
-        detail: error && error.message ? error.message : "Unknown error",
-      });
-      return;
-    }
-  }
-
-  var key = toTelegramBindingKey(tenantKey, authSession.subject);
-  var bindingRecord = {
-    tenantKey: tenantKey,
-    subject: authSession.subject,
-    role: authSession.role || "",
-    provider: authSession.provider || "",
-    chatId: chatId,
-    updatedAt: new Date().toISOString(),
-  };
-
-  telegramUserChatBindings.set(key, bindingRecord);
-
-  var commandMenuSync = {
-    accepted: false,
-    reason: "bot-token-missing",
-  };
-  var botTokenForCommandMenu = getTelegramBotToken(config);
-  if (botTokenForCommandMenu) {
-    try {
-      commandMenuSync = await syncTelegramCommandsForRoleChat(
-        botTokenForCommandMenu,
-        bindingRecord.role,
-        chatId
-      );
-    } catch (menuSyncError) {
-      commandMenuSync = {
-        accepted: false,
-        reason: "menu-sync-failed",
-        detail: menuSyncError && menuSyncError.message ? menuSyncError.message : "Unknown error",
-      };
-    }
-  }
-
-  res.status(201).json({
-    accepted: true,
-    tenantKey: tenantKey,
-    subject: authSession.subject,
-    role: bindingRecord.role,
-    chatId: chatId,
-    visibleCommands: buildTelegramCommandDefinitionsForRole(bindingRecord.role),
-    commandMenuSync: commandMenuSync,
-    updatedAt: bindingRecord.updatedAt,
-    detail: "Telegram chat linked for authenticated user",
-  });
+  res.status(linkResult.statusCode || 201).json(linkResult);
 });
 
 router.post("/integrations/mobile/push/register", function (req, res) {
@@ -5428,11 +6405,13 @@ router.get("/integrations/messaging/telegram/setup", function (req, res) {
     providerEnabled: Boolean(provider && provider.enabled),
     setupSteps: [
       "Open Telegram and start BotFather",
-      "Create a bot and save bot token in secret manager",
-      "Set INTEGRATION_TELEGRAM_CREDENTIALS reference",
-      "Optional: set INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL and INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL for onboarding links",
+      "Create one PulseWard-level bot and save bot token in secret manager",
+      "Set INTEGRATION_TELEGRAM_BOT_TOKEN (preferred) or INTEGRATION_TELEGRAM_CREDENTIALS reference",
+      "Set INTEGRATION_TELEGRAM_PUBLIC_API_BASE_URL and INTEGRATION_TELEGRAM_PUBLIC_AUTH_BASE_URL to LAN/public URLs (not localhost)",
+      "Or set PULSEWARD_LAN_HOST once and service will auto-build Wi-Fi URLs",
       "Optional: set tenant timezone in config.integrations.<tenant>.telegramDefaults.timeZone",
-      "Use GET /api/v1/integrations/messaging/telegram/link/bootstrap?tenantKey=<tenant>&chatId=<chatId> for guided link URLs",
+      "Use GET /api/v1/integrations/messaging/telegram/link/bootstrap?chatId=<chatId> for guided link URLs",
+      "Use one-tap browser flow at /api/v1/integrations/messaging/telegram/link/auth?chatId=<chatId>",
       "Call POST /api/v1/integrations/messaging/telegram/commands/setup to publish bot commands",
       "Link each user via POST /api/v1/integrations/messaging/telegram/link",
       "Notification service auto-polls commands when running (manual poll endpoint remains available)",
@@ -5446,18 +6425,19 @@ router.get("/integrations/messaging/telegram/config-status", function (req, res)
   var config = loadTenantIntegrationConfig(tenantKey);
   var provider = findMessagingProvider(config, "telegram-bot");
   var secretStatus = getProviderSecretStatus(provider, "INTEGRATION_TELEGRAM_CREDENTIALS");
+  var botToken = getTelegramBotToken(config, tenantKey);
+  var pollOffsetKey = toTelegramCommandOffsetStateKey(tenantKey, botToken);
 
   res.json({
     tenantKey: tenantKey,
     providerEnabled: Boolean(provider && provider.enabled),
     secretKey: secretStatus.secretKey,
-    configured: Boolean(secretStatus.parsed && secretStatus.parsed.botToken),
+    configured: Boolean(botToken),
     hasChatId: Boolean(secretStatus.parsed && secretStatus.parsed.chatId),
     publishedCommands: buildTelegramCommandDefinitions(),
     linkedUsersCount: getTenantTelegramBindingCount(tenantKey),
-    nextPollOffset: Number(
-      telegramCommandOffsets.get(normalizeTenantKey(tenantKey, "default")) || 0
-    ),
+    pollOffsetKey: pollOffsetKey,
+    nextPollOffset: Number(telegramCommandOffsets.get(pollOffsetKey) || 0),
   });
 });
 
@@ -5483,23 +6463,25 @@ router.post("/integrations/messaging/telegram/commands/setup", async function (r
   }
 
   var config = loadTenantIntegrationConfig(tenantKey);
-  var botToken = getTelegramBotToken(config);
+  var botToken = getTelegramBotToken(config, tenantKey);
   if (!botToken) {
     res.status(400).json({
       accepted: false,
       code: "TELEGRAM_BOT_TOKEN_MISSING",
-      message: "Telegram bot token is not configured for this tenant",
+      message: "Telegram bot token is not configured for this PulseWard deployment",
     });
     return;
   }
 
   var commands = buildTelegramCommandDefinitions();
+  var tokenFingerprint = getTelegramCommandSetupFingerprint(botToken);
 
   try {
     await setTelegramCommands(botToken, commands);
-    telegramCommandSetupApplied.set(normalizeTenantKey(tenantKey, "default"), {
-      tokenFingerprint: getTelegramCommandSetupFingerprint(botToken),
+    telegramCommandSetupApplied.set(tokenFingerprint, {
+      tokenFingerprint: tokenFingerprint,
       updatedAt: new Date().toISOString(),
+      tenantKey: normalizeTenantKey(tenantKey, "default"),
       commandCount: commands.length,
     });
     res.json({
@@ -5531,14 +6513,17 @@ router.get("/integrations/messaging/telegram/commands/status", function (req, re
 
   var normalizedTenant = normalizeTenantKey(tenantKey, "default");
   var config = loadTenantIntegrationConfig(normalizedTenant);
-  var botToken = getTelegramBotToken(config);
+  var provider = findMessagingProvider(config, "telegram-bot");
+  var botToken = getTelegramBotToken(config, normalizedTenant);
+  var pollOffsetKey = toTelegramCommandOffsetStateKey(normalizedTenant, botToken);
 
   res.json({
     tenantKey: normalizedTenant,
-    providerEnabled: Boolean(findMessagingProvider(config, "telegram-bot")),
+    providerEnabled: Boolean(provider && provider.enabled),
     botConfigured: Boolean(botToken),
+    pollOffsetKey: pollOffsetKey,
     linkedUsersCount: getTenantTelegramBindingCount(normalizedTenant),
-    nextPollOffset: Number(telegramCommandOffsets.get(normalizedTenant) || 0),
+    nextPollOffset: Number(telegramCommandOffsets.get(pollOffsetKey) || 0),
     commands: buildTelegramCommandDefinitions(),
     visibleCommandsForRequester: buildTelegramCommandDefinitionsForRole(authSession.role),
     autoPoll: getTelegramAutoPollRuntimeState(),
@@ -5568,20 +6553,21 @@ router.post("/integrations/messaging/telegram/commands/poll", async function (re
 
   var normalizedTenant = normalizeTenantKey(tenantKey, "default");
   var config = loadTenantIntegrationConfig(normalizedTenant);
-  var botToken = getTelegramBotToken(config);
+  var botToken = getTelegramBotToken(config, normalizedTenant);
   if (!botToken) {
     res.status(400).json({
       accepted: false,
       code: "TELEGRAM_BOT_TOKEN_MISSING",
-      message: "Telegram bot token is not configured for this tenant",
+      message: "Telegram bot token is not configured for this PulseWard deployment",
     });
     return;
   }
 
+  var offsetStateKey = toTelegramCommandOffsetStateKey(normalizedTenant, botToken);
   var providedOffset = Number(payload.offset);
   var offset = Number.isFinite(providedOffset)
     ? Math.max(0, Math.floor(providedOffset))
-    : Number(telegramCommandOffsets.get(normalizedTenant) || 0);
+    : Number(telegramCommandOffsets.get(offsetStateKey) || 0);
   var limit = Number(payload.limit);
 
   try {
@@ -5596,19 +6582,20 @@ router.post("/integrations/messaging/telegram/commands/poll", async function (re
         nextOffset = updateId + 1;
       }
 
-      var result = await processTelegramCommandUpdate(normalizedTenant, botToken, update);
+      var result = await processTelegramCommandUpdate(botToken, update);
       if (result && result.handled) {
         processed.push(result);
       }
     }
 
-    telegramCommandOffsets.set(normalizedTenant, nextOffset);
+    telegramCommandOffsets.set(offsetStateKey, nextOffset);
 
     res.json({
       accepted: true,
       tenantKey: normalizedTenant,
       fetchedUpdates: updates.length,
       handledCommands: processed.length,
+      pollOffsetKey: offsetStateKey,
       nextOffset: nextOffset,
       processed: processed,
     });
@@ -5624,15 +6611,8 @@ router.post("/integrations/messaging/telegram/commands/poll", async function (re
 
 router.post("/integrations/messaging/telegram/commands/webhook", async function (req, res) {
   var payload = req.body || {};
-  var tenantKey = normalizeTenantKey(req.query.tenantKey || payload.tenantKey, "default");
-  if (!tenantKey) {
-    res.status(400).json({
-      accepted: false,
-      code: "TELEGRAM_TENANT_REQUIRED",
-      message: "tenantKey is required in query or payload",
-    });
-    return;
-  }
+  var tenantKey = normalizeTenantKey(req.query.tenantKey || payload.tenantKey, "");
+  var effectiveTenant = tenantKey || "default";
 
   var configuredSecret = String(process.env.INTEGRATION_TELEGRAM_WEBHOOK_SECRET || "").trim();
   if (configuredSecret) {
@@ -5647,26 +6627,28 @@ router.post("/integrations/messaging/telegram/commands/webhook", async function 
     }
   }
 
-  var config = loadTenantIntegrationConfig(tenantKey);
-  var botToken = getTelegramBotToken(config);
+  var config = loadTenantIntegrationConfig(effectiveTenant);
+  var botToken = getTelegramBotToken(config, effectiveTenant);
   if (!botToken) {
     res.status(400).json({
       accepted: false,
       code: "TELEGRAM_BOT_TOKEN_MISSING",
-      message: "Telegram bot token is not configured for this tenant",
+      message: "Telegram bot token is not configured for this PulseWard deployment",
     });
     return;
   }
 
   try {
-    var result = await processTelegramCommandUpdate(tenantKey, botToken, payload);
+    var result = await processTelegramCommandUpdate(botToken, payload);
+    var pollOffsetKey = toTelegramCommandOffsetStateKey(effectiveTenant, botToken);
 
     res.json({
       accepted: true,
-      tenantKey: tenantKey,
+      tenantKey: effectiveTenant,
       handled: Boolean(result && result.handled),
       result: result,
-      nextOffset: Number(telegramCommandOffsets.get(tenantKey) || 0),
+      pollOffsetKey: pollOffsetKey,
+      nextOffset: Number(telegramCommandOffsets.get(pollOffsetKey) || 0),
     });
   } catch (error) {
     res.status(502).json({

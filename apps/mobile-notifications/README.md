@@ -4,7 +4,8 @@ This app provides the M6 mobile-notification baseline for PulseWard using Expo m
 
 ## Purpose
 
-- Fetch tenant-scoped appointment event receipts from notification-service.
+- Use one PulseWard app across organizations with organization-name selection.
+- Fetch organization-scoped appointment event receipts from notification-service.
 - Display event metadata for operator verification and mobile-path evidence.
 - Register an Expo push token on Android.
 - Send a real test push notification to the phone.
@@ -50,11 +51,14 @@ pnpm run start:mobile:lan
 
 ## API Path Used
 
+- GET /api/v1/integrations/tenants/catalog
 - GET /api/v1/integrations/appointments/events?tenantKey=<tenant>
 
 ## Notes
 
 - Open the app on your Android phone (Expo Go or development build).
+- For patients, select organization by display name.
+- For doctors/nurses/staff, enter tenant key explicitly if required by your workflow.
 - Tap "Enable push and get token".
 - Tap "Send test push".
 - The app shows the latest notification payload once received.

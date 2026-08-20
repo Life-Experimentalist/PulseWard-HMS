@@ -53,8 +53,6 @@ jobs:
           mkdir -p _site/docs
           cp -r apps/landing-page/. _site/
           cp -r docs/site/.vitepress/dist/. _site/docs/
-          # Remove app.js (stub) from service worker cache to prevent noise
-          rm -f _site/app.js
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

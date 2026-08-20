@@ -441,7 +441,7 @@
             </div>
           </div>
 
-          <details class="setup-steps">
+          <details class="setup-steps" open>
             <summary class="setup-summary">
               <span>Full setup walkthrough (5 steps)</span>
               <svg
@@ -476,23 +476,22 @@
                 <div class="step-num" aria-hidden="true">2</div>
                 <div class="step-body">
                   <h4>Clone the repository</h4>
-                  <div class="code-block">
-                    <code
-                      >git clone https://github.com/Life-Experimentalist/PulseWard-HMS.git cd
-                      PulseWard-HMS</code
-                    >
-                  </div>
+                  <pre
+                    class="code-block"
+                  ><code>git clone https://github.com/Life-Experimentalist/PulseWard-HMS.git
+cd PulseWard-HMS</code></pre>
                 </div>
               </li>
               <li>
                 <div class="step-num" aria-hidden="true">3</div>
                 <div class="step-body">
                   <h4>Configure environment</h4>
-                  <div class="code-block">
-                    <code>cp .env.example .env node scripts/generate-jwt-secret.mjs</code>
-                  </div>
+                  <pre class="code-block"><code>cp .env.example .env
+node scripts/generate-jwt-secret.mjs</code></pre>
                   <p>
-                    Edit <code>.env</code> and set <code>JWT_SECRET</code> to the generated value.
+                    Copy the environment template, then edit <code>.env</code> and set
+                    <code>JWT_SECRET</code> to the value the generator prints. Everything else works
+                    with the defaults.
                   </p>
                 </div>
               </li>
@@ -500,7 +499,7 @@
                 <div class="step-num" aria-hidden="true">4</div>
                 <div class="step-body">
                   <h4>Start the stack</h4>
-                  <div class="code-block"><code>docker compose up -d</code></div>
+                  <pre class="code-block"><code>docker compose up -d</code></pre>
                   <p>
                     Starts the API Gateway (internal :8787) and an nginx reverse proxy on :80/:443
                     serving all four portals as static files. Want hot reload for local development

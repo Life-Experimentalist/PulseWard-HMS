@@ -7,6 +7,8 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 # Copy workspace manifest files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# preinstall hook (enforce-pnpm) referenced by the root package.json
+COPY scripts/enforce-pnpm.cjs ./scripts/
 COPY services/api-gateway/package.json ./services/api-gateway/
 
 # Install only api-gateway dependencies

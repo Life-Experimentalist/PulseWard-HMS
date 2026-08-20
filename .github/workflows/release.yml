@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend apps
+        run: pnpm run build:apps:ci
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/api-gateway/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Package dist artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release-artifacts
+          zip -r release-artifacts/patient-portal-v${VERSION}.zip    apps/patient-portal/dist
+          zip -r release-artifacts/clinician-portal-v${VERSION}.zip  apps/clinician-portal/dist
+          zip -r release-artifacts/admin-console-v${VERSION}.zip     apps/admin-console/dist
+          zip -r release-artifacts/operations-dashboard-v${VERSION}.zip apps/operations-dashboard/dist
+          zip -r release-artifacts/source-v${VERSION}.zip . \
+            --exclude "node_modules/*" --exclude ".git/*" \
+            --exclude "*/dist/*" --exclude "*/node_modules/*"
+          cd release-artifacts && sha256sum *.zip > checksums.sha256
+
+      - name: Resolve release notes path
+        id: relnotes
+        run: |
+          NOTES="releases/${{ github.ref_name }}/RELEASE-NOTES.md"
+          if [ -f "$NOTES" ]; then
+            echo "path=$NOTES" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PulseWard HMS ${{ github.ref_name }}
+          body_path: ${{ steps.relnotes.outputs.path }}
+          fail_on_unmatched_files: false
+          files: |
+            release-artifacts/*.zip
+            release-artifacts/checksums.sha256

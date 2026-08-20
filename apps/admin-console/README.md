@@ -1,67 +1,45 @@
-﻿# PulseWard Admin Console
+# PulseWard Admin Console
 
-The Admin Console is a framework-based React + Vite application built for modular, professional operations workflows.
-Production usage is precompiled static assets (`dist`) served by a lightweight Node static server.
+The administrative portal for PulseWard HMS — a React 18 + Vite single-page app for
+platform administrators. Dev server runs on **port 4180** and proxies `/api` to the
+API gateway on `:8787`.
 
 ## What It Covers
 
-- Service reachability checks for Auth, Notification, and Appointment services
-- Google OAuth readiness and quick start-link launch
-- ABHA environment readiness visibility and ABHA gateway health-check tab
-- Telegram Bot test delivery (live send via Bot API)
-- SMTP test delivery (live send via configured credentials)
-- Activity log with latest test output
+- **User management** — create, list, and deactivate users across roles
+- **Clinician directory** — manage provider profiles
+- **Audit log** — review the tamper-evident `audit_events` trail
+- **Dashboard** — tenant-wide activity and account statistics
 
-## Build and Start (Production-Fast)
+## Development
 
-From repository root:
+From the repository root, start everything (API gateway + all four portals with HMR):
 
 ```powershell
-pnpm run install:admin
-pnpm run build:admin
-pnpm run start:admin
+pnpm run dev
 ```
 
-For CI/CD production pipelines:
+Or run just this portal (the API gateway must already be running via `pnpm run start`):
 
 ```powershell
-pnpm run build:admin:ci
-pnpm run start:admin
+pnpm --dir apps/admin-console dev
 ```
 
-`start:admin` serves prebuilt files only and does not run runtime bundling.
-By default, it starts on `http://127.0.0.1:4180` and auto-falls forward to the next free port.
+The dev server listens on `http://localhost:4180` (override with `ADMIN_CONSOLE_PORT`).
 
-## Optional Dev Mode
-
-For iterative UI development:
+## Production Build
 
 ```powershell
-pnpm run start:admin:dev
+pnpm run build                      # builds all four portals to apps/*/dist
+pnpm --dir apps/admin-console build # or just this one
+pnpm --dir apps/admin-console preview
 ```
 
-## Required Service Endpoints
+The build emits static assets to `apps/admin-console/dist`, served by any static host
+or reverse proxy that forwards `/api/v1/*` to the gateway.
 
-Set these in dashboard routing controls or `.env`:
+## Related Documentation
 
-- Auth Service: `http://localhost:5101`
-- Notification Service: `http://localhost:5102`
-- Appointment Service: `http://localhost:5103`
-
-## Integration Credentials
-
-For production-like usage, configure credentials through environment variables and secret references.
-For quick validation, the dashboard can submit one-time credentials directly in test requests.
-
-## Data Storage
-
-- Tenant dashboard settings are persisted server-side in auth-service JSON store:
-  `services/auth-service/data/admin-console-settings.json`
-- Browser `localStorage` is used only as a fallback cache if server persistence is unavailable.
-- Integration credentials remain environment-driven or one-time test payloads and are not persisted by the dashboard.
-
-## Notes
-
-- Keep CORS allowed origins permissive for local/LAN demos, then restrict for production.
-- Avoid using real patient identifiers in integration test payloads.
-
+- API reference: [`docs/site/api.md`](../../docs/site/api.md)
+- Architecture: [`docs/site/architecture/`](../../docs/site/architecture/)
+- Auth flow: [`docs/site/architecture/auth-flow.md`](../../docs/site/architecture/auth-flow.md)

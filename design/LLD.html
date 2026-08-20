@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PulseWard HMS — Low-Level Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0e1e26; --ink-2:#233039; --ink-3:#3d4b54; --muted:#6b7a83; --mute-2:#93a1aa;
+    --line:#dfe7ea; --line-soft:#eaf0f2; --paper:#f6f9fa; --paper-2:#f0f4f5; --panel:#ffffff;
+    --teal:#0f4c5c; --teal-2:#1a6b7e; --teal-50:#e5f0f2; --teal-100:#c9dfe4;
+    --sun:#ea8f3b; --ok:#1f8a5b; --ok-50:#e3f4ec; --warn:#c98a14; --warn-50:#fbf1d9;
+    --danger:#c0382a; --danger-50:#fbe5e2; --info:#2a6ea1; --info-50:#e3eef6;
+    --violet:#6b46c1; --violet-50:#ede7f6;
+    --font-sans:"IBM Plex Sans", system-ui, sans-serif;
+    --font-display:"Space Grotesk", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--paper);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em;margin:0;font-weight:600;}
+  a{color:var(--teal);}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:14px;z-index:10;}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--teal),var(--teal-2));color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;}
+  .brand{font-family:var(--font-display);font-weight:700;color:var(--teal);}
+  .top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:white;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+  .btn.primary{background:var(--teal);color:white;border-color:transparent;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px;}
+
+  .hero{padding:36px 32px;background:linear-gradient(155deg,#fff,#e6f1ee 60%,#fdf3e6);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;}
+  .hero .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--teal-2);}
+  .hero h1{font-size:32px;line-height:1.1;margin-top:8px;font-weight:600;letter-spacing:-0.02em;}
+  .hero p{color:var(--muted);margin-top:10px;font-size:14.5px;max-width:62ch;}
+  .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px;}
+  .stat{background:rgba(255,255,255,0.7);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--mute-2);}
+  .stat .val{font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--teal);}
+
+  h2.sec{font-size:22px;margin:38px 0 4px;padding-top:12px;font-weight:600;}
+  .sec-sub{color:var(--muted);margin-bottom:18px;font-size:13.5px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;}
+  .card h3{font-size:15px;margin-bottom:6px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:10px;}
+
+  .grid{display:grid;gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  .cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.cols-2,.cols-3,.cols-4,.stat-strip{grid-template-columns:1fr;}}
+
+  pre{background:#0e1e26;color:#dfe7ea;padding:14px 16px;border-radius:10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;overflow-x:auto;margin:10px 0;}
+  pre .c{color:#6b7a83;}
+  pre .k{color:#6fc6d7;}
+  pre .s{color:#e0b358;}
+  pre .n{color:#b39be0;}
+  code.inl{background:var(--paper-2);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2);}
+
+  ul.checklist, ol.checklist{padding-left:0;list-style:none;margin:8px 0;}
+  ul.checklist li, ol.checklist li{padding:5px 0 5px 24px;position:relative;font-size:13.5px;}
+  ol.checklist{counter-reset:item;}
+  ol.checklist li::before{content:counter(item);counter-increment:item;position:absolute;left:0;top:6px;width:18px;height:18px;background:var(--teal-50);color:var(--teal);border-radius:99px;display:grid;place-items:center;font-weight:700;font-size:10.5px;font-family:var(--font-mono);}
+  ul.checklist li::before{content:"";position:absolute;left:4px;top:12px;width:6px;height:6px;border-radius:99px;background:var(--teal);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--paper-2);color:var(--ink-3);border:1px solid var(--line);}
+  .badge.ok{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .badge.warn{background:var(--warn-50);color:var(--warn);border-color:transparent;}
+  .badge.info{background:var(--info-50);color:var(--info);border-color:transparent;}
+  .badge.teal{background:var(--teal-50);color:var(--teal);border-color:transparent;}
+  .badge.violet{background:var(--violet-50);color:var(--violet);border-color:transparent;}
+  .badge.sun{background:#fdf1e4;color:var(--sun);border-color:transparent;}
+  .badge.danger{background:var(--danger-50);color:var(--danger);border-color:transparent;}
+
+  .callout{padding:12px 16px;border-radius:10px;margin:12px 0;font-size:13px;border-left:3px solid;}
+  .callout.info{background:var(--info-50);color:var(--info);border-left-color:var(--info);}
+  .callout.warn{background:var(--warn-50);color:var(--warn);border-left-color:var(--warn);}
+  .callout.ok{background:var(--ok-50);color:var(--ok);border-left-color:var(--ok);}
+  .callout.danger{background:var(--danger-50);color:var(--danger);border-left-color:var(--danger);}
+
+  table.spec{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-top:6px;}
+  table.spec th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mute-2);background:var(--paper-2);border-bottom:1px solid var(--line);}
+  table.spec td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  table.spec td:first-child{font-weight:600;}
+  table.spec .mono, .mono{font-family:var(--font-mono);font-size:12px;}
+  .card.tight{padding:0;overflow:hidden;}
+  .card.tight table.spec th, .card.tight table.spec td{padding-left:18px;padding-right:18px;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px;}
+  .toc a{font-size:11.5px;background:white;border:1px solid var(--line);padding:5px 10px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-weight:500;}
+  .toc a:hover{background:var(--paper-2);}
+
+  /* ─── Service cards ─── */
+  .svc{display:grid;grid-template-columns:120px 1fr;gap:18px;padding:18px;border-radius:14px;background:var(--panel);border:1px solid var(--line);margin-bottom:14px;}
+  .svc .label{font-family:var(--font-display);font-weight:700;color:var(--teal);font-size:14px;}
+  .svc .label .port{font-family:var(--font-mono);font-size:11px;color:var(--mute-2);font-weight:500;margin-top:6px;background:var(--paper-2);padding:3px 7px;border-radius:6px;display:inline-block;}
+  .svc .label .kind{color:var(--mute-2);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-top:6px;}
+  .svc .body h4{font-size:15px;margin-bottom:4px;}
+  .svc .body p.intro{color:var(--ink-3);margin:0 0 10px;font-size:13px;}
+
+  /* ─── Sequence flow ─── */
+  .seq{display:grid;gap:6px;margin:12px 0;}
+  .seq .step{display:grid;grid-template-columns:32px 1fr;gap:14px;padding:10px 12px;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;}
+  .seq .step .n{width:26px;height:26px;border-radius:99px;background:var(--teal);color:white;display:grid;place-items:center;font-weight:700;font-family:var(--font-display);font-size:12px;}
+  .seq .step .lbl{font-weight:600;font-size:13px;}
+  .seq .step .desc{color:var(--ink-3);font-size:12.5px;margin-top:2px;}
+  .seq .step .mono{font-family:var(--font-mono);font-size:11.5px;color:var(--teal-2);margin-top:4px;}
+
+  /* ─── State machine ─── */
+  .fsm{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;font-family:var(--font-mono);font-size:12px;}
+  .fsm .state{padding:5px 10px;border-radius:7px;background:var(--teal-50);color:var(--teal);font-weight:600;border:1px solid var(--teal-100);}
+  .fsm .state.term{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .fsm .state.bad{background:var(--danger-50);color:var(--danger);border-color:transparent;}
+  .fsm .arrow{color:var(--mute-2);font-weight:600;}
+  .fsm .label{font-size:10.5px;color:var(--mute-2);}
+
+  /* ─── ERD ─── */
+  .erd{font-family:var(--font-mono);font-size:11.5px;background:#0e1e26;color:#dfe7ea;padding:18px;border-radius:10px;overflow-x:auto;white-space:pre;line-height:1.6;}
+  .erd .tbl{color:#6fc6d7;font-weight:700;}
+  .erd .fk{color:#e0b358;}
+  .erd .pk{color:#b39be0;}
+  .erd .c{color:#6b7a83;}
+
+  /* ─── API endpoint ─── */
+  .ep{padding:12px 14px;border-radius:10px;background:var(--paper-2);border:1px solid var(--line);margin:8px 0;}
+  .ep .head{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:12.5px;}
+  .ep .meth{padding:2px 7px;border-radius:5px;font-weight:700;font-size:11px;color:white;}
+  .ep .meth.get{background:#2a6ea1;}
+  .ep .meth.post{background:#1f8a5b;}
+  .ep .meth.patch{background:#c98a14;}
+  .ep .meth.delete{background:#c0382a;}
+  .ep .meth.put{background:#6b46c1;}
+  .ep .path{color:var(--ink);font-weight:600;}
+  .ep .desc{color:var(--muted);font-size:12.5px;margin-top:4px;}
+  .ep details{margin-top:8px;}
+  .ep details summary{cursor:pointer;font-size:11.5px;color:var(--teal-2);font-weight:600;}
+
+  .files{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);background:var(--paper-2);padding:14px;border-radius:8px;white-space:pre;overflow-x:auto;line-height:1.5;}
+  .files .dir{color:var(--teal);font-weight:600;}
+  .files .anno{color:var(--mute-2);}
+
+  .err-row td{font-family:var(--font-mono);font-size:12px;}
+  .err-code{font-weight:700;color:var(--danger);}
+
+  h3.sub{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--ink-2);}
+
+  /* sticky side index optional, keeping inline */
+  .anchor{padding-top:8px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">P</div>
+  <div>
+    <div class="brand">PulseWard HMS</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Low-Level Design · v1</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="Architecture.html">Architecture</a>
+    <a class="btn" href="Build Notes.html">Build notes</a>
+    <a class="btn" href="Setup Guide.html">Setup guide →</a>
+    <a class="btn" href="Operations Runbook.html">Runbook</a>
+    <a class="btn" href="PulseWard HMS.html">← App</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="eyebrow">LLD · module-level design · contracts · state · errors</div>
+    <h1>How every service is shaped, talks to its peers, and behaves under stress.</h1>
+    <p>Architecture says <em>what we're building</em>; Build Notes says <em>when</em>. This document answers the third question — <em>exactly how</em>. Tables, request/response shapes, state machines, error codes and module decomposition for each of the seven services that sit behind the React apps.</p>
+    <div class="stat-strip">
+      <div class="stat"><div class="lbl">Backend services</div><div class="val">7</div></div>
+      <div class="stat"><div class="lbl">Public endpoints</div><div class="val">~80</div></div>
+      <div class="stat"><div class="lbl">Core tables</div><div class="val">18</div></div>
+      <div class="stat"><div class="lbl">SLO p95</div><div class="val">&lt; 250 ms</div></div>
+    </div>
+  </section>
+
+  <div class="toc">
+    <a href="#sysctx">System context</a>
+    <a href="#services">Service catalog</a>
+    <a href="#ports">Ports &amp; routing</a>
+    <a href="#data">Data model</a>
+    <a href="#auth-svc">Auth</a>
+    <a href="#patient-svc">Patient</a>
+    <a href="#appt-svc">Appointments</a>
+    <a href="#ehr-svc">EHR</a>
+    <a href="#lab-svc">Lab</a>
+    <a href="#rx-svc">Pharmacy</a>
+    <a href="#notif-svc">Notifications</a>
+    <a href="#abha-svc">ABHA</a>
+    <a href="#fsm">State machines</a>
+    <a href="#flows">Cross-service flows</a>
+    <a href="#cross">Cross-cutting</a>
+    <a href="#errors">Errors</a>
+    <a href="#tests">Testing</a>
+    <a href="#nfr">NFRs &amp; SLOs</a>
+  </div>
+
+  <!-- ──────────────── 1 · SYSTEM CONTEXT ──────────────── -->
+  <h2 id="sysctx" class="sec">1 · System context</h2>
+  <p class="sec-sub">Five client surfaces, one API contract, seven backend services, three data planes.</p>
+
+  <div class="card">
+<div class="files">                          ┌────────────────────────────┐
+                          │  Patient · Clinician · Admin │   ← React + Vite SPAs
+                          │   Operations · Landing       │
+                          │   Mobile (Expo) · Telegram   │
+                          └──────────────┬──────────────┘
+                                         │ HTTPS, JSON, JWT
+                          ┌──────────────▼───────────────┐
+                          │      API Gateway (Hono)      │   ← Auth · Tenant · Audit · Rate-limit
+                          └─┬────┬────┬────┬────┬────┬───┘
+                            │    │    │    │    │    │
+        ┌───────────────────┘    │    │    │    │    └────────────────────────┐
+        ▼                        ▼    ▼    ▼    ▼                              ▼
+  <span class="dir">auth-service</span>          <span class="dir">patient-svc</span> <span class="dir">appt-svc</span> <span class="dir">ehr-svc</span> <span class="dir">lab-svc</span>                <span class="dir">notification-svc</span>
+        │                        │    │    │    │                              │
+        └────────┐  ┌────────────┴────┴────┴────┘                              │
+                 ▼  ▼                                                          ▼
+              <span class="dir">D1 / Postgres</span>                                        <span class="dir">Queues</span> → Telegram · FCM · APNs · Email · SMS
+                 │
+                 ▼
+              <span class="dir">R2</span> (lab PDFs, scans, backups)   <span class="dir">KV</span> (sessions, rate-limit, ABDM token cache)
+
+                                         ▲
+                                         │   ABDM v3 · UIDAI · Telegram · MSG91 · Resend
+                          ┌──────────────┴───────────────┐
+                          │       External providers     │
+                          └──────────────────────────────┘</div>
+  </div>
+
+  <div class="callout info">
+    <strong>Trust boundary:</strong> everything to the left of the API Gateway is untrusted (any client can be impersonated). Everything to the right runs inside Cloudflare's Worker isolate and only talks to managed primitives. The gateway is the only place we need full auth + tenant + audit logic.
+  </div>
+
+  <!-- ──────────────── 2 · SERVICE CATALOG ──────────────── -->
+  <h2 id="services" class="sec">2 · Service catalog</h2>
+  <p class="sec-sub">Seven services. Each is a separate Worker so each can scale, log, and roll back independently. They share <code class="inl">packages/schema</code> and <code class="inl">packages/sdk</code> for type safety across the wire.</p>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Service</th><th>Owns</th><th>Storage</th><th>Calls out to</th></tr></thead>
+      <tbody>
+        <tr><td>api-gateway</td><td>Routing, auth middleware, tenant resolution, audit, rate limits</td><td>KV (sessions, rate limit)</td><td>All internal services</td></tr>
+        <tr><td>auth-service</td><td>Signup, login, refresh, password reset, 2FA, sessions</td><td>D1 <span class="mono">users</span>, <span class="mono">sessions</span>; KV refresh</td><td>notification-svc (welcome / 2FA)</td></tr>
+        <tr><td>patient-service</td><td>Patient CRUD, demographics, conditions, allergies, vitals</td><td>D1 <span class="mono">patients</span></td><td>abha-svc (linking)</td></tr>
+        <tr><td>appointment-service</td><td>Calendar, booking, conflicts, reassignment queue, availability blocks</td><td>D1 <span class="mono">appointments</span>, <span class="mono">availability_blocks</span>, <span class="mono">reassignment_queue</span></td><td>notification-svc</td></tr>
+        <tr><td>ehr-service</td><td>Clinical notes (append-only after signing), messages, threads</td><td>D1 <span class="mono">notes</span>, <span class="mono">messages</span>; R2 attachments</td><td>notification-svc</td></tr>
+        <tr><td>lab-service</td><td>Lab orders, results ingestion, PDF storage</td><td>D1 <span class="mono">lab_orders</span>; R2 PDFs</td><td>External lab webhooks, notification-svc</td></tr>
+        <tr><td>pharmacy-service</td><td>Prescriptions, refill timers</td><td>D1 <span class="mono">prescriptions</span></td><td>notification-svc</td></tr>
+        <tr><td>notification-service</td><td>Channel routing &amp; fan-out, in-app inbox, delivery receipts</td><td>D1 <span class="mono">notifications</span>, <span class="mono">providers</span>; Queues</td><td>Telegram, FCM/APNs, Resend, MSG91</td></tr>
+        <tr><td>abha-service</td><td>ABDM proxy: enrollment, link, HIP callbacks, consent</td><td>D1 <span class="mono">consents</span>; KV (ABDM tokens)</td><td>ABDM v3 endpoints</td></tr>
+        <tr><td>backup-service</td><td>Cron-scheduled D1 → R2 snapshots, restore tooling</td><td>R2 backups</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <strong>Why split this small?</strong> Because they have different failure modes. ABHA can be down for hours and the hospital still works. Notification can lag without blocking clinicians. Auth must be 99.99%. Each service gets its own SLO, alert thresholds, and on-call rotation.
+  </div>
+
+  <!-- ──────────────── 3 · PORTS & ROUTING ──────────────── -->
+  <h2 id="ports" class="sec">3 · Local ports &amp; production routing</h2>
+  <p class="sec-sub">Local dev runs each service as a Node process. Production fronts everything with a single <code class="inl">api.your-hospital.in</code> behind the gateway.</p>
+
+  <div class="grid cols-2">
+    <div class="card tight">
+      <table class="spec">
+        <thead><tr><th>Surface</th><th>Local</th><th>Prod URL</th></tr></thead>
+        <tbody>
+          <tr><td>Landing page</td><td class="mono">localhost:4173</td><td class="mono">www.&hellip;in</td></tr>
+          <tr><td>Admin console</td><td class="mono">localhost:4180</td><td class="mono">admin.&hellip;in</td></tr>
+          <tr><td>Clinician portal</td><td class="mono">localhost:4181</td><td class="mono">app.&hellip;in/c</td></tr>
+          <tr><td>Operations dash</td><td class="mono">localhost:4182</td><td class="mono">ops.&hellip;in</td></tr>
+          <tr><td>Patient portal</td><td class="mono">localhost:4183</td><td class="mono">app.&hellip;in</td></tr>
+          <tr><td>Mobile (Expo)</td><td class="mono">expo://lan</td><td>App Store / Play</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card tight">
+      <table class="spec">
+        <thead><tr><th>Service</th><th>Local</th><th>Prod route</th></tr></thead>
+        <tbody>
+          <tr><td>api-gateway</td><td class="mono">:8087</td><td class="mono">api.&hellip;in/*</td></tr>
+          <tr><td>auth-service</td><td class="mono">:5101</td><td class="mono">api.&hellip;in/v1/auth/*</td></tr>
+          <tr><td>notification-svc</td><td class="mono">:5102 / :8088</td><td class="mono">api.&hellip;in/v1/notify/*</td></tr>
+          <tr><td>appointment-svc</td><td class="mono">:5103</td><td class="mono">api.&hellip;in/v1/appointments/*</td></tr>
+          <tr><td>ehr-service</td><td class="mono">:5104</td><td class="mono">api.&hellip;in/v1/{notes,messages}/*</td></tr>
+          <tr><td>lab-service</td><td class="mono">:5105</td><td class="mono">api.&hellip;in/v1/labs/*</td></tr>
+          <tr><td>pharmacy-svc</td><td class="mono">:5106</td><td class="mono">api.&hellip;in/v1/prescriptions/*</td></tr>
+          <tr><td>abha-service</td><td class="mono">:5107</td><td class="mono">api.&hellip;in/v1/abha/*</td></tr>
+          <tr><td>backup-service</td><td>cron only</td><td>Worker Cron</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3 class="sub">Vite proxy convention</h3>
+  <pre><span class="c">// apps/*/vite.config.js — every SPA proxies its own back end</span>
+<span class="k">export default</span> {
+  server: {
+    proxy: {
+      <span class="s">'/api/v1'</span>:      { target: <span class="s">'http://127.0.0.1:8087'</span>, changeOrigin: <span class="k">true</span> },     <span class="c">// gateway</span>
+      <span class="s">'/api/auth-v1'</span>: { target: <span class="s">'http://127.0.0.1:5101'</span>, rewrite: p =&gt; p.replace(<span class="s">'/api/auth-v1'</span>, <span class="s">'/api/v1'</span>) },
+    },
+  },
+};</pre>
+
+  <!-- ──────────────── 4 · DATA MODEL ──────────────── -->
+  <h2 id="data" class="sec">4 · Data model</h2>
+  <p class="sec-sub">SQLite (D1) — 18 tables. Every row carries <code class="inl">tenant_id</code>. Every soft-mutable shape uses a JSON column for evolvability; hot query fields are projected to dedicated columns.</p>
+
+  <h3 class="sub">Entity diagram (PK / FK only)</h3>
+  <div class="erd"><span class="tbl">tenants</span>            <span class="pk">id*</span>  slug  name  hfr_id  branding_json
+<span class="tbl">users</span>              <span class="pk">id*</span>  <span class="fk">tenant_id→tenants</span>  email  password_hash  role  linked_entity_id
+<span class="tbl">sessions</span>           <span class="pk">id*</span>  <span class="fk">user_id→users</span>      refresh_hash  expires_at  device  ip
+<span class="tbl">patients</span>           <span class="pk">id*</span>  <span class="fk">tenant_id→tenants</span>  mrn  profile_id  abha_number  abha_address  demographics_json
+<span class="tbl">clinicians</span>         <span class="pk">id*</span>  <span class="fk">tenant_id→tenants</span>  name  npi  department  languages_json
+<span class="tbl">appointments</span>       <span class="pk">id*</span>  <span class="fk">tenant_id→tenants</span>  <span class="fk">patient_id→patients</span>  <span class="fk">clinician_id→clinicians</span>  starts_at  status
+<span class="tbl">availability_blocks</span> <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">clinician_id</span>  starts_at  ends_at  kind  reason
+<span class="tbl">reassignment_queue</span>  <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">appointment_id→appointments</span>  reason  proposed_clinician_id  status
+<span class="tbl">notes</span>              <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">patient_id</span>  <span class="fk">clinician_id</span>  type  body  signed_at  prev_hash
+<span class="tbl">messages</span>           <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">patient_id</span>  <span class="fk">clinician_id</span>  subject  thread_json  last_at
+<span class="tbl">lab_orders</span>         <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">patient_id</span>  <span class="fk">clinician_id</span>  panel  status  results_json  pdf_r2_key
+<span class="tbl">prescriptions</span>      <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">patient_id</span>  <span class="fk">clinician_id</span>  drug  freq  duration  refills  status
+<span class="tbl">consents</span>           <span class="pk">id*</span>  <span class="fk">tenant_id</span>  <span class="fk">patient_id</span>  scope  granted  granted_at  expires_at  abdm_consent_id
+<span class="tbl">notifications</span>      <span class="pk">id*</span>  <span class="fk">tenant_id</span>  audience  kind  title  body  payload_json  sent_to_json  status
+<span class="tbl">providers</span>          <span class="pk">id*</span>  <span class="fk">tenant_id</span>  key  category  status  config_json  success_rate
+<span class="tbl">devices</span>            <span class="pk">id*</span>  <span class="fk">user_id→users</span>  platform  push_token  app_version  last_seen_at
+<span class="tbl">audit_events</span>       <span class="pk">id*</span>  <span class="fk">tenant_id</span>  at  actor  action  scope  ip  user_agent  diff_json
+<span class="tbl">incidents</span>          <span class="pk">id*</span>  severity  title  service  status  opened_at  resolved_at  owner
+
+<span class="c">-- Indices that matter --</span>
+<span class="tbl">appointments</span>      (tenant_id, clinician_id, starts_at)        <span class="c">-- daily schedule</span>
+<span class="tbl">appointments</span>      (tenant_id, patient_id, starts_at DESC)      <span class="c">-- patient history</span>
+<span class="tbl">notifications</span>     (tenant_id, audience, at DESC)               <span class="c">-- inbox</span>
+<span class="tbl">audit_events</span>      (tenant_id, at DESC)                         <span class="c">-- compliance dump</span>
+<span class="tbl">users</span>             (tenant_id, email) UNIQUE                    <span class="c">-- login lookup</span>
+<span class="tbl">patients</span>          (tenant_id, mrn) UNIQUE                      <span class="c">-- MRN scoping</span></div>
+
+  <h3 class="sub">JSON column shapes</h3>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><code class="inl">patients.demographics_json</code></h3>
+<pre>{
+  <span class="s">"address"</span>: { line1, line2, city, state, pin },
+  <span class="s">"emergencyContact"</span>: { name, rel, phone },
+  <span class="s">"language"</span>: <span class="s">"en"</span> | <span class="s">"hi"</span> | <span class="s">"ta"</span> | &hellip;,
+  <span class="s">"insurance"</span>: [{ provider, policyNo, validTill }]
+}</pre>
+    </div>
+    <div class="card">
+      <h3><code class="inl">notifications.sent_to_json</code></h3>
+<pre>[
+  { channel: <span class="s">"telegram"</span>, status: <span class="s">"delivered"</span>, at, providerId },
+  { channel: <span class="s">"push"</span>,     status: <span class="s">"failed"</span>,    at, error: <span class="s">"INVALID_TOKEN"</span> },
+  { channel: <span class="s">"email"</span>,    status: <span class="s">"sent"</span>,      at }
+]</pre>
+    </div>
+    <div class="card">
+      <h3><code class="inl">lab_orders.results_json</code></h3>
+<pre>{
+  <span class="s">"reportedAt"</span>: ISO,
+  <span class="s">"analytes"</span>: [
+    { code: <span class="s">"HGB"</span>, name: <span class="s">"Hemoglobin"</span>, value: 13.4, unit: <span class="s">"g/dL"</span>, ref: <span class="s">"12&ndash;16"</span>, flag: <span class="s">"normal"</span> }
+  ],
+  <span class="s">"comments"</span>: <span class="s">"&hellip;"</span>,
+  <span class="s">"sourceVendor"</span>: <span class="s">"externallab.in"</span>
+}</pre>
+    </div>
+    <div class="card">
+      <h3><code class="inl">audit_events.diff_json</code></h3>
+<pre>{
+  <span class="s">"before"</span>: { status: <span class="s">"scheduled"</span> },
+  <span class="s">"after"</span>:  { status: <span class="s">"cancelled"</span>, reason: <span class="s">"&hellip;"</span> },
+  <span class="s">"keys"</span>:   [<span class="s">"status"</span>, <span class="s">"reason"</span>]
+}</pre>
+    </div>
+  </div>
+
+  <!-- ──────────────── 5 · AUTH SERVICE ──────────────── -->
+  <h2 id="auth-svc" class="sec">5 · auth-service</h2>
+
+  <div class="svc">
+    <div class="label">
+      auth-service
+      <div class="kind">Stateless · D1 + KV</div>
+      <div class="port">:5101</div>
+    </div>
+    <div class="body">
+      <h4>Identity, credentials, sessions, 2FA, ABHA-OAuth.</h4>
+      <p class="intro">Every request to any other service must carry a JWT minted here. Refresh tokens are opaque IDs whose hash lives in KV; rotation is one-shot.</p>
+
+      <h3 class="sub">Module layout</h3>
+<div class="files"><span class="dir">services/auth-service/</span>
+├─ src/
+│  ├─ index.ts                <span class="anno"># Hono app</span>
+│  ├─ routes/
+│  │  ├─ signup.ts
+│  │  ├─ login.ts             <span class="anno"># constant-time, rate-limited</span>
+│  │  ├─ refresh.ts           <span class="anno"># single-use rotation</span>
+│  │  ├─ logout.ts
+│  │  ├─ password.ts          <span class="anno"># reset → email link</span>
+│  │  ├─ twofa.ts             <span class="anno"># TOTP enroll + verify</span>
+│  │  └─ me.ts
+│  ├─ lib/
+│  │  ├─ jwt.ts               <span class="anno"># HS256 sign + verify</span>
+│  │  ├─ hash.ts              <span class="anno"># argon2id with pepper</span>
+│  │  ├─ session.ts           <span class="anno"># KV refresh-token CRUD</span>
+│  │  └─ ratelimit.ts         <span class="anno"># sliding window per (ip,email)</span>
+│  └─ data/
+│     └─ admin-console-settings.json   <span class="anno"># tenant admin prefs</span>
+└─ test/</div>
+
+      <h3 class="sub">Endpoints</h3>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/signup</span></div>
+        <div class="desc">Create patient user. Auto-creates patients row + MRN. Issues tokens.</div>
+        <details><summary>Schemas</summary>
+<pre><span class="c">// Request</span>
+{ name: str(2,80), email: email, password: str(8,128),
+  dob: <span class="s">"YYYY-MM-DD"</span>?, gender: <span class="s">"M"|"F"|"O"</span>, phone: <span class="s">"+91..."</span> }
+
+<span class="c">// 201 OK</span>
+{ ok: <span class="k">true</span>, token: jwt, role: <span class="s">"patient"</span>, user: { id, email, name }, patient: { id, mrn, profileId } }
+
+<span class="c">// 409 — email_taken</span>
+<span class="c">// 429 — rate_limited (5 signups per IP per hour)</span></pre>
+        </details>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/login</span></div>
+        <div class="desc">Email + password. Returns access JWT in body, refresh in HttpOnly cookie.</div>
+        <details><summary>Schemas</summary>
+<pre><span class="c">// Request</span>
+{ email, password, tenantHint?: slug }
+
+<span class="c">// 200 — token + role</span>
+{ ok: <span class="k">true</span>, token, role, user, requires2fa?: <span class="k">true</span> }
+
+<span class="c">// 401 invalid_credentials</span>  <span class="c">// 403 locked</span>  <span class="c">// 429 too_many_attempts</span></pre>
+        </details>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/refresh</span></div>
+        <div class="desc">Rotates refresh token (one-shot). Old token is invalidated immediately.</div>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/logout</span></div>
+        <div class="desc">Revokes the refresh token and all derived sessions on this device.</div>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/password/forgot</span></div>
+        <div class="desc">Always returns 204; sends email with single-use reset link (15-min TTL).</div>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/password/reset</span></div>
+        <div class="desc">Burns the reset token. Invalidates all existing sessions for the user.</div>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth post">POST</span><span class="path">/v1/auth/2fa/enroll</span> &nbsp; <span class="meth post">POST</span><span class="path">/v1/auth/2fa/verify</span></div>
+        <div class="desc">TOTP enrollment for clinicians/admins. Returns a QR-code URL + 8 backup codes.</div>
+      </div>
+
+      <div class="ep">
+        <div class="head"><span class="meth get">GET</span><span class="path">/v1/auth/me</span></div>
+        <div class="desc">Returns the current user + role + tenant. Used by every app on boot.</div>
+      </div>
+
+      <h3 class="sub">JWT claims</h3>
+<pre>{
+  <span class="s">"iss"</span>: <span class="s">"pulseward"</span>,
+  <span class="s">"sub"</span>: <span class="s">"&lt;userId&gt;"</span>,
+  <span class="s">"tid"</span>: <span class="s">"&lt;tenantId&gt;"</span>,
+  <span class="s">"role"</span>: <span class="s">"patient"|"clinician"|"admin"|"frontdesk"|"ops"</span>,
+  <span class="s">"eid"</span>: <span class="s">"&lt;linked_entity_id&gt;"</span>,
+  <span class="s">"sid"</span>: <span class="s">"&lt;sessionId&gt;"</span>,
+  <span class="s">"iat"</span>: 1715900000,
+  <span class="s">"exp"</span>: 1715900900
+}
+<span class="c">// HS256 with JWT_SECRET. 15-min lifetime. Refresh token is opaque + in KV.</span></pre>
+
+      <h3 class="sub">Hashing</h3>
+<pre>argon2id({ memoryCost: 19456, timeCost: 2, parallelism: 1 })
+hash = argon2(password || PEPPER, perUserSalt)
+<span class="c">// PEPPER is a 32-byte hex secret stored in Workers Secrets — rotated quarterly.</span>
+<span class="c">// Salt is 16 random bytes per user, persisted alongside hash.</span></pre>
+
+      <h3 class="sub">Session lifecycle</h3>
+      <div class="fsm">
+        <span class="state">anonymous</span>
+        <span class="arrow">→ signup/login →</span>
+        <span class="state">active</span>
+        <span class="arrow">→ access exp →</span>
+        <span class="state">refreshing</span>
+        <span class="arrow">→ rotated →</span>
+        <span class="state">active</span>
+        <span class="arrow">→ logout/idle 30d →</span>
+        <span class="state term">revoked</span>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);">If a refresh token is presented twice (reuse detection) the entire session family is killed and the user is forced to log in again.</p>
+    </div>
+  </div>
+
+  <!-- ──────────────── 6 · PATIENT SERVICE ──────────────── -->
+  <h2 id="patient-svc" class="sec">6 · patient-service</h2>
+
+  <div class="svc">
+    <div class="label">
+      patient-service
+      <div class="kind">Per-tenant CRUD</div>
+      <div class="port">internal</div>
+    </div>
+    <div class="body">
+      <h4>The patient record. Demographics, conditions, allergies, vitals, MRN.</h4>
+      <p class="intro">Owns the canonical <code class="inl">patients</code> table. Reads are common; writes are clinician-only after a patient is created. Search must hit p95 &lt; 80 ms with 100 k records.</p>
+
+      <h3 class="sub">Endpoints</h3>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/patients?q=&amp;limit=20&amp;cursor=</span></div>
+        <div class="desc">Full-text on <code class="inl">name | mrn | phone | abha_address</code>. Returns paged list with opaque cursor. Tenant-scoped automatically.</div></div>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/patients/:id</span></div>
+        <div class="desc">Full record. Includes computed fields: <code class="inl">age</code>, <code class="inl">openOrders</code>, <code class="inl">activeRx</code>.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/patients</span></div>
+        <div class="desc">Front-desk creates a patient. MRN auto-generated. Emits <code class="inl">patient.created</code>.</div></div>
+      <div class="ep"><div class="head"><span class="meth patch">PATCH</span><span class="path">/v1/patients/:id</span></div>
+        <div class="desc">Partial update. <strong>Never overwrites the entire JSON column</strong> — merges keys server-side.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/patients/:id/vitals</span></div>
+        <div class="desc">Append a vitals snapshot. Tracked separately for time-series rendering.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/patients/:id/link-abha</span></div>
+        <div class="desc">Calls abha-service. Stores <code class="inl">abha_number</code> + <code class="inl">abha_address</code> on success.</div></div>
+
+      <h3 class="sub">MRN format</h3>
+<pre><span class="c">// Format: {tenant.short}-{YY}-{seq}</span>
+<span class="c">// Examples: PW-26-04217, MA-26-00112</span>
+<span class="c">// Sequence is monotonically increasing per (tenant_id, year).</span>
+mrn(tenantId) = `${tenant.short}-${yy()}-${nextSeq(tenantId)}`</pre>
+
+      <h3 class="sub">Validation</h3>
+      <ul class="checklist">
+        <li><code class="inl">phone</code> normalized to E.164 before insert (<code class="inl">+91XXXXXXXXXX</code>).</li>
+        <li><code class="inl">dob</code> must be a real date and not in the future.</li>
+        <li><code class="inl">bloodType</code> is one of <span class="mono">A+|A-|B+|B-|AB+|AB-|O+|O-|unknown</span>.</li>
+        <li><code class="inl">allergies</code> entries each carry a severity (<span class="mono">mild|moderate|severe|life-threatening</span>) — severe and above are surfaced as banners on every screen.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ──────────────── 7 · APPOINTMENT SERVICE ──────────────── -->
+  <h2 id="appt-svc" class="sec">7 · appointment-service</h2>
+
+  <div class="svc">
+    <div class="label">
+      appointment-service
+      <div class="kind">Calendar engine</div>
+      <div class="port">:5103</div>
+    </div>
+    <div class="body">
+      <h4>Booking, conflicts, availability, reassignment.</h4>
+      <p class="intro">Most contended write surface in the system. Bookings race; we serialize per <code class="inl">(clinician_id, day)</code> with optimistic concurrency on the appointments index.</p>
+
+      <h3 class="sub">Endpoints</h3>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/appointments?clinicianId=&amp;date=YYYY-MM-DD</span></div>
+        <div class="desc">Day view for one clinician. Returns 100 events max.</div></div>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/appointments?patientId=&amp;upcoming=true</span></div>
+        <div class="desc">Patient's upcoming + past 30-day history.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/appointments</span></div>
+        <div class="desc">Book. <strong>409</strong> if slot is taken; <strong>422</strong> if patient has another appointment within 30 min.</div></div>
+      <div class="ep"><div class="head"><span class="meth patch">PATCH</span><span class="path">/v1/appointments/:id</span></div>
+        <div class="desc">Reschedule, cancel, check-in, complete. State guarded — see FSM.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/availability</span></div>
+        <div class="desc">Clinician adds a block (leave, OR slot, conference). Returns <code class="inl">affected: [appointmentId]</code> — those become reassignment candidates.</div></div>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/reassignments</span></div>
+        <div class="desc">Front-desk queue. Filter by status, sort by patient priority.</div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/reassignments/:id/resolve</span></div>
+        <div class="desc">Body: <code class="inl">{ action: "reschedule"|"reassign"|"cancel", &hellip; }</code>. Atomically updates the appointment and emits notifications.</div></div>
+
+      <h3 class="sub">Booking race protection</h3>
+<pre><span class="c">// services/appointment-service/src/lib/book.ts</span>
+<span class="k">async function</span> book(req) {
+  <span class="k">return</span> db.transaction(<span class="k">async</span> (tx) =&gt; {
+    <span class="k">const</span> conflict = <span class="k">await</span> tx.prepare(<span class="s">`
+      SELECT id FROM appointments
+       WHERE tenant_id = ? AND clinician_id = ?
+         AND status NOT IN ('cancelled','no-show')
+         AND starts_at &lt; ? AND starts_at + duration_min*60*1000 &gt; ?
+       LIMIT 1`</span>).bind(t, c, req.endsAt, req.startsAt).first();
+    <span class="k">if</span> (conflict) <span class="k">throw new</span> ConflictError(<span class="s">'slot_taken'</span>);
+
+    <span class="k">await</span> tx.prepare(<span class="s">'INSERT INTO appointments &hellip;'</span>).bind(&hellip;).run();
+  });
+}</pre>
+
+      <h3 class="sub">Reassignment queue lifecycle</h3>
+      <div class="fsm">
+        <span class="state">open</span>
+        <span class="arrow">→ propose →</span>
+        <span class="state">proposed</span>
+        <span class="arrow">→ confirm →</span>
+        <span class="state term">resolved</span>
+        &nbsp;&nbsp;<span class="label">or</span>&nbsp;
+        <span class="state">proposed</span>
+        <span class="arrow">→ patient declines →</span>
+        <span class="state">open</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────── 8 · EHR SERVICE ──────────────── -->
+  <h2 id="ehr-svc" class="sec">8 · ehr-service</h2>
+  <div class="svc">
+    <div class="label">
+      ehr-service
+      <div class="kind">Clinical record</div>
+      <div class="port">:5104</div>
+    </div>
+    <div class="body">
+      <h4>Notes (signed = immutable), messages, attachments.</h4>
+      <p class="intro">The legal record of care. Notes are append-only after signing — every later edit becomes an addendum. Hash chained for tamper evidence.</p>
+
+      <h3 class="sub">Note state machine</h3>
+      <div class="fsm">
+        <span class="state">draft</span>
+        <span class="arrow">→ save →</span>
+        <span class="state">draft</span>
+        <span class="arrow">→ sign →</span>
+        <span class="state term">signed</span>
+        <span class="arrow">→ addendum →</span>
+        <span class="state">addended</span>
+        <span class="arrow">→ sign →</span>
+        <span class="state term">signed</span>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);">Once <code class="inl">signed_at</code> is set, the row's columns are read-only. New rows reference the parent via <code class="inl">addendum_of</code> and store <code class="inl">prev_hash = sha256(prev.body)</code>.</p>
+
+      <h3 class="sub">Endpoints</h3>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/notes</span> · <span class="meth patch">PATCH</span><span class="path">/v1/notes/:id</span> · <span class="meth post">POST</span><span class="path">/v1/notes/:id/sign</span></div></div>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/threads?patientId=</span> · <span class="meth post">POST</span><span class="path">/v1/threads</span> · <span class="meth post">POST</span><span class="path">/v1/threads/:id/messages</span></div></div>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/attachments</span></div>
+        <div class="desc">Returns presigned R2 PUT URL for the client to upload directly. We then POST <code class="inl">/v1/attachments/:id/finalize</code> to virus-scan + link.</div></div>
+
+      <h3 class="sub">Note schema (signed shape)</h3>
+<pre>{
+  id, tenant_id, patient_id, clinician_id,
+  type: <span class="s">"soap"|"progress"|"telecons"|"admission"|"discharge"</span>,
+  title, body: { subjective, objective, assessment, plan },
+  diagnoses: [{ icd10, label }],
+  signed_at, prev_hash, addendum_of?
+}</pre>
+    </div>
+  </div>
+
+  <!-- ──────────────── 9 · LAB SERVICE ──────────────── -->
+  <h2 id="lab-svc" class="sec">9 · lab-service</h2>
+  <div class="svc">
+    <div class="label">
+      lab-service
+      <div class="kind">Orders + ingestion</div>
+      <div class="port">:5105</div>
+    </div>
+    <div class="body">
+      <h4>Order panels, hand off to an external lab, ingest results.</h4>
+
+      <h3 class="sub">Order FSM</h3>
+      <div class="fsm">
+        <span class="state">ordered</span>
+        <span class="arrow">→ specimen collected →</span>
+        <span class="state">in-lab</span>
+        <span class="arrow">→ webhook →</span>
+        <span class="state">resulted</span>
+        <span class="arrow">→ clinician review →</span>
+        <span class="state term">reviewed</span>
+        &nbsp;<span class="label">or</span>&nbsp;
+        <span class="state">ordered</span>
+        <span class="arrow">→</span>
+        <span class="state bad">cancelled</span>
+      </div>
+
+      <h3 class="sub">Ingestion webhook (external lab)</h3>
+<pre><span class="c">// POST /v1/labs/webhook</span>
+<span class="c">// Verify HMAC-SHA256 in X-Lab-Signature header (constant-time)</span>
+{
+  orderRef: <span class="s">"PW-LAB-2026-04217"</span>,
+  reportedAt: ISO,
+  analytes: [{ code, name, value, unit, ref, flag }],
+  pdfUrl: <span class="s">"https://&hellip;.pdf"</span>           <span class="c">// we re-fetch &amp; store in R2</span>
+}
+<span class="c">// → updates lab_orders.results_json + lab_orders.pdf_r2_key</span>
+<span class="c">// → enqueues notification.fanout(patientId, "lab.resulted")</span></pre>
+
+      <div class="callout warn">
+        <strong>Idempotency:</strong> the lab may retry. We dedupe by <code class="inl">orderRef + reportedAt</code> in a 24h window. Duplicate webhooks return 200 with <code class="inl">{ ok: true, deduped: true }</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────── 10 · PHARMACY SERVICE ──────────────── -->
+  <h2 id="rx-svc" class="sec">10 · pharmacy-service</h2>
+  <div class="svc">
+    <div class="label">
+      pharmacy-service
+      <div class="kind">Prescriptions</div>
+      <div class="port">:5106</div>
+    </div>
+    <div class="body">
+      <h4>Active / completed prescriptions, refill timers, allergy + interaction checks.</h4>
+
+      <h3 class="sub">Endpoints</h3>
+      <div class="ep"><div class="head"><span class="meth post">POST</span><span class="path">/v1/prescriptions</span></div>
+        <div class="desc">Body validated against drug formulary + patient allergies. <strong>422 + warnings array</strong> on allergy or interaction hit — clinician can override with <code class="inl">overrideReason</code>.</div></div>
+      <div class="ep"><div class="head"><span class="meth patch">PATCH</span><span class="path">/v1/prescriptions/:id</span></div>
+        <div class="desc">Mark dispensed, refill, discontinue.</div></div>
+      <div class="ep"><div class="head"><span class="meth get">GET</span><span class="path">/v1/prescriptions?patientId=&amp;active=true</span></div></div>
+
+      <h3 class="sub">Refill scheduler</h3>
+      <p style="font-size:13px;">A 06:00 IST Workers Cron walks active prescriptions whose next-dose calculation lands today and enqueues reminders for the patient (via notification-service) per the patient's channel preferences.</p>
+    </div>
+  </div>
+
+  <!-- ──────────────── 11 · NOTIFICATION SERVICE ──────────────── -->
+  <h2 id="notif-svc" class="sec">11 · notification-service</h2>
+  <div class="svc">
+    <div class="label">
+      notification-service
+      <div class="kind">Fan-out + delivery</div>
+      <div class="port">:5102 / :8088</div>
+    </div>
+    <div class="body">
+      <h4>One event in. Many channels out. Receipts persisted for replay-debugging.</h4>
+
+      <h3 class="sub">Event envelope</h3>
+<pre>{
+  id, tenant_id,
+  audience: { kind: <span class="s">"user"|"role"</span>, userId?, role?, patientId? },
+  kind: <span class="s">"appointment.booked"|"lab.resulted"|"rx.refill"|&hellip;</span>,
+  title, body, payload: { &hellip; },
+  channels: [<span class="s">"telegram"</span>, <span class="s">"push"</span>, <span class="s">"email"</span>, <span class="s">"sms"</span>, <span class="s">"in-app"</span>],
+  priority: <span class="s">"info"|"warn"|"critical"</span>
+}</pre>
+
+      <h3 class="sub">Channel routing rules</h3>
+      <div class="card tight">
+        <table class="spec">
+          <thead><tr><th>Priority</th><th>Default channel order</th><th>Failover</th></tr></thead>
+          <tbody>
+            <tr><td>info</td><td>in-app → push → email</td><td>silent drop after email</td></tr>
+            <tr><td>warn</td><td>in-app → push → telegram</td><td>email after 5 min if unread</td></tr>
+            <tr><td>critical</td><td>push → sms → telegram → email</td><td>retry sms every 5 min ×3, then escalate to ops</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub">Endpoints (operator)</h3>
+      <ul class="checklist">
+        <li><code class="inl">GET /api/v1/integrations/messaging/fault-injection/manifest/verify/attempts/retention</code></li>
+        <li><code class="inl">GET &hellip;/retention/saturation-trend</code> &nbsp;— hourly retention saturation gauge</li>
+        <li><code class="inl">GET &hellip;/retention/escalations/export</code> &nbsp;— SLA breach CSV/JSON dump</li>
+        <li><code class="inl">POST &hellip;/anomalies/{anomalyInstanceId}/triage</code></li>
+        <li><code class="inl">POST &hellip;/retention/apply</code> &nbsp;— bounded retention tune</li>
+      </ul>
+
+      <h3 class="sub">Delivery FSM (per channel)</h3>
+      <div class="fsm">
+        <span class="state">queued</span>
+        <span class="arrow">→ sent →</span>
+        <span class="state">sent</span>
+        <span class="arrow">→ provider ack →</span>
+        <span class="state term">delivered</span>
+        &nbsp;<span class="label">or</span>&nbsp;
+        <span class="state">sent</span>
+        <span class="arrow">→ bounce →</span>
+        <span class="state bad">failed</span>
+        <span class="arrow">→ retry ×N →</span>
+        <span class="state">queued</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────── 12 · ABHA SERVICE ──────────────── -->
+  <h2 id="abha-svc" class="sec">12 · abha-service</h2>
+  <div class="svc">
+    <div class="label">
+      abha-service
+      <div class="kind">ABDM proxy</div>
+      <div class="port">:5107</div>
+    </div>
+    <div class="body">
+      <h4>Aadhaar/mobile-OTP enrollment, address picking, HIP callbacks, consent ledger.</h4>
+
+      <h3 class="sub">Token caching</h3>
+<pre><span class="c">// All ABDM-bound calls go through this helper</span>
+<span class="k">async function</span> getAbdmToken(env) {
+  <span class="k">const</span> cached = <span class="k">await</span> env.KV.get(<span class="s">'abdm:access'</span>);
+  <span class="k">if</span> (cached) <span class="k">return</span> cached;
+  <span class="k">const</span> tok = <span class="k">await</span> fetchAbdmSessionToken(env);
+  <span class="k">await</span> env.KV.put(<span class="s">'abdm:access'</span>, tok.access_token, { expirationTtl: 540 }); <span class="c">// 9-min safety on 10-min real TTL</span>
+  <span class="k">return</span> tok.access_token;
+}</pre>
+
+      <h3 class="sub">Enrollment sequence (Aadhaar)</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Request OTP</div><div class="mono">POST /v1/abha/request-otp { aadhaar }</div><div class="desc">RSA-encrypt aadhaar with <code class="inl">ABDM_PUBLIC_CERT</code>. We never persist the aadhaar.</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Verify OTP</div><div class="mono">POST /v1/abha/verify-otp { txnId, otp }</div><div class="desc">Returns ABDM tokens scoped to enrolment.</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Suggestions</div><div class="mono">GET /v1/abha/suggestions</div><div class="desc">List of <code class="inl">name@abdm</code> candidates.</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Set address</div><div class="mono">POST /v1/abha/set-address { address }</div></div></div>
+        <div class="step"><div class="n">5</div><div><div class="lbl">Persist</div><div class="desc">Update <code class="inl">patients.abha_number</code> &amp; <code class="inl">abha_address</code>. Audit event + welcome notification.</div></div></div>
+      </div>
+
+      <h3 class="sub">HIP callback</h3>
+      <p style="font-size:13px;">When another HIP requests a patient's records via ABDM, we receive a callback at <code class="inl">/v1/abdm/callback</code> with a consent token. We verify the consent (signature + <code class="inl">expires_at</code> + scope), assemble a FHIR bundle from EHR + lab, and POST it back to the requested data-push URL.</p>
+
+      <h3 class="sub">Operator telemetry</h3>
+      <ul class="checklist">
+        <li><code class="inl">GET /api/v1/platform/abha/operational-readiness</code></li>
+        <li><code class="inl">GET /api/v1/platform/abha/fallback-decision/telemetry</code></li>
+        <li><code class="inl">GET /api/v1/platform/abha/transactions/evidence</code></li>
+        <li><code class="inl">POST /api/v1/platform/abha/transactions/{read|write}</code> — dry-run probe</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ──────────────── 13 · STATE MACHINES ──────────────── -->
+  <h2 id="fsm" class="sec">13 · Domain state machines</h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>appointments.status</h3>
+      <div class="fsm">
+        <span class="state">scheduled</span>
+        <span class="arrow">→</span>
+        <span class="state">checked-in</span>
+        <span class="arrow">→</span>
+        <span class="state">in-progress</span>
+        <span class="arrow">→</span>
+        <span class="state term">completed</span>
+      </div>
+      <div class="fsm">
+        <span class="state">scheduled</span>
+        <span class="arrow">→</span>
+        <span class="state bad">cancelled</span>
+        &nbsp;/&nbsp;
+        <span class="state">checked-in</span>
+        <span class="arrow">→</span>
+        <span class="state bad">no-show</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);">Allowed transitions live in <code class="inl">packages/schema/fsm.ts</code> and are enforced server-side before each <code class="inl">PATCH</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>lab_orders.status</h3>
+      <div class="fsm">
+        <span class="state">ordered</span>
+        <span class="arrow">→</span>
+        <span class="state">in-lab</span>
+        <span class="arrow">→</span>
+        <span class="state">resulted</span>
+        <span class="arrow">→</span>
+        <span class="state term">reviewed</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);"><span class="mono">cancelled</span> reachable from <span class="mono">ordered</span> or <span class="mono">in-lab</span>.</p>
+    </div>
+
+    <div class="card">
+      <h3>prescriptions.status</h3>
+      <div class="fsm">
+        <span class="state">active</span>
+        <span class="arrow">→</span>
+        <span class="state">dispensed</span>
+        <span class="arrow">→</span>
+        <span class="state term">completed</span>
+      </div>
+      <div class="fsm">
+        <span class="state">active</span>
+        <span class="arrow">→</span>
+        <span class="state bad">discontinued</span>
+        <span class="label">(reason required)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>consents (ABDM)</h3>
+      <div class="fsm">
+        <span class="state">requested</span>
+        <span class="arrow">→</span>
+        <span class="state">granted</span>
+        <span class="arrow">→ expires →</span>
+        <span class="state term">expired</span>
+      </div>
+      <div class="fsm">
+        <span class="state">granted</span>
+        <span class="arrow">→ patient revokes →</span>
+        <span class="state bad">revoked</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────── 14 · CROSS-SERVICE FLOWS ──────────────── -->
+  <h2 id="flows" class="sec">14 · Critical cross-service flows</h2>
+
+  <div class="card">
+    <h3>14.1 — Patient books an appointment (web)</h3>
+    <div class="seq">
+      <div class="step"><div class="n">1</div><div><div class="lbl">Client</div><div class="mono">POST /v1/appointments { clinicianId, startsAt, duration, reason }</div><div class="desc">SPA includes JWT in Authorization header.</div></div></div>
+      <div class="step"><div class="n">2</div><div><div class="lbl">api-gateway</div><div class="desc">Verifies JWT → resolves <code class="inl">tenant_id</code> from claim → forwards to appointment-service with internal header <code class="inl">X-Internal-User</code>.</div></div></div>
+      <div class="step"><div class="n">3</div><div><div class="lbl">appointment-service</div><div class="desc">Validates body with Zod. Opens transaction, checks conflict (clinician overlap + patient-stacking), inserts row.</div></div></div>
+      <div class="step"><div class="n">4</div><div><div class="lbl">appointment-service → notification-service</div><div class="mono">POST /internal/notifications { kind: "appointment.booked", &hellip; }</div></div></div>
+      <div class="step"><div class="n">5</div><div><div class="lbl">notification-service</div><div class="desc">Looks up patient channel prefs + provider config. Pushes job onto Queues.</div></div></div>
+      <div class="step"><div class="n">6</div><div><div class="lbl">Worker queue consumer</div><div class="desc">Sends Telegram message + iOS push + email. Updates <code class="inl">notifications.sent_to_json</code> with per-channel receipts.</div></div></div>
+      <div class="step"><div class="n">7</div><div><div class="lbl">api-gateway → client</div><div class="mono">201 Created · { id, status: "scheduled", &hellip; }</div></div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);"><strong>SLO:</strong> end-to-end p95 &lt; 250 ms (steps 1–7 excluding queue work). Notification delivery is async; the API returns once the DB write commits.</p>
+  </div>
+
+  <div class="card">
+    <h3>14.2 — External lab posts results</h3>
+    <div class="seq">
+      <div class="step"><div class="n">1</div><div><div class="lbl">External lab</div><div class="mono">POST https://api.&hellip;in/v1/labs/webhook + X-Lab-Signature</div></div></div>
+      <div class="step"><div class="n">2</div><div><div class="lbl">lab-service</div><div class="desc">Verifies HMAC (constant-time). Looks up <code class="inl">orderRef</code>. If status already <code class="inl">resulted</code> within 24h → dedupe path.</div></div></div>
+      <div class="step"><div class="n">3</div><div><div class="lbl">lab-service</div><div class="desc">Fetches PDF → stores in R2 → updates <code class="inl">lab_orders.results_json</code> + <code class="inl">pdf_r2_key</code>.</div></div></div>
+      <div class="step"><div class="n">4</div><div><div class="lbl">→ notification-service</div><div class="desc">Fans out to patient (info) + ordering clinician (review needed).</div></div></div>
+      <div class="step"><div class="n">5</div><div><div class="lbl">200 OK</div><div class="desc">Lab gets a clean ack; we have replay-safe state.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>14.3 — ABHA HIP data-push (other HIP requests a record)</h3>
+    <div class="seq">
+      <div class="step"><div class="n">1</div><div><div class="lbl">ABDM gateway</div><div class="mono">POST /v1/abdm/callback { consentId, requestId, careContexts[] }</div></div></div>
+      <div class="step"><div class="n">2</div><div><div class="lbl">abha-service</div><div class="desc">Verifies consent token, scope, and <code class="inl">expires_at</code>. Loads consent row from <code class="inl">consents</code>.</div></div></div>
+      <div class="step"><div class="n">3</div><div><div class="lbl">abha-service → ehr-service + lab-service</div><div class="desc">Loads notes, prescriptions, lab results inside the consent scope. Assembles FHIR R4 bundle.</div></div></div>
+      <div class="step"><div class="n">4</div><div><div class="lbl">abha-service → ABDM data-push URL</div><div class="desc">POSTs encrypted bundle. Records request ID + outcome in <code class="inl">audit_events</code>.</div></div></div>
+      <div class="step"><div class="n">5</div><div><div class="lbl">Patient timeline</div><div class="desc">New entry: "Records shared with X Hospital on …, scope: OPConsult, expires …"</div></div></div>
+    </div>
+  </div>
+
+  <!-- ──────────────── 15 · CROSS-CUTTING CONCERNS ──────────────── -->
+  <h2 id="cross" class="sec">15 · Cross-cutting concerns</h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Idempotency</h3>
+      <p class="sub">Any mutating endpoint that can be retried by a client accepts <code class="inl">Idempotency-Key</code>.</p>
+<pre><span class="c">// services/api-gateway/src/middleware/idempotency.ts</span>
+<span class="k">const</span> key = c.req.header(<span class="s">'Idempotency-Key'</span>);
+<span class="k">if</span> (key) {
+  <span class="k">const</span> cached = <span class="k">await</span> env.KV.get(<span class="s">`idem:${key}`</span>);
+  <span class="k">if</span> (cached) <span class="k">return</span> c.json(JSON.parse(cached));
+}
+<span class="k">const</span> res = <span class="k">await</span> next();
+<span class="k">if</span> (key &amp;&amp; res.ok) <span class="k">await</span> env.KV.put(<span class="s">`idem:${key}`</span>, JSON.stringify(res.body), { expirationTtl: 86400 });</pre>
+    </div>
+
+    <div class="card">
+      <h3>Rate limiting</h3>
+      <p class="sub">Sliding window in KV, per <code class="inl">(ip, route)</code>.</p>
+      <table class="spec">
+        <thead><tr><th>Route</th><th>Budget</th></tr></thead>
+        <tbody>
+          <tr><td>POST /v1/auth/login</td><td>10 / 15 min</td></tr>
+          <tr><td>POST /v1/auth/signup</td><td>5 / 60 min</td></tr>
+          <tr><td>POST /v1/abha/request-otp</td><td>3 / 60 min</td></tr>
+          <tr><td>POST /v1/labs/webhook</td><td>120 / min (per vendor IP)</td></tr>
+          <tr><td>Default authed write</td><td>60 / min / user</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Audit</h3>
+      <p class="sub">Every write goes through <code class="inl">audit(ctx, action, diff)</code> before commit.</p>
+      <ul class="checklist">
+        <li><code class="inl">actor</code> = email or service identity</li>
+        <li><code class="inl">scope</code> = <code class="inl">pat:&lt;id&gt;</code>, <code class="inl">appt:&lt;id&gt;</code>, etc.</li>
+        <li><code class="inl">ip</code> + <code class="inl">user_agent</code> captured</li>
+        <li><code class="inl">diff_json</code> stores before/after for mutable rows</li>
+        <li>Daily roll-up Worker exports to R2 (cold tier)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Authorization (RBAC + tenant)</h3>
+<pre><span class="c">// middleware/guard.ts</span>
+<span class="k">function</span> guard(roles: Role[], scope?: <span class="s">'self'|'tenant'|'any'</span>) {
+  <span class="k">return async</span> (c, next) =&gt; {
+    <span class="k">const</span> u = c.get(<span class="s">'user'</span>);
+    <span class="k">if</span> (!roles.includes(u.role)) <span class="k">return</span> c.json({ error: <span class="s">'forbidden'</span> }, 403);
+    <span class="k">if</span> (scope === <span class="s">'self'</span> &amp;&amp; c.req.param(<span class="s">'id'</span>) !== u.eid) <span class="k">return</span> c.json({ error: <span class="s">'forbidden'</span> }, 403);
+    <span class="k">await</span> next();
+  };
+}
+<span class="c">// usage:</span>
+app.get(<span class="s">'/v1/patients/:id'</span>, guard([<span class="s">'patient'</span>], <span class="s">'self'</span>), &hellip;);
+app.post(<span class="s">'/v1/appointments'</span>, guard([<span class="s">'patient'</span>,<span class="s">'frontdesk'</span>,<span class="s">'clinician'</span>]), &hellip;);</pre>
+    </div>
+
+    <div class="card">
+      <h3>Validation</h3>
+      <p>Single source of truth for shapes lives in <code class="inl">packages/schema</code>. Backends validate with Zod; frontends import the same Zod schemas to drive form errors.</p>
+    </div>
+
+    <div class="card">
+      <h3>Observability</h3>
+      <ul class="checklist">
+        <li>Per-request structured log line (trace_id, route, status, ms, user, tenant)</li>
+        <li>Sentry SDK in Workers — captures unhandled errors with sourcemaps</li>
+        <li>Cloudflare Analytics for traffic + edge latency</li>
+        <li>Custom counters via Workers Analytics Engine: <code class="inl">notify.delivered</code>, <code class="inl">appt.book.conflict</code>, <code class="inl">abha.enrol.success</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ──────────────── 16 · ERROR CATALOG ──────────────── -->
+  <h2 id="errors" class="sec">16 · Error catalog</h2>
+  <p class="sec-sub">Every error response has shape <code class="inl">{ ok: false, error: string, code: string, details?: object, trace?: string }</code>. Codes are stable; messages may change. Clients switch on <code class="inl">code</code>, not status alone.</p>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Status</th><th>Code</th><th>Service</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr class="err-row"><td>400</td><td><span class="err-code">validation_failed</span></td><td>any</td><td>Body did not pass Zod. <code class="inl">details</code> has per-field issues.</td></tr>
+        <tr class="err-row"><td>401</td><td><span class="err-code">no_session</span></td><td>gateway</td><td>Missing/expired JWT.</td></tr>
+        <tr class="err-row"><td>401</td><td><span class="err-code">invalid_credentials</span></td><td>auth</td><td>Login failed.</td></tr>
+        <tr class="err-row"><td>403</td><td><span class="err-code">forbidden</span></td><td>any</td><td>Role check failed.</td></tr>
+        <tr class="err-row"><td>403</td><td><span class="err-code">tenant_mismatch</span></td><td>any</td><td>Resource not in caller's tenant.</td></tr>
+        <tr class="err-row"><td>404</td><td><span class="err-code">not_found</span></td><td>any</td><td>Resource not present (or hidden by tenant scope).</td></tr>
+        <tr class="err-row"><td>409</td><td><span class="err-code">email_taken</span></td><td>auth</td><td>Signup conflict.</td></tr>
+        <tr class="err-row"><td>409</td><td><span class="err-code">slot_taken</span></td><td>appt</td><td>Booking conflict on the chosen clinician.</td></tr>
+        <tr class="err-row"><td>409</td><td><span class="err-code">already_signed</span></td><td>ehr</td><td>Attempt to edit a signed note (use addendum).</td></tr>
+        <tr class="err-row"><td>422</td><td><span class="err-code">drug_allergy</span></td><td>rx</td><td>Patient is allergic; pass <code class="inl">overrideReason</code>.</td></tr>
+        <tr class="err-row"><td>422</td><td><span class="err-code">drug_interaction</span></td><td>rx</td><td>Interaction with active Rx; override required.</td></tr>
+        <tr class="err-row"><td>422</td><td><span class="err-code">patient_stacking</span></td><td>appt</td><td>Patient already booked within 30 min.</td></tr>
+        <tr class="err-row"><td>422</td><td><span class="err-code">consent_expired</span></td><td>abha</td><td>HIP data-push attempted after consent expired.</td></tr>
+        <tr class="err-row"><td>429</td><td><span class="err-code">rate_limited</span></td><td>any</td><td>Retry after <code class="inl">details.retryAfter</code> seconds.</td></tr>
+        <tr class="err-row"><td>502</td><td><span class="err-code">abdm_upstream</span></td><td>abha</td><td>ABDM returned 5xx. We've cached the txnId for retry.</td></tr>
+        <tr class="err-row"><td>503</td><td><span class="err-code">circuit_open</span></td><td>notify</td><td>Channel circuit breaker tripped — using next channel.</td></tr>
+        <tr class="err-row"><td>500</td><td><span class="err-code">internal</span></td><td>any</td><td>Bug. Trace ID is in the response; Sentry will have it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ──────────────── 17 · TESTING ──────────────── -->
+  <h2 id="tests" class="sec">17 · Testing strategy</h2>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Unit</h3>
+      <ul class="checklist">
+        <li>Vitest in every <code class="inl">packages/*</code> and <code class="inl">services/*</code></li>
+        <li>Pure logic: FSM transitions, MRN generator, formulary checks, validators</li>
+        <li>Coverage gate: 80% on <code class="inl">packages/schema</code> and FSM modules</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Integration</h3>
+      <ul class="checklist">
+        <li><code class="inl">miniflare</code> for Workers + a real local D1 file</li>
+        <li>One file per route folder spinning the Hono app</li>
+        <li>Snapshot the JSON shape so contract drift fails CI</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Contract</h3>
+      <ul class="checklist">
+        <li><code class="inl">packages/schema/openapi.ts</code> generates OpenAPI 3</li>
+        <li><code class="inl">pnpm run contracts:check</code> compares prod schema → repo</li>
+        <li>Mock fixtures auto-generated for the SDK clients</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>End-to-end</h3>
+      <ul class="checklist">
+        <li>Playwright per app — booking flow, lab review flow, ABHA link flow</li>
+        <li>Runs against an ephemeral preview environment per PR</li>
+        <li>Visual diff guard on Storybook stories</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Load</h3>
+      <ul class="checklist">
+        <li><code class="inl">k6</code> scripts in <code class="inl">scripts/load/</code></li>
+        <li>Targets: 100 concurrent, 30 min, p95 &lt; 250 ms, error &lt; 0.1%</li>
+        <li>Spike test: 500 concurrent for 60 s — must not 503</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Security</h3>
+      <ul class="checklist">
+        <li>OWASP ZAP baseline scan in CI nightly</li>
+        <li><code class="inl">pnpm audit</code> on every PR</li>
+        <li>CodeQL on push to <code class="inl">main</code></li>
+        <li>Pen-test before public launch</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ──────────────── 18 · NFR / SLOs ──────────────── -->
+  <h2 id="nfr" class="sec">18 · Non-functional requirements &amp; SLOs</h2>
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Concern</th><th>Target</th><th>Measured by</th><th>Alert at</th></tr></thead>
+      <tbody>
+        <tr><td>API latency p95 (read)</td><td>&lt; 120 ms</td><td>CF Analytics</td><td>&gt; 250 ms for 5 min</td></tr>
+        <tr><td>API latency p95 (write)</td><td>&lt; 250 ms</td><td>CF Analytics</td><td>&gt; 500 ms for 5 min</td></tr>
+        <tr><td>API availability</td><td>99.9% / 30 d</td><td>Synthetic probe (1/min)</td><td>&gt; 1 min unhealthy</td></tr>
+        <tr><td>Notification delivery (info)</td><td>p95 &lt; 30 s</td><td>notif receipts</td><td>p95 &gt; 60 s</td></tr>
+        <tr><td>Notification delivery (critical)</td><td>p95 &lt; 5 s</td><td>notif receipts</td><td>p95 &gt; 10 s</td></tr>
+        <tr><td>ABHA enrolment success rate</td><td>&gt; 92%</td><td>abha-svc counter</td><td>&lt; 85% / day</td></tr>
+        <tr><td>RPO (data loss)</td><td>&lt; 24 h</td><td>backup-svc audit</td><td>backup missed</td></tr>
+        <tr><td>RTO (restore)</td><td>&lt; 1 h</td><td>quarterly drill</td><td>drill fails</td></tr>
+        <tr><td>Auth error rate</td><td>&lt; 0.5%</td><td>auth-svc counter</td><td>&gt; 1% / 10 min</td></tr>
+        <tr><td>Browser bundle</td><td>&lt; 250 KB gzip</td><td>build step</td><td>regression in PR</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout ok">
+    <strong>Definition of "production ready":</strong> all SLOs above are met for 14 consecutive days on the staging environment with synthetic + real-user load, with one successful restore drill on the way in. Then we roll one department.
+  </div>
+
+  <p style="margin-top:36px;font-size:12px;color:var(--mute-2);text-align:center;">
+    PulseWard HMS · LLD v1 · Last updated <span id="d"></span>
+  </p>
+
+</div>
+
+<script>document.getElementById('d').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });</script>
+</body>
+</html>

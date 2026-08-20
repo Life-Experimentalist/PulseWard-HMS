@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PulseWard HMS — Build & Production Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0e1e26; --ink-2:#233039; --ink-3:#3d4b54; --muted:#6b7a83; --mute-2:#93a1aa;
+    --line:#dfe7ea; --line-soft:#eaf0f2; --paper:#f6f9fa; --paper-2:#f0f4f5; --panel:#ffffff;
+    --teal:#0f4c5c; --teal-2:#1a6b7e; --teal-50:#e5f0f2; --teal-100:#c9dfe4;
+    --sun:#ea8f3b; --ok:#1f8a5b; --ok-50:#e3f4ec; --warn:#c98a14; --warn-50:#fbf1d9;
+    --danger:#c0382a; --danger-50:#fbe5e2; --info:#2a6ea1; --info-50:#e3eef6;
+    --violet:#6b46c1; --violet-50:#ede7f6;
+    --font-sans:"IBM Plex Sans", system-ui, sans-serif;
+    --font-display:"Space Grotesk", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--paper);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em;margin:0;font-weight:600;}
+  a{color:var(--teal);}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:14px;z-index:10;}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--teal),var(--teal-2));color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;}
+  .brand{font-family:var(--font-display);font-weight:700;color:var(--teal);}
+  .top-actions{margin-left:auto;display:flex;gap:8px;}
+  .btn{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:white;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+  .btn.primary{background:var(--teal);color:white;border-color:transparent;}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:28px;}
+  .hero{padding:36px 32px;background:linear-gradient(155deg,#fff,#e6f1ee 60%,#fdf3e6);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;}
+  .hero .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--teal-2);}
+  .hero h1{font-size:32px;line-height:1.1;margin-top:8px;font-weight:600;letter-spacing:-0.02em;}
+  .hero p{color:var(--muted);margin-top:10px;font-size:14.5px;max-width:62ch;}
+
+  .timeline-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:22px;}
+  .tl-step{background:rgba(255,255,255,0.7);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:12px;}
+  .tl-step .wk{font-family:var(--font-mono);font-size:10.5px;color:var(--teal-2);font-weight:700;}
+  .tl-step .lbl{font-weight:600;color:var(--ink);font-family:var(--font-display);margin-top:2px;}
+
+  h2.sec{font-size:22px;margin:38px 0 4px;padding-top:12px;}
+  .sec-sub{color:var(--muted);margin-bottom:18px;font-size:13.5px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;}
+  .card h3{font-size:15px;margin-bottom:6px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:10px;}
+
+  .grid{display:grid;gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:900px){.cols-2,.cols-3,.timeline-strip{grid-template-columns:1fr;}}
+
+  pre{background:#0e1e26;color:#dfe7ea;padding:16px 18px;border-radius:10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;overflow-x:auto;margin:10px 0;}
+  pre .c{color:#6b7a83;}
+  pre .k{color:#6fc6d7;}
+  pre .s{color:#e0b358;}
+  code.inl{background:var(--paper-2);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2);}
+
+  ol.checklist, ul.checklist{padding-left:0;list-style:none;}
+  ol.checklist li, ul.checklist li{padding:6px 0 6px 28px;position:relative;font-size:13.5px;}
+  ol.checklist li::before{content:counter(item);counter-increment:item;position:absolute;left:0;top:6px;width:20px;height:20px;background:var(--teal-50);color:var(--teal);border-radius:99px;display:grid;place-items:center;font-weight:700;font-size:11px;font-family:var(--font-mono);}
+  ol.checklist{counter-reset:item;}
+  ul.checklist li::before{content:"";position:absolute;left:4px;top:13px;width:7px;height:7px;border-radius:99px;background:var(--teal);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--paper-2);color:var(--ink-3);border:1px solid var(--line);}
+  .badge.ok{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .badge.warn{background:var(--warn-50);color:var(--warn);border-color:transparent;}
+  .badge.info{background:var(--info-50);color:var(--info);border-color:transparent;}
+  .badge.teal{background:var(--teal-50);color:var(--teal);border-color:transparent;}
+  .badge.violet{background:var(--violet-50);color:var(--violet);border-color:transparent;}
+  .badge.sun{background:#fdf1e4;color:var(--sun);border-color:transparent;}
+  .badge.danger{background:var(--danger-50);color:var(--danger);border-color:transparent;}
+
+  .callout{padding:13px 16px;border-radius:10px;margin:14px 0;font-size:13px;border-left:3px solid;}
+  .callout.info{background:var(--info-50);color:var(--info);border-left-color:var(--info);}
+  .callout.warn{background:var(--warn-50);color:var(--warn);border-left-color:var(--warn);}
+  .callout.ok{background:var(--ok-50);color:var(--ok);border-left-color:var(--ok);}
+  .callout.danger{background:var(--danger-50);color:var(--danger);border-left-color:var(--danger);}
+  .callout strong{color:inherit;}
+
+  table.spec{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-top:6px;}
+  table.spec th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mute-2);background:var(--paper-2);border-bottom:1px solid var(--line);}
+  table.spec td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  table.spec td:first-child{font-weight:600;}
+  .mono{font-family:var(--font-mono);font-size:12px;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px;}
+  .toc a{font-size:11.5px;background:white;border:1px solid var(--line);padding:5px 10px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-weight:500;}
+  .toc a:hover{background:var(--paper-2);}
+
+  .week{display:grid;grid-template-columns:120px 1fr;gap:18px;padding:18px;border-radius:14px;background:var(--panel);border:1px solid var(--line);margin-bottom:14px;}
+  .week .label{font-family:var(--font-display);font-weight:700;color:var(--teal);font-size:14px;}
+  .week .label .num{font-size:38px;line-height:1;display:block;color:var(--teal);}
+  .week .label .sub{color:var(--mute-2);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-top:6px;}
+  .week .body h4{font-size:15px;margin-bottom:6px;}
+  .week .body p.intro{color:var(--ink-3);margin:0 0 8px;font-size:13px;}
+
+  .ck{display:grid;gap:5px;}
+  .ck .item{display:grid;grid-template-columns:22px 1fr;align-items:start;gap:8px;font-size:13px;padding:4px 0;}
+  .ck .item .box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line);margin-top:3px;}
+  .ck .item .out{margin-top:0;}
+  .ck .item .out b{font-weight:600;}
+  .ck .item .out .meta{color:var(--mute-2);font-size:11.5px;margin-top:1px;}
+
+  .price{font-family:var(--font-mono);font-weight:600;color:var(--teal);}
+  .cost-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13px;}
+
+  .files{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);background:var(--paper-2);padding:14px;border-radius:8px;white-space:pre;overflow-x:auto;}
+  .files .dir{color:var(--teal);font-weight:600;}
+  .files .anno{color:var(--mute-2);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">P</div>
+  <div>
+    <div class="brand">PulseWard HMS</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Build &amp; Production Notes · v1</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="Architecture.html">Architecture</a>
+    <a class="btn" href="LLD.html">LLD</a>
+    <a class="btn" href="Setup Guide.html">Setup guide</a>
+    <a class="btn" href="Operations Runbook.html">Runbook</a>
+    <a class="btn" href="PulseWard HMS.html">← App</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="eyebrow">v1 production plan · ~4 weeks · ~$5–35 / month at MVP scale</div>
+    <h1>Build notes: take PulseWard HMS to production.</h1>
+    <p>Every screen in the prototype is already wired to a clean data layer. Production is mostly about swapping the storage adapter, deploying behind a Worker, doing ABDM onboarding, and packaging the same web build for mobile. This is the order to do it in.</p>
+    <div class="timeline-strip">
+      <div class="tl-step"><div class="wk">WEEK 0</div><div class="lbl">Setup &amp; access</div></div>
+      <div class="tl-step"><div class="wk">WEEK 1</div><div class="lbl">Backend skeleton</div></div>
+      <div class="tl-step"><div class="wk">WEEK 2</div><div class="lbl">Clinical workflows</div></div>
+      <div class="tl-step"><div class="wk">WEEK 3</div><div class="lbl">ABHA + bot</div></div>
+      <div class="tl-step"><div class="wk">WEEK 4</div><div class="lbl">Mobile + go-live</div></div>
+    </div>
+  </section>
+
+  <div class="toc">
+    <a href="#prereq">Prereqs</a>
+    <a href="#repo">Repo layout</a>
+    <a href="#week0">Week 0 setup</a>
+    <a href="#week1">Week 1 backend</a>
+    <a href="#week2">Week 2 clinical</a>
+    <a href="#week3">Week 3 ABHA + bot</a>
+    <a href="#week4">Week 4 mobile + ship</a>
+    <a href="#admin">Admin separation</a>
+    <a href="#security">Security</a>
+    <a href="#mobile">Mobile build</a>
+    <a href="#backups">Backups</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#observability">Observability</a>
+    <a href="#testing">Testing</a>
+    <a href="#cost">Cost</a>
+    <a href="#launch">Launch checklist</a>
+  </div>
+
+  <!-- ───── DOC INDEX ───── -->
+  <div class="card" style="background:linear-gradient(155deg,#fff,#e5f0f2 90%);">
+    <h3>Production documentation set</h3>
+    <div class="sub">Four docs cover the full journey. Use them in this order.</div>
+    <table class="spec">
+      <thead><tr><th>Doc</th><th>Answers</th><th>Read when</th></tr></thead>
+      <tbody>
+        <tr><td><a href="Architecture.html">Architecture</a></td><td>What we're building &amp; why</td><td>Day 0 — orient yourself</td></tr>
+        <tr><td><a href="LLD.html">LLD</a></td><td>Module shapes, contracts, FSMs, errors</td><td>Before touching a service</td></tr>
+        <tr><td><b>Build notes</b> (this doc)</td><td>4-week plan to production</td><td>Sprint planning</td></tr>
+        <tr><td><a href="Setup Guide.html">Setup Guide</a></td><td>How to clone, run, deploy</td><td>Day 1 — getting started</td></tr>
+        <tr><td><a href="Operations Runbook.html">Runbook</a></td><td>On-call, incidents, drills</td><td>Before going live; on-call rotation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── PREREQ ───── -->
+  <h2 id="prereq" class="sec">0 · Prerequisites</h2>
+  <div class="sec-sub">Get these accounts &amp; tools in place before week 1 work begins.</div>
+
+  <div class="card">
+    <h3>Accounts</h3>
+    <table class="spec">
+      <thead><tr><th>Service</th><th>What you need</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Cloudflare</td><td>Free account → enable Workers + Pages + D1 + R2 + KV. Add hospital's domain.</td><td>Free tier</td></tr>
+        <tr><td>ABDM Sandbox</td><td>Register at <code class="inl">facility.abdm.gov.in/sandbox</code> → get client_id + client_secret + public cert.</td><td>Free</td></tr>
+        <tr><td>HFR (production ABHA)</td><td>Apply at <code class="inl">facility.abdm.gov.in</code> with hospital license. 7–14 day approval.</td><td>Free</td></tr>
+        <tr><td>Telegram</td><td>Create bot via @BotFather. Save token.</td><td>Free</td></tr>
+        <tr><td>Resend (or SES)</td><td>Sign up, verify hospital domain, generate API key.</td><td>3k emails/mo free</td></tr>
+        <tr><td>MSG91 (SMS, India)</td><td>For OTP/critical alerts only. Buy 1k credit (~₹200).</td><td>~₹0.18/SMS</td></tr>
+        <tr><td>Apple Developer (optional)</td><td>Only if shipping iOS native app. Skip if Capacitor PWA is enough.</td><td>$99/yr</td></tr>
+        <tr><td>GitHub</td><td>Private repo for code. Free for small team.</td><td>Free</td></tr>
+        <tr><td>Sentry (optional)</td><td>Free 5k errors/month — enough for MVP.</td><td>Free tier</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Local tooling</h3>
+    <pre><span class="c"># Install Node 22, pnpm, wrangler</span>
+nvm install 22 && nvm use 22
+corepack enable && corepack prepare <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="83f3edf3eec3baadb2b6adb3">[email&#160;protected]</a> --activate
+npm i -g wrangler
+
+<span class="c"># Verify</span>
+node --version    <span class="c"># v22.x</span>
+pnpm --version    <span class="c"># 9.15.0</span>
+wrangler --version</pre>
+  </div>
+
+  <!-- ───── REPO LAYOUT ───── -->
+  <h2 id="repo" class="sec">1 · Final repo layout</h2>
+  <div class="sec-sub">Single monorepo. One source tree, three deployable targets (patient/clinician web, admin, mobile). The existing <code class="inl">apps/</code> + <code class="inl">services/</code> structure from the GitHub repo maps directly.</div>
+
+  <div class="card">
+<div class="files"><span class="dir">pulseward-hms/</span>
+├─ <span class="dir">apps/</span>                           <span class="anno"># client deploy targets</span>
+│  ├─ <span class="dir">portal/</span>                      <span class="anno"># patient + clinician (single SPA)</span>
+│  │  ├─ index.html
+│  │  ├─ src/                          <span class="anno"># React app — exact prototype code</span>
+│  │  └─ vite.config.js
+│  ├─ <span class="dir">admin/</span>                       <span class="anno"># admin console (separate deploy)</span>
+│  │  ├─ index.html
+│  │  └─ src/                          <span class="anno"># mounts admin routes only</span>
+│  └─ <span class="dir">mobile/</span>                      <span class="anno"># Capacitor shell</span>
+│     ├─ capacitor.config.json
+│     ├─ android/                      <span class="anno"># native projects</span>
+│     └─ ios/
+├─ <span class="dir">services/</span>                       <span class="anno"># backend (one Worker per service)</span>
+│  ├─ api-gateway/                     <span class="anno"># Hono router + auth middleware</span>
+│  ├─ auth-service/
+│  ├─ patient-service/
+│  ├─ appointment-service/
+│  ├─ ehr-service/
+│  ├─ lab-service/
+│  ├─ pharmacy-service/
+│  ├─ billing-service/
+│  ├─ notification-service/            <span class="anno"># telegram, push, email, SMS fan-out</span>
+│  ├─ abha-service/                    <span class="anno"># ABDM proxy</span>
+│  └─ backup-service/                  <span class="anno"># cron-triggered snapshot Worker</span>
+├─ <span class="dir">packages/</span>                       <span class="anno"># shared code</span>
+│  ├─ schema/                          <span class="anno"># Zod schemas + types — used by app AND services</span>
+│  ├─ ui/                              <span class="anno"># shared React components</span>
+│  └─ sdk/                             <span class="anno"># typed client (replaces IndexedDB layer)</span>
+├─ <span class="dir">migrations/</span>                     <span class="anno"># drizzle SQL migrations</span>
+├─ <span class="dir">docs/</span>                           <span class="anno"># runbooks, ABHA spec, API catalog</span>
+└─ <span class="dir">.github/workflows/</span>              <span class="anno"># CI/CD</span></div>
+  </div>
+
+  <div class="callout info">
+    <strong>From prototype → repo:</strong> the existing <code class="inl">src/*.jsx</code> files map to <code class="inl">apps/portal/src/</code> (rename Babel-loaded scripts into ES modules; Vite picks them up unchanged). The <code class="inl">src/db.jsx</code> IndexedDB layer gets replaced by <code class="inl">packages/sdk</code> with the same function signatures — so React components don't change.
+  </div>
+
+  <!-- ───── WEEK 0 ───── -->
+  <h2 id="week0" class="sec">2 · Week 0 — Foundation</h2>
+
+  <div class="week">
+    <div class="label">
+      <span class="num">0</span>
+      <span class="sub">Foundation</span>
+    </div>
+    <div class="body">
+      <h4>Get the boring stuff right before any code.</h4>
+      <p class="intro">~2 days for one engineer. After this you can deploy a "Hello world" to staging in 5 minutes.</p>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Provision Cloudflare resources</b><div class="meta">Create D1 database, R2 bucket, KV namespace. Save the IDs.</div></div></div>
+      </div>
+<pre><span class="c"># in services/api-gateway/</span>
+wrangler d1 create pulseward-prod
+wrangler kv namespace create SESSIONS
+wrangler kv namespace create RATELIMIT
+wrangler r2 bucket create pulseward-backups
+wrangler r2 bucket create pulseward-uploads</pre>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Set up DNS + sub-domains</b><div class="meta">Point hospital domain at Cloudflare. Reserve:<br>
+        <span class="mono">www.your-hospital.in</span> → landing page<br>
+        <span class="mono">app.your-hospital.in</span> → patient + clinician portal<br>
+        <span class="mono">admin.your-hospital.in</span> → admin console (locked-down)<br>
+        <span class="mono">api.your-hospital.in</span> → API gateway</div></div></div>
+
+        <div class="item"><div class="box"></div><div class="out"><b>Create GitHub repo + branch protection</b><div class="meta">Protect <code class="inl">main</code>: PR required, 1 review, CI must pass. Default branch.</div></div></div>
+
+        <div class="item"><div class="box"></div><div class="out"><b>Save secrets to Cloudflare</b><div class="meta">Never check them into git. Use Workers Secrets (<code class="inl">wrangler secret put</code>).</div></div></div>
+      </div>
+
+      <pre>wrangler secret put JWT_SECRET           <span class="c"># 64-byte random hex</span>
+wrangler secret put PEPPER               <span class="c"># 32-byte random hex — added to argon2 hash</span>
+wrangler secret put ABDM_CLIENT_ID
+wrangler secret put ABDM_CLIENT_SECRET
+wrangler secret put ABDM_PUBLIC_CERT     <span class="c"># public cert from ABDM sandbox</span>
+wrangler secret put TELEGRAM_BOT_TOKEN
+wrangler secret put TELEGRAM_WEBHOOK_SECRET
+wrangler secret put RESEND_API_KEY
+wrangler secret put MSG91_AUTH_KEY
+wrangler secret put SENTRY_DSN           <span class="c"># optional</span></pre>
+
+      <div class="callout warn">
+        <strong>Rotate secrets quarterly.</strong> All of them. Especially JWT_SECRET — old sessions will be invalidated, plan a maintenance window.
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── WEEK 1 ───── -->
+  <h2 id="week1" class="sec">3 · Week 1 — Backend skeleton</h2>
+
+  <div class="week">
+    <div class="label">
+      <span class="num">1</span>
+      <span class="sub">Backend</span>
+    </div>
+    <div class="body">
+      <h4>Stand up auth + patient CRUD + the contract for everything else.</h4>
+      <p class="intro">Everything that follows hangs off this. Get the data shapes right; the rest is glue.</p>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Apply database schema</b><div class="meta">Use drizzle-kit migrations. Schema mirrors the IndexedDB stores 1:1.</div></div></div>
+      </div>
+
+      <pre><span class="c">// packages/schema/db.ts</span>
+<span class="k">import</span> { sqliteTable, text, integer, blob } <span class="k">from</span> <span class="s">'drizzle-orm/sqlite-core'</span>;
+
+<span class="k">export const</span> tenants = sqliteTable(<span class="s">'tenants'</span>, {
+  id: text(<span class="s">'id'</span>).primaryKey(),
+  slug: text().notNull().unique(),
+  name: text().notNull(),
+  hfrId: text(<span class="s">'hfr_id'</span>),
+  accent: text(),
+  brandingJson: text(<span class="s">'branding_json'</span>, { mode: <span class="s">'json'</span> }),
+  createdAt: integer(<span class="s">'created_at'</span>, { mode: <span class="s">'timestamp'</span> }).notNull(),
+});
+
+<span class="k">export const</span> patients = sqliteTable(<span class="s">'patients'</span>, {
+  id: text(<span class="s">'id'</span>).primaryKey(),
+  tenantId: text(<span class="s">'tenant_id'</span>).notNull(),
+  mrn: text().notNull(),
+  profileId: text(<span class="s">'profile_id'</span>),
+  abhaNumber: text(<span class="s">'abha_number'</span>),
+  abhaAddress: text(<span class="s">'abha_address'</span>),
+  name: text().notNull(),
+  dob: text(),
+  gender: text(),
+  bloodType: text(<span class="s">'blood_type'</span>),
+  phone: text(),
+  email: text(),
+  demographicsJson: text(<span class="s">'demographics_json'</span>, { mode: <span class="s">'json'</span> }),
+  conditionsJson: text(<span class="s">'conditions_json'</span>, { mode: <span class="s">'json'</span> }),
+  allergiesJson: text(<span class="s">'allergies_json'</span>, { mode: <span class="s">'json'</span> }),
+  vitalsJson: text(<span class="s">'vitals_json'</span>, { mode: <span class="s">'json'</span> }),
+  createdAt: integer(<span class="s">'created_at'</span>, { mode: <span class="s">'timestamp'</span> }).notNull(),
+});
+
+<span class="c">// + users, sessions, clinicians, appointments, lab_orders,</span>
+<span class="c">//   prescriptions, notes, messages, audit_events, consents,</span>
+<span class="c">//   availability_blocks, reassignment_queue, providers, etc.</span></pre>
+
+      <pre>cd services/api-gateway
+pnpm i drizzle-orm drizzle-kit
+pnpm drizzle-kit generate
+wrangler d1 migrations apply pulseward-prod --remote</pre>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Bring up the API gateway Worker</b><div class="meta">Hono + Zod. Returns <code class="inl">/health</code>, sets up CORS, auth middleware skeleton.</div></div></div>
+      </div>
+
+      <pre><span class="c">// services/api-gateway/src/index.ts</span>
+<span class="k">import</span> { Hono } <span class="k">from</span> <span class="s">'hono'</span>;
+<span class="k">import</span> { cors } <span class="k">from</span> <span class="s">'hono/cors'</span>;
+<span class="k">import</span> auth <span class="k">from</span> <span class="s">'./routes/auth'</span>;
+<span class="k">import</span> patients <span class="k">from</span> <span class="s">'./routes/patients'</span>;
+<span class="k">import</span> appointments <span class="k">from</span> <span class="s">'./routes/appointments'</span>;
+
+<span class="k">const</span> app = <span class="k">new</span> Hono&lt;{ Bindings: Env }&gt;();
+
+app.use(<span class="s">'*'</span>, cors({
+  origin: (o) =&gt; [<span class="s">'https://app.your-hospital.in'</span>, <span class="s">'https://admin.your-hospital.in'</span>].includes(o) ? o : <span class="s">''</span>,
+  credentials: <span class="k">true</span>,
+}));
+
+app.get(<span class="s">'/health'</span>, (c) =&gt; c.json({ ok: <span class="k">true</span>, ver: <span class="s">'1.0.0'</span> }));
+app.route(<span class="s">'/v1/auth'</span>, auth);
+app.route(<span class="s">'/v1/patients'</span>, patients);
+app.route(<span class="s">'/v1/appointments'</span>, appointments);
+
+<span class="k">export default</span> app;</pre>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Implement auth endpoints</b><div class="meta">argon2id hash (server-side) + JWT access token (15m) + opaque refresh token in KV (30d).</div></div></div>
+      </div>
+
+      <pre><span class="c">// services/api-gateway/src/routes/auth.ts</span>
+<span class="k">import</span> { Hono } <span class="k">from</span> <span class="s">'hono'</span>;
+<span class="k">import</span> { zValidator } <span class="k">from</span> <span class="s">'@hono/zod-validator'</span>;
+<span class="k">import</span> { hash, verify } <span class="k">from</span> <span class="s">'@node-rs/argon2'</span>;
+<span class="k">import</span> { signJwt } <span class="k">from</span> <span class="s">'./jwt'</span>;
+<span class="k">import</span> { z } <span class="k">from</span> <span class="s">'zod'</span>;
+
+<span class="k">const</span> SignupSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(8),
+  dob: z.string().optional(),
+  gender: z.enum([<span class="s">'M'</span>, <span class="s">'F'</span>, <span class="s">'O'</span>]),
+  phone: z.string().regex(/^\+?[0-9 ]{10,15}$/),
+});
+
+<span class="k">const</span> app = <span class="k">new</span> Hono();
+
+app.post(<span class="s">'/signup'</span>, zValidator(<span class="s">'json'</span>, SignupSchema), <span class="k">async</span> (c) =&gt; {
+  <span class="k">const</span> body = c.req.valid(<span class="s">'json'</span>);
+  <span class="k">const</span> db = c.env.DB;
+
+  <span class="c">// rate limit by IP</span>
+  <span class="k">await</span> rateLimit(c.env.RATELIMIT, c.req.header(<span class="s">'cf-connecting-ip'</span>) ?? <span class="s">'?'</span>, 5, 3600);
+
+  <span class="k">const</span> existing = <span class="k">await</span> db.prepare(<span class="s">'SELECT id FROM users WHERE email = ?'</span>).bind(body.email).first();
+  <span class="k">if</span> (existing) <span class="k">return</span> c.json({ ok: <span class="k">false</span>, error: <span class="s">'email_taken'</span> }, 409);
+
+  <span class="k">const</span> ph = <span class="k">await</span> hash(body.password + c.env.PEPPER);
+
+  <span class="k">const</span> patientId = crypto.randomUUID();
+  <span class="k">const</span> userId = crypto.randomUUID();
+  <span class="k">const</span> tenantId = <span class="s">'main'</span>;  <span class="c">// or look up from origin header for multi-tenant</span>
+
+  <span class="k">await</span> db.batch([
+    db.prepare(<span class="s">'INSERT INTO patients (id, tenant_id, mrn, profile_id, name, dob, gender, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'</span>)
+      .bind(patientId, tenantId, mrn(tenantId), <span class="s">'PID-'</span> + uid(5), body.name, body.dob, body.gender, body.phone, body.email, Date.now()),
+    db.prepare(<span class="s">'INSERT INTO users (id, tenant_id, email, password_hash, role, linked_entity_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'</span>)
+      .bind(userId, tenantId, body.email, ph, <span class="s">'patient'</span>, patientId, Date.now()),
+  ]);
+
+  <span class="k">const</span> token = <span class="k">await</span> signJwt({ uid: userId, role: <span class="s">'patient'</span>, tid: tenantId }, c.env.JWT_SECRET, 15 * 60);
+  <span class="k">const</span> refresh = crypto.randomUUID();
+  <span class="k">await</span> c.env.SESSIONS.put(<span class="s">`rt:${refresh}`</span>, userId, { expirationTtl: 30 * 86400 });
+
+  audit(c, { actor: body.email, action: <span class="s">'patient_signup'</span>, scope: <span class="s">`pat:${patientId}`</span> });
+  setCookie(c, <span class="s">'rt'</span>, refresh, { httpOnly: <span class="k">true</span>, secure: <span class="k">true</span>, sameSite: <span class="s">'Strict'</span>, maxAge: 30 * 86400 });
+  <span class="k">return</span> c.json({ ok: <span class="k">true</span>, token, role: <span class="s">'patient'</span> });
+});
+
+<span class="c">// + /login, /refresh, /logout, /me</span>
+<span class="k">export default</span> app;</pre>
+
+      <div class="ck">
+        <div class="item"><div class="box"></div><div class="out"><b>Build typed SDK</b><div class="meta">Replace IndexedDB layer in the React app with HTTP calls. Same function names — UI unchanged.</div></div></div>
+      </div>
+
+      <pre><span class="c">// packages/sdk/client.ts</span>
+<span class="k">export class</span> PulseWardClient {
+  constructor(<span class="k">private</span> base: string, <span class="k">private</span> getToken: () =&gt; string | <span class="k">null</span>) {}
+  <span class="k">private async</span> req(path: string, init?: RequestInit) {
+    <span class="k">const</span> r = <span class="k">await</span> fetch(<span class="s">`${</span>this.base<span class="s">}${path}`</span>, {
+      ...init,
+      headers: { <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span>, Authorization: <span class="s">`Bearer ${</span>this.getToken() ?? <span class="s">''}`</span>, ...init?.headers },
+      credentials: <span class="s">'include'</span>,
+    });
+    <span class="k">if</span> (!r.ok) <span class="k">throw new</span> Error(<span class="k">await</span> r.text());
+    <span class="k">return</span> r.json();
+  }
+  signup(b) { <span class="k">return this</span>.req(<span class="s">'/v1/auth/signup'</span>, { method: <span class="s">'POST'</span>, body: JSON.stringify(b) }); }
+  login(b)  { <span class="k">return this</span>.req(<span class="s">'/v1/auth/login'</span>,  { method: <span class="s">'POST'</span>, body: JSON.stringify(b) }); }
+  patients = { list: () =&gt; <span class="k">this</span>.req(<span class="s">'/v1/patients'</span>), get: (id) =&gt; <span class="k">this</span>.req(<span class="s">`/v1/patients/${id}`</span>) };
+  appointments = { ... };
+  <span class="c">// 1:1 with the IndexedDB store API surface</span>
+}</pre>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <strong>Definition of done for week 1:</strong> a freshly-cloned dev can run <code class="inl">pnpm dev</code>, point the browser at <code class="inl">localhost:8787</code>, register a patient, log in, see their profile. Smoke test in CI.
+  </div>
+
+  <!-- ───── WEEK 2 ───── -->
+  <h2 id="week2" class="sec">4 · Week 2 — Clinical workflows</h2>
+
+  <div class="week">
+    <div class="label">
+      <span class="num">2</span>
+      <span class="sub">Clinical</span>
+    </div>
+    <div class="body">
+      <h4>Port every feature from the prototype into real endpoints.</h4>
+
+      <table class="spec">
+        <thead><tr><th>Feature</th><th>Endpoints to build</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Appointments</td><td><span class="mono">GET /v1/appointments?q=&amp;clinicianId=&amp;date=</span><br><span class="mono">POST /v1/appointments</span><br><span class="mono">PATCH /v1/appointments/:id</span></td><td>appointment-service</td></tr>
+          <tr><td>Lab orders</td><td><span class="mono">POST /v1/labs</span> · <span class="mono">PATCH /v1/labs/:id</span> · webhook ingest from external lab</td><td>lab-service</td></tr>
+          <tr><td>Prescriptions</td><td><span class="mono">POST /v1/prescriptions</span> · <span class="mono">PATCH /v1/prescriptions/:id</span></td><td>pharmacy-service</td></tr>
+          <tr><td>Clinical notes</td><td><span class="mono">POST /v1/notes</span> · append-only; signing locks the row</td><td>ehr-service</td></tr>
+          <tr><td>Messages</td><td><span class="mono">GET/POST /v1/threads</span> · <span class="mono">POST /v1/threads/:id/messages</span></td><td>ehr-service</td></tr>
+          <tr><td>Availability blocks</td><td><span class="mono">POST /v1/availability</span> · returns affected appointments for conflict UI</td><td>appointment-service</td></tr>
+          <tr><td>Reassignment queue</td><td><span class="mono">GET /v1/reassignments</span> · <span class="mono">POST /v1/reassignments/:id/resolve</span></td><td>appointment-service</td></tr>
+          <tr><td>Notifications (in-app)</td><td><span class="mono">GET /v1/notifications</span> · marks-read</td><td>notification-service</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ck" style="margin-top:14px;">
+        <div class="item"><div class="box"></div><div class="out"><b>Wire notification fan-out</b><div class="meta">notification-service consumes events and dispatches per the patient's preferences (Telegram / push / email / SMS).</div></div></div>
+        <div class="item"><div class="box"></div><div class="out"><b>Add Cloudflare Queues</b><div class="meta">Use Workers Queues for "send notification" async work. Free tier covers 1M ops/month.</div></div></div>
+        <div class="item"><div class="box"></div><div class="out"><b>Replace IndexedDB calls with SDK</b><div class="meta">In the React app: swap <code class="inl">PWDB.dbPut(...)</code> → <code class="inl">client.patients.update(...)</code>. UI components unchanged.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── WEEK 3 ───── -->
+  <h2 id="week3" class="sec">5 · Week 3 — ABHA + Telegram bot</h2>
+
+  <div class="week">
+    <div class="label">
+      <span class="num">3</span>
+      <span class="sub">Integrations</span>
+    </div>
+    <div class="body">
+      <h4>The two integrations that make this a real Indian healthcare product.</h4>
+
+      <div class="grid cols-2">
+        <div>
+          <h4>ABHA / ABDM</h4>
+          <ul class="checklist">
+            <li>HFR onboarding complete; client_id + secret saved.</li>
+            <li>Implement <code class="inl">abha-service</code> Worker as a thin proxy to ABDM v3 endpoints.</li>
+            <li>Aadhaar OTP: <span class="mono">POST /v1/abha/request-otp</span> → <span class="mono">/verify-otp</span> → <span class="mono">/suggestions</span> → <span class="mono">/set-address</span>.</li>
+            <li>Cache ABDM access tokens in KV (10-min TTL — re-fetch on miss).</li>
+            <li>RSA-encrypt Aadhaar with ABDM public cert before sending.</li>
+            <li>Store ABHA number + address on patient row; emit audit + welcome notification.</li>
+            <li>Implement HIP callback at <span class="mono">/v1/abdm/callback</span> for consent and data-fetch requests.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Telegram bot</h4>
+          <ul class="checklist">
+            <li>Set webhook: <span class="mono">https://api.../v1/telegram/webhook?secret=...</span></li>
+            <li>Verify <code class="inl">X-Telegram-Bot-Api-Secret-Token</code> on each request.</li>
+            <li>Commands: <code class="inl">/start</code> · <code class="inl">/link &lt;code&gt;</code> · <code class="inl">/book</code> · <code class="inl">/labs</code> · <code class="inl">/rx</code> · <code class="inl">/cancel</code>.</li>
+            <li>Link patient identity: patient generates a 6-digit code in the portal; sends <code class="inl">/link 123456</code> on Telegram; bot resolves to user_id and stores chat_id.</li>
+            <li>For reminders: notification-service fetches chat_id and calls <code class="inl">sendMessage</code> with inline keyboard buttons.</li>
+          </ul>
+        </div>
+      </div>
+
+      <pre><span class="c">// services/abha-service/src/routes/enrol.ts</span>
+app.post(<span class="s">'/v1/abha/request-otp'</span>, <span class="k">async</span> (c) =&gt; {
+  <span class="k">const</span> { aadhaar } = <span class="k">await</span> c.req.json();
+
+  <span class="k">const</span> abdmToken = <span class="k">await</span> getCachedToken(c.env);
+  <span class="k">const</span> encrypted = <span class="k">await</span> rsaEncrypt(aadhaar, c.env.ABDM_PUBLIC_CERT);
+
+  <span class="k">const</span> r = <span class="k">await</span> fetch(<span class="s">`${ABDM_BASE}/v3/enrollment/request/otp`</span>, {
+    method: <span class="s">'POST'</span>,
+    headers: {
+      Authorization: <span class="s">`Bearer ${abdmToken}`</span>,
+      <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span>,
+      <span class="s">'REQUEST-ID'</span>: crypto.randomUUID(),
+      <span class="s">'TIMESTAMP'</span>: <span class="k">new</span> Date().toISOString(),
+    },
+    body: JSON.stringify({
+      txnId: <span class="s">''</span>,
+      scope: [<span class="s">'abha-enrol'</span>],
+      loginHint: <span class="s">'aadhaar'</span>,
+      loginId: encrypted,
+      otpSystem: <span class="s">'aadhaar'</span>,
+    }),
+  });
+
+  <span class="k">return</span> c.json(<span class="k">await</span> r.json());
+});</pre>
+    </div>
+  </div>
+
+  <!-- ───── WEEK 4 ───── -->
+  <h2 id="week4" class="sec">6 · Week 4 — Mobile + go-live</h2>
+
+  <div class="week">
+    <div class="label">
+      <span class="num">4</span>
+      <span class="sub">Ship</span>
+    </div>
+    <div class="body">
+      <h4>Mobile build, security review, soft launch.</h4>
+
+      <ol class="checklist" style="counter-reset:item;">
+        <li><b>Add Capacitor to the portal app.</b> <code class="inl">npx cap add ios android</code> in <code class="inl">apps/mobile</code> — points to <code class="inl">apps/portal/dist</code>.</li>
+        <li><b>Wire native push.</b> <code class="inl">@capacitor/push-notifications</code> for FCM/APNs. Store device token via <code class="inl">POST /v1/devices</code>.</li>
+        <li><b>Biometric unlock.</b> <code class="inl">capacitor-biometric-auth</code> — after first sign-in, store refresh token in native keychain, re-auth via Face ID / fingerprint.</li>
+        <li><b>Submit to Play Store (Internal Testing track).</b> Faster review (~hours). Apple TestFlight if iOS.</li>
+        <li><b>Load test the API.</b> <code class="inl">k6 run loadtest.js</code> — target 100 concurrent users sustained, p95 &lt; 250ms.</li>
+        <li><b>Security review.</b> See checklist below. Run OWASP ZAP against staging.</li>
+        <li><b>Restore drill.</b> Pick a 7-day-old backup, restore to a sandbox tenant, verify all clinical data is intact.</li>
+        <li><b>Soft launch: one department.</b> Cardiology only for 2 weeks. Daily standup, hourly Sentry checks.</li>
+        <li><b>Roll hospital-wide.</b> Once you have 14 days of clean operation.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ───── ADMIN SEPARATION ───── -->
+  <h2 id="admin" class="sec">7 · Admin console separation</h2>
+  <p class="sec-sub">Same React codebase, different deployment. The point is a defence-in-depth boundary, not a separate engineering effort.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>What stays shared</h3>
+      <ul class="checklist">
+        <li>All components in <code class="inl">packages/ui</code></li>
+        <li>Design tokens, icons, fonts</li>
+        <li>SDK / API client</li>
+        <li>Auth, session handling</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What differs in admin</h3>
+      <ul class="checklist">
+        <li>Entry HTML mounts <strong>only admin routes</strong> (no patient/clinician views).</li>
+        <li>Hosted at <code class="inl">admin.your-hospital.in</code> (separate Pages project).</li>
+        <li>WAF: IP allow-list (hospital office IPs + VPN range).</li>
+        <li>2FA required (TOTP minimum, WebAuthn for super-admin).</li>
+        <li>Backend rejects admin endpoints from any other origin via signed origin header.</li>
+        <li>JWT scope check: <code class="inl">role === 'admin' || 'ops'</code> before any handler runs.</li>
+        <li>No public sign-up. Admins are seeded or invited by existing admins.</li>
+      </ul>
+    </div>
+  </div>
+
+  <pre><span class="c">// apps/admin/src/main.tsx — only mounts admin routes</span>
+<span class="k">import</span> { AdminApp } <span class="k">from</span> <span class="s">'@pulseward/ui/admin'</span>;
+<span class="k">import</span> { requireRole } <span class="k">from</span> <span class="s">'./guards'</span>;
+
+requireRole([<span class="s">'admin'</span>, <span class="s">'ops'</span>]);  <span class="c">// hard reject if token role is wrong</span>
+ReactDOM.createRoot(...).render(&lt;AdminApp /&gt;);</pre>
+
+  <!-- ───── SECURITY ───── -->
+  <h2 id="security" class="sec">8 · Security hardening</h2>
+
+  <div class="card">
+    <h3>Must-have before launch</h3>
+    <table class="spec">
+      <thead><tr><th>Control</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Password hashing</td><td><code class="inl">argon2id</code> server-side with per-user salt + pepper from secrets.</td></tr>
+        <tr><td>Transport</td><td>TLS 1.3 only (Cloudflare default). HSTS with <code class="inl">includeSubDomains; preload</code>.</td></tr>
+        <tr><td>CSP</td><td>Strict — no inline scripts. <code class="inl">script-src 'self'</code>; no <code class="inl">unsafe-inline</code>.</td></tr>
+        <tr><td>Auth tokens</td><td>JWT 15-min access in memory · opaque refresh in HttpOnly Secure SameSite=Strict cookie.</td></tr>
+        <tr><td>CORS</td><td>Allow-list only the portal + admin origins. Reject everything else.</td></tr>
+        <tr><td>Rate limiting</td><td>KV-backed sliding window. 10 login attempts / 15 min per IP+email. OTP requests: 3 / hour.</td></tr>
+        <tr><td>Authorization</td><td>Every handler checks tenant_id + role; never trusts client-supplied IDs.</td></tr>
+        <tr><td>Audit</td><td>Append-only. Every write logs to <code class="inl">audit_events</code> with actor + IP + user agent.</td></tr>
+        <tr><td>PII at rest</td><td>D1 encrypted by default. Aadhaar never stored — sent to ABDM, dropped from logs.</td></tr>
+        <tr><td>Backups</td><td>R2 encryption at rest + AES-256 per-tenant envelope key.</td></tr>
+        <tr><td>Webhook verification</td><td>HMAC-SHA256 signature on Telegram, ABDM, lab webhooks. Constant-time comparison.</td></tr>
+        <tr><td>Dependency hygiene</td><td>Dependabot weekly. <code class="inl">pnpm audit</code> in CI. Pin major versions.</td></tr>
+        <tr><td>Secrets</td><td>Workers Secrets only. Never in code, env files, or git. Rotate quarterly.</td></tr>
+        <tr><td>2FA for staff</td><td>TOTP for clinicians/admins. WebAuthn for super-admin.</td></tr>
+        <tr><td>Session pinning</td><td>Refresh tokens bound to IP /24 + user agent. Rotate on each use.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout danger">
+    <strong>Compliance — non-negotiable.</strong> If you handle Indian patient data, you must comply with the <strong>DPDP Act 2023</strong> (Digital Personal Data Protection) and ABDM data privacy guidelines. Build a Data Protection Impact Assessment doc before launch. Designate a Data Protection Officer if &gt; 50k patient records.
+  </div>
+
+  <!-- ───── MOBILE ───── -->
+  <h2 id="mobile" class="sec">9 · Mobile build (Capacitor)</h2>
+  <p class="sec-sub">One web codebase, native shells for iOS and Android. No React Native fork.</p>
+
+  <pre><span class="c"># From apps/portal — build the web app first</span>
+pnpm build                                  <span class="c"># produces apps/portal/dist/</span>
+
+<span class="c"># In apps/mobile</span>
+pnpm i @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+pnpm i @capacitor/push-notifications @capacitor/preferences capacitor-biometric-auth
+npx cap init pulseward in.pulseward.app --web-dir=../portal/dist
+npx cap add android
+npx cap add ios
+
+<span class="c"># Sync web build → native</span>
+npx cap copy
+npx cap open android       <span class="c"># builds in Android Studio</span>
+npx cap open ios           <span class="c"># builds in Xcode</span></pre>
+
+  <div class="card">
+    <h3>Native bits to wire on day 1</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Push notifications</td><td><code class="inl">@capacitor/push-notifications</code> · FCM (Android) + APNs (iOS). Register on first launch, store token via <code class="inl">POST /v1/devices</code>.</td></tr>
+        <tr><td>Biometric unlock</td><td>Stash refresh token in keychain after first sign-in. Re-prompt on every cold launch.</td></tr>
+        <tr><td>Secure storage</td><td><code class="inl">@capacitor/preferences</code> for non-sensitive prefs only. Native keychain for tokens.</td></tr>
+        <tr><td>Deep links</td><td><code class="inl">in.pulseward.app://appointment/&lt;id&gt;</code> opens that screen. Used by notifications and Telegram inline buttons.</td></tr>
+        <tr><td>Offline cache</td><td>Service Worker (PWA build) caches the shell + last 7 days of data. Works on flaky 2G.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── BACKUPS ───── -->
+  <h2 id="backups" class="sec">10 · Backups in production</h2>
+  <p class="sec-sub">Same schema as the prototype — just runs server-side on a cron.</p>
+
+  <pre><span class="c"># services/backup-service/wrangler.toml</span>
+name = <span class="s">"pulseward-backup"</span>
+main = <span class="s">"src/index.ts"</span>
+
+[triggers]
+crons = [<span class="s">"0 21 * * *"</span>]    <span class="c"># 21:00 UTC = 03:00 IST</span>
+
+[[r2_buckets]]
+binding = <span class="s">"BACKUPS"</span>
+bucket_name = <span class="s">"pulseward-backups"</span>
+
+[[d1_databases]]
+binding = <span class="s">"DB"</span>
+database_id = <span class="s">"..."</span></pre>
+
+  <pre><span class="c">// services/backup-service/src/index.ts</span>
+<span class="k">export default</span> {
+  <span class="k">async</span> scheduled(event, env) {
+    <span class="k">const</span> snap = {};
+    <span class="k">for</span> (<span class="k">const</span> table <span class="k">of</span> TABLES) {
+      <span class="k">const</span> rows = <span class="k">await</span> env.DB.prepare(<span class="s">`SELECT * FROM ${table}`</span>).all();
+      snap[table] = rows.results;
+    }
+    <span class="k">const</span> ts = <span class="k">new</span> Date().toISOString().slice(0, 10);
+    <span class="k">const</span> body = JSON.stringify(snap);
+    <span class="k">await</span> env.BACKUPS.put(<span class="s">`auto/${ts}.json`</span>, body, {
+      customMetadata: { tenant: <span class="s">'main'</span>, kind: <span class="s">'auto'</span>, version: <span class="s">'1'</span> },
+    });
+
+    <span class="c">// Rolling retention: keep last 7 auto + roll older to cold tier</span>
+    <span class="k">const</span> list = <span class="k">await</span> env.BACKUPS.list({ prefix: <span class="s">'auto/'</span> });
+    <span class="k">const</span> sorted = list.objects.sort((a, b) =&gt; b.uploaded.getTime() - a.uploaded.getTime());
+    <span class="k">for</span> (<span class="k">const</span> obj <span class="k">of</span> sorted.slice(7)) {
+      <span class="c">// Move to weekly cold tier (rename key prefix)</span>
+      <span class="c">// or env.BACKUPS_COLD.put(...)</span>
+    }
+  },
+};</pre>
+
+  <div class="card">
+    <h3>Restore procedure</h3>
+    <ol class="checklist" style="counter-reset:item;">
+      <li>Identify snapshot: <code class="inl">wrangler r2 object list pulseward-backups --prefix auto/</code></li>
+      <li>Download: <code class="inl">wrangler r2 object get pulseward-backups/auto/2026-05-19.json &gt; snap.json</code></li>
+      <li>Apply to a sandbox D1: <code class="inl">node scripts/restore.js sandbox snap.json</code></li>
+      <li>Smoke test the sandbox tenant.</li>
+      <li>Maintenance window: swap DNS or apply restore to prod D1.</li>
+      <li>Audit log entry written automatically.</li>
+    </ol>
+  </div>
+
+  <!-- ───── CI/CD ───── -->
+  <h2 id="cicd" class="sec">11 · CI/CD</h2>
+
+  <pre><span class="c"># .github/workflows/ci.yml</span>
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run build:types
+      - run: pnpm run contracts:check -- --strict
+      - run: pnpm test
+      - run: pnpm run build:apps
+
+  deploy-staging:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:apps
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: deploy --env staging</pre>
+
+  <ul class="checklist">
+    <li><b>Production deploy is manual</b> — protected by a <code class="inl">workflow_dispatch</code> trigger and a "production-approver" GitHub team.</li>
+    <li><b>Database migrations</b> run in their own job, before app deploy, with backup-first hook.</li>
+    <li><b>Rollback plan</b>: <code class="inl">wrangler rollback --env production</code> reverts to the previous Worker version in seconds. Web is atomic via Pages.</li>
+  </ul>
+
+  <!-- ───── PORTS ───── -->
+  <h2 id="ports" class="sec">11.5 · Service ports &amp; environment matrix</h2>
+  <p class="sec-sub">Quick reference for every port, env var, and where it comes from. The full LLD has the contracts; this is the pocket card.</p>
+
+  <div class="grid cols-2">
+    <div class="card tight">
+      <table class="spec">
+        <thead><tr><th>Surface</th><th>Local</th><th>Static prod</th></tr></thead>
+        <tbody>
+          <tr><td>Landing page</td><td class="mono">4173</td><td class="mono">4173</td></tr>
+          <tr><td>Admin console</td><td class="mono">4180</td><td class="mono">4180</td></tr>
+          <tr><td>Clinician portal</td><td class="mono">4311 (dev)</td><td class="mono">4181</td></tr>
+          <tr><td>Operations dashboard</td><td class="mono">4312 (dev)</td><td class="mono">4182</td></tr>
+          <tr><td>Patient portal</td><td class="mono">4313 (dev)</td><td class="mono">4183</td></tr>
+          <tr><td>api-gateway</td><td class="mono">8087</td><td>Worker</td></tr>
+          <tr><td>auth-service</td><td class="mono">5101</td><td>Worker</td></tr>
+          <tr><td>notification-svc</td><td class="mono">5102 / 8088</td><td>Worker</td></tr>
+          <tr><td>appointment-svc</td><td class="mono">5103</td><td>Worker</td></tr>
+          <tr><td>ehr-service</td><td class="mono">5104</td><td>Worker</td></tr>
+          <tr><td>lab-service</td><td class="mono">5105</td><td>Worker</td></tr>
+          <tr><td>pharmacy-service</td><td class="mono">5106</td><td>Worker</td></tr>
+          <tr><td>abha-service</td><td class="mono">5107</td><td>Worker</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card tight">
+      <table class="spec">
+        <thead><tr><th>Secret / env</th><th>Where</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">JWT_SECRET</span></td><td>gateway, auth</td><td>32-byte hex; rotate quarterly</td></tr>
+          <tr><td><span class="mono">PEPPER</span></td><td>auth</td><td>16-byte hex added to argon2</td></tr>
+          <tr><td><span class="mono">ABDM_CLIENT_ID/SECRET</span></td><td>abha</td><td>From facility.abdm.gov.in</td></tr>
+          <tr><td><span class="mono">ABDM_PUBLIC_CERT</span></td><td>abha</td><td>RSA cert; encrypts Aadhaar</td></tr>
+          <tr><td><span class="mono">TELEGRAM_BOT_TOKEN</span></td><td>notify</td><td>@BotFather</td></tr>
+          <tr><td><span class="mono">TELEGRAM_WEBHOOK_SECRET</span></td><td>notify</td><td>Random; set on <code class="inl">setWebhook</code></td></tr>
+          <tr><td><span class="mono">RESEND_API_KEY</span></td><td>notify</td><td>Verified domain only</td></tr>
+          <tr><td><span class="mono">MSG91_AUTH_KEY</span></td><td>notify</td><td>India SMS</td></tr>
+          <tr><td><span class="mono">EXPO_ACCESS_TOKEN</span></td><td>notify</td><td>Push (Expo Go path)</td></tr>
+          <tr><td><span class="mono">FCM_SERVER_KEY</span></td><td>notify</td><td>Android push</td></tr>
+          <tr><td><span class="mono">APNS_KEY_ID</span></td><td>notify</td><td>iOS push</td></tr>
+          <tr><td><span class="mono">SENTRY_DSN</span></td><td>all</td><td>Optional; recommended</td></tr>
+          <tr><td><span class="mono">CF_API_TOKEN</span></td><td>CI</td><td>Scoped to deploy only</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <strong>Source of truth:</strong> local <code class="inl">.env</code> files (gitignored) for dev; <code class="inl">wrangler secret put</code> for prod. CI pulls deploy creds from GitHub Action secrets only. Never check secrets into git, even encrypted.
+  </div>
+
+  <!-- ───── OBSERVABILITY ───── -->
+  <h2 id="observability" class="sec">11.6 · Observability</h2>
+  <p class="sec-sub">If you can't see it, you can't run it. Four pillars: logs, metrics, traces, audits — each with a default tool and what it costs.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Structured logs</h3>
+      <ul class="checklist">
+        <li>Every request emits one JSON line: <span class="mono">trace_id · route · status · ms · user · tenant</span>.</li>
+        <li>Workers Logs (CF dashboard) for live tailing. <code class="inl">wrangler tail --env production</code>.</li>
+        <li>Sentry for unhandled errors + sourcemaps. Free tier covers 5k events / month.</li>
+        <li>No PII in logs — middleware redacts <span class="mono">password, aadhaar, otp, refresh_token</span> by key.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Metrics</h3>
+      <ul class="checklist">
+        <li>Cloudflare Analytics: traffic, edge latency, 4xx/5xx by route.</li>
+        <li>Workers Analytics Engine for custom counters: <code class="inl">notify.delivered</code>, <code class="inl">appt.book.conflict</code>, <code class="inl">abha.enrol.success</code>.</li>
+        <li>D1 panel: top slow queries, storage growth, rows scanned.</li>
+        <li>Operations dashboard reads notif + ABHA telemetry endpoints (see ops README).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Traces</h3>
+      <ul class="checklist">
+        <li>Every request gets a <span class="mono">trace_id</span> in <code class="inl">X-Trace-Id</code>; propagated to internal service calls.</li>
+        <li>Sentry stitches spans across services automatically when SDK is initialized in each Worker.</li>
+        <li>Search a trace by ID across the whole stack in 1 click.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Audit</h3>
+      <ul class="checklist">
+        <li>Append-only <code class="inl">audit_events</code> on every write.</li>
+        <li>Daily roll-up Worker exports to R2 cold tier for cheap multi-year retention.</li>
+        <li>Admin console has a search-by-actor view; ops uses it for compliance dumps.</li>
+        <li>Read access is logged too (just at lower frequency to avoid noise).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Alerts — wired before launch</h3>
+    <table class="spec">
+      <thead><tr><th>Signal</th><th>Threshold</th><th>Channel</th></tr></thead>
+      <tbody>
+        <tr><td>API 5xx rate</td><td>&gt; 1% for 5 min</td><td>PagerDuty (S2)</td></tr>
+        <tr><td>p95 latency (writes)</td><td>&gt; 500 ms for 5 min</td><td>PagerDuty (S3)</td></tr>
+        <tr><td>Auth error rate</td><td>&gt; 1% for 10 min</td><td>PagerDuty (S2)</td></tr>
+        <tr><td>Notification delivery (critical)</td><td>p95 &gt; 10 s</td><td>PagerDuty (S1)</td></tr>
+        <tr><td>ABDM upstream 5xx</td><td>&gt; 5% for 10 min</td><td>Slack (S3)</td></tr>
+        <tr><td>Backup missed</td><td>Daily job did not run</td><td>PagerDuty (S1)</td></tr>
+        <tr><td>D1 storage</td><td>&gt; 80% of free tier</td><td>Slack (planning)</td></tr>
+        <tr><td>Synthetic probe</td><td>2 consecutive failures</td><td>PagerDuty (S1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── TESTING ───── -->
+  <h2 id="testing" class="sec">11.7 · Testing strategy</h2>
+  <p class="sec-sub">Production-ready means we know the system works under load and after every change. Coverage matters less than confidence at each layer.</p>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Unit (Vitest)</h3>
+      <ul class="checklist">
+        <li>Pure logic in <code class="inl">packages/*</code> + <code class="inl">services/*/lib</code></li>
+        <li>FSM transition tables (every legal/illegal combination)</li>
+        <li>Validators, MRN generator, drug interaction lookups</li>
+        <li>Coverage gate: 80% on <code class="inl">schema</code> + FSM modules</li>
+        <li>Run on every PR</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Integration (miniflare)</h3>
+      <ul class="checklist">
+        <li>Spin Workers + local D1 file in-process</li>
+        <li>One file per route folder</li>
+        <li>Snapshot the JSON response shape — drift fails CI</li>
+        <li>Includes the auth middleware + audit middleware</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Contract</h3>
+      <ul class="checklist">
+        <li><code class="inl">packages/schema/openapi.ts</code> emits OpenAPI 3</li>
+        <li><code class="inl">pnpm run contracts:check</code> compares prod schema to repo</li>
+        <li>SDK clients regenerated automatically from the schema</li>
+        <li>Breaking changes require a major bump + migration plan</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>End-to-end (Playwright)</h3>
+      <ul class="checklist">
+        <li>Booking flow · lab review flow · ABHA link flow</li>
+        <li>Runs against an ephemeral preview env per PR</li>
+        <li>Visual regression on Storybook stories</li>
+        <li>Smoke suite runs against staging post-deploy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Load (k6)</h3>
+      <ul class="checklist">
+        <li>100 concurrent users, 30 min sustained</li>
+        <li>Targets: p95 &lt; 250 ms, error &lt; 0.1%</li>
+        <li>Spike: 500 concurrent for 60 s → must not 503 the gateway</li>
+        <li>Run before launch &amp; bi-annually</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Security</h3>
+      <ul class="checklist">
+        <li>OWASP ZAP baseline nightly on staging</li>
+        <li><code class="inl">pnpm audit</code> + Dependabot on every PR</li>
+        <li>CodeQL on push to <code class="inl">main</code></li>
+        <li>Third-party pen-test before public launch</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <strong>Definition of "production ready":</strong> all six test layers green on staging for 14 consecutive days plus one successful restore drill. Then we roll one department.
+  </div>
+
+  <!-- ───── COST ───── -->
+  <h2 id="cost" class="sec">12 · Realistic monthly cost</h2>
+  <p class="sec-sub">For one hospital at ~2,000 active patients and 15 staff using the system daily.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Compute &amp; storage</h3>
+      <div class="cost-row"><span>Cloudflare Pages — 3 static deploys</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Workers — ~50k req/day across services</span><span class="price">$0 (free tier)</span></div>
+      <div class="cost-row"><span>D1 — &lt; 5 GB</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>R2 — 10 GB lab PDFs + backups</span><span class="price">$0 (free tier)</span></div>
+      <div class="cost-row"><span>KV — sessions + rate limit</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Workers Queues — notification fan-out</span><span class="price">$0 (1M/mo free)</span></div>
+      <div class="cost-row" style="border-bottom:none;font-weight:600;color:var(--ok);"><span>Subtotal</span><span class="price" style="color:var(--ok);">$0</span></div>
+    </div>
+    <div class="card">
+      <h3>Notifications &amp; misc</h3>
+      <div class="cost-row"><span>Resend email — 3k / mo free</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>MSG91 SMS — 500 OTPs / mo</span><span class="price">~₹100 ($1.20)</span></div>
+      <div class="cost-row"><span>Telegram bot</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Domain (.in)</span><span class="price">~$10/yr</span></div>
+      <div class="cost-row"><span>Apple Developer (if iOS native)</span><span class="price">$99/yr</span></div>
+      <div class="cost-row"><span>Sentry — 5k errors / mo</span><span class="price">$0</span></div>
+      <div class="cost-row" style="border-bottom:none;font-weight:600;color:var(--teal);"><span>Realistic month at MVP scale</span><span class="price">$5–35</span></div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    At <strong>10,000+ patients</strong>, expect to upgrade D1 (~$10/mo above free tier), increase SMS spend (~₹500/mo), and possibly move to Neon Postgres (~$20/mo) for richer queries. Still well under $100/month.
+  </div>
+
+  <!-- ───── LAUNCH CHECKLIST ───── -->
+  <h2 id="launch" class="sec">13 · Go-live checklist</h2>
+  <p class="sec-sub">Run through this T-7 days before launch.</p>
+
+  <div class="card">
+    <h3>T-7 days</h3>
+    <ul class="checklist">
+      <li>Full restore drill on sandbox tenant from latest backup. RTO clocked &lt; 1h.</li>
+      <li>Load test: 100 concurrent users for 30 minutes; p95 &lt; 250ms.</li>
+      <li>OWASP ZAP scan against staging; resolve all High/Critical.</li>
+      <li>Dependency audit — <code class="inl">pnpm audit</code> shows no High/Critical.</li>
+      <li>All Workers Secrets rotated; staging secrets ≠ prod secrets.</li>
+      <li>DPIA document signed off; DPO designated.</li>
+      <li>Incident response runbook printed and pinned in the ops channel.</li>
+      <li>On-call schedule for week 1 published (one engineer for 2-hour windows, rotating).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>T-1 day</h3>
+    <ul class="checklist">
+      <li>Take a manual snapshot before any deploy.</li>
+      <li>Migrate prod schema; run smoke test against prod URL.</li>
+      <li>Verify Telegram webhook is set and responding.</li>
+      <li>Verify ABHA sandbox calls succeed end-to-end.</li>
+      <li>Set up status page (CF Workers + a simple template).</li>
+      <li>Pre-create the first 5 clinician accounts; share temp passwords offline.</li>
+      <li>Bookmark Sentry dashboard, Cloudflare Analytics, and the audit log.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Launch day</h3>
+    <ul class="checklist">
+      <li>Soft launch in <strong>one department</strong> (Cardiology). Don't open the portal URL publicly yet.</li>
+      <li>Front-desk staff trained — they're your tier-1 support.</li>
+      <li>Hourly Sentry check for the first 8 hours.</li>
+      <li>EOD: take a manual snapshot labelled "Launch day".</li>
+      <li>Stand-down: write a launch-day retro the next morning.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Days 1–14 (soft launch window)</h3>
+    <ul class="checklist">
+      <li>Daily standup with the cardiology team — capture every friction.</li>
+      <li>One ticket = one PR. No batched changes.</li>
+      <li>Watch p95 latency, error rate, and patient sign-up funnel.</li>
+      <li>If anything looks off, you have rollback and restore one click away.</li>
+      <li>Day 14 review: if metrics are clean, expand to the next 2 departments.</li>
+    </ul>
+  </div>
+
+  <h2 id="next" class="sec">14 · After go-live</h2>
+  <ul class="checklist">
+    <li><b>Month 2:</b> roll the rest of the hospital. Optional WhatsApp connector. Insurance API for cashless flow.</li>
+    <li><b>Month 3:</b> productionize ABHA (move from sandbox to production endpoints). HIP callback completeness review.</li>
+    <li><b>Month 6:</b> second hospital onboarded. Multi-tenant code paths get real exercise.</li>
+    <li><b>Quarterly:</b> DR drill, secret rotation, dependency audit, DPIA refresh, on-call rotation review.</li>
+  </ul>
+
+  <p style="margin-top:36px;font-size:12px;color:var(--mute-2);text-align:center;">
+    PulseWard HMS · Build notes v1 · Last updated <span id="d"></span>
+  </p>
+
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>document.getElementById('d').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });</script>
+
+</body>
+</html>

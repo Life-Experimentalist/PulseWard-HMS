@@ -1,19 +1,19 @@
 {
-    "name": "PulseWard Demo Console",
-    "short_name": "PulseWard",
-    "start_url": "./index.html",
-    "scope": "./",
-    "display": "standalone",
-    "orientation": "portrait-primary",
-    "background_color": "#f9fcfb",
-    "theme_color": "#0f4c5c",
-    "description": "Interactive multi-hospital demo with setup wizard, admin controls, and testable data flows.",
-    "icons": [
-        {
-            "src": "./icon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any maskable"
-        }
-    ]
+  "name": "PulseWard HMS",
+  "short_name": "PulseWard",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1118",
+  "theme_color": "#0f4c5c",
+  "description": "Open-source hospital management system — patient portal, clinician portal, admin console, and ops dashboard.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

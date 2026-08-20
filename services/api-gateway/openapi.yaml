@@ -1,108 +1,347 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
-  title: PulseWard API Gateway
-  description: API Gateway for the PulseWard Hospital Management System, routing requests to various microservices.
+  title: PulseWard HMS — API Gateway
   version: 1.0.0
+  description: >-
+    REST API for the PulseWard Hospital Management System. A single Hono gateway
+    serves every route below, backed by SQLite. All responses use a uniform
+    envelope: success responses are `{ "ok": true, ... }` and errors are
+    `{ "ok": false, "error": "<code>", "message": "<human text>" }`.
+    Authentication is a Bearer JWT access token (15-minute lifetime); refresh
+    tokens are single-use and rotated. Every record is scoped to a tenant.
+  license:
+    name: UNLICENSED
 servers:
-  - url: http://localhost:3000
-    description: Development server
+  - url: http://localhost:8787
+    description: Local development gateway
+
+tags:
+  - name: Health
+    description: Liveness probe (public).
+  - name: Auth
+    description: Signup, login, silent refresh, logout, and the current-session identity.
+  - name: Patients
+    description: Patient demographics and MRN assignment.
+  - name: Clinicians
+    description: Provider directory and profiles.
+  - name: Appointments
+    description: Scheduling and the appointment lifecycle state machine.
+  - name: Clinical Notes
+    description: Encounter notes with sign-off.
+  - name: Labs
+    description: Lab orders and results.
+  - name: Prescriptions
+    description: Medication orders.
+  - name: Messages
+    description: Secure patient–clinician threads.
+  - name: Notifications
+    description: The authenticated user's notification inbox.
+  - name: Admin
+    description: Tenant administration — users, clinicians, audit, tenants, stats.
+  - name: Platform
+    description: Operations health and incident feed (admin/ops only).
+
+security:
+  - bearerAuth: []
+
 paths:
-  /auth:
-    post:
-      summary: Authenticate a user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
-      responses:
-        "200":
-          description: Successful authentication
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-        "401":
-          description: Unauthorized
-  /patients:
+  /health:
     get:
-      summary: Retrieve a list of patients
+      tags: [Health]
+      summary: Liveness probe
+      description: Public, unauthenticated healthcheck used by Docker and load balancers.
+      security: []
       responses:
         "200":
-          description: A list of patients
+          description: Service is up.
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    age:
-                      type: integer
-                    gender:
-                      type: string
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+
+  /api/v1/auth/login:
     post:
-      summary: Add a new patient
+      tags: [Auth]
+      summary: Authenticate with email and password
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                age:
-                  type: integer
-                gender:
-                  type: string
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Authenticated; returns access token, rotating refresh token, and identity.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Self-register a patient account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignupRequest" }
       responses:
         "201":
-          description: Patient created
+          description: Account and linked patient record created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new session
+      description: Refresh tokens are single-use; reusing a rotated token revokes the whole family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New access and refresh tokens issued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the current refresh-token family
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: Logged out (idempotent).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Return the authenticated user's identity
+      responses:
+        "200":
+          description: Current user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/patients:
+    get:
+      tags: [Patients]
+      summary: List or search patients
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: Free-text search over name and MRN.
+      responses:
+        "200":
+          description: Patient roster (tenant-scoped).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-  /appointments:
-    get:
-      summary: Retrieve a list of appointments
+                  ok: { type: boolean }
+                  patients:
+                    type: array
+                    items: { $ref: "#/components/schemas/Patient" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Patients]
+      summary: Register a new patient and assign an MRN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatientCreate" }
       responses:
-        "200":
-          description: A list of appointments
+        "201":
+          description: Patient created.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    patientId:
-                      type: string
-                    clinicianId:
-                      type: string
-                    date:
-                      type: string
-                      format: date-time
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  patient: { $ref: "#/components/schemas/Patient" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/patients/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    get:
+      tags: [Patients]
+      summary: Read a single patient record
+      responses:
+        "200":
+          description: Patient record.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  patient: { $ref: "#/components/schemas/Patient" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Patients]
+      summary: Update a patient record
+      description: >-
+        Patients may update their own contact details only; clinical fields
+        (allergies, etc.) require a clinical role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatientUpdate" }
+      responses:
+        "200":
+          description: Updated patient.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  patient: { $ref: "#/components/schemas/Patient" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/clinicians:
+    get:
+      tags: [Clinicians]
+      summary: List clinicians
+      responses:
+        "200":
+          description: Clinician directory.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  clinicians:
+                    type: array
+                    items: { $ref: "#/components/schemas/Clinician" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/clinicians/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    get:
+      tags: [Clinicians]
+      summary: Read a clinician profile
+      responses:
+        "200":
+          description: Clinician profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  clinician: { $ref: "#/components/schemas/Clinician" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/appointments:
+    get:
+      tags: [Appointments]
+      summary: List appointments (role-scoped)
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: clinicianId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Appointments visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  appointments:
+                    type: array
+                    items: { $ref: "#/components/schemas/Appointment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
     post:
-      summary: Schedule a new appointment
+      tags: [Appointments]
+      summary: Book an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentCreate" }
+      responses:
+        "201":
+          description: Appointment booked.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  appointment: { $ref: "#/components/schemas/Appointment" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Requested slot overlaps an existing appointment for that clinician.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/appointments/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Appointments]
+      summary: Transition an appointment's status
+      description: >-
+        Valid transitions — scheduled→checked-in|cancelled, checked-in→in-progress|no-show,
+        in-progress→completed. Any other transition returns 422.
       requestBody:
         required: true
         content:
@@ -110,52 +349,876 @@ paths:
             schema:
               type: object
               properties:
-                patientId:
+                status:
                   type: string
-                clinicianId:
-                  type: string
-                date:
-                  type: string
-                  format: date-time
+                  enum: [checked-in, in-progress, completed, cancelled, no-show]
       responses:
-        "201":
-          description: Appointment scheduled
+        "200":
+          description: Updated appointment.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
+                  ok: { type: boolean }
+                  appointment: { $ref: "#/components/schemas/Appointment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Illegal status transition.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/notes:
+    get:
+      tags: [Clinical Notes]
+      summary: List clinical notes for a patient
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Notes visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  notes:
+                    type: array
+                    items: { $ref: "#/components/schemas/Note" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Clinical Notes]
+      summary: Author a clinical note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteCreate" }
+      responses:
+        "201":
+          description: Note created (unsigned).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  note: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/notes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Clinical Notes]
+      summary: Edit an unsigned note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: { type: string }
+      responses:
+        "200":
+          description: Updated note.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  note: { $ref: "#/components/schemas/Note" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The note is already signed and is immutable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/notes/{id}/sign:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Clinical Notes]
+      summary: Sign a note (locks it)
+      responses:
+        "200":
+          description: Signed note with a signature timestamp.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  note: { $ref: "#/components/schemas/Note" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The note is already signed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/labs:
+    get:
+      tags: [Labs]
+      summary: List a patient's lab orders
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Lab orders visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  labs:
+                    type: array
+                    items: { $ref: "#/components/schemas/LabOrder" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Labs]
+      summary: Order a lab panel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LabCreate" }
+      responses:
+        "201":
+          description: Lab order created (status "ordered").
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  lab: { $ref: "#/components/schemas/LabOrder" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/labs/all:
+    get:
+      tags: [Labs]
+      summary: List all lab orders across the tenant (worklist)
+      responses:
+        "200":
+          description: Tenant-wide lab worklist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  labs:
+                    type: array
+                    items: { $ref: "#/components/schemas/LabOrder" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/labs/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Labs]
+      summary: Advance a lab order's status or attach results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ordered, in-lab, resulted, reviewed]
+                results: { type: string }
+      responses:
+        "200":
+          description: Updated lab order.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  lab: { $ref: "#/components/schemas/LabOrder" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/prescriptions:
+    get:
+      tags: [Prescriptions]
+      summary: List a patient's prescriptions
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Prescriptions visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  prescriptions:
+                    type: array
+                    items: { $ref: "#/components/schemas/Prescription" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Prescriptions]
+      summary: Prescribe a medication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrescriptionCreate" }
+      responses:
+        "201":
+          description: Prescription created (status "active").
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  prescription: { $ref: "#/components/schemas/Prescription" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/prescriptions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Prescriptions]
+      summary: Update a prescription (e.g. discontinue)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, discontinued, completed]
+      responses:
+        "200":
+          description: Updated prescription.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  prescription: { $ref: "#/components/schemas/Prescription" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/messages:
+    get:
+      tags: [Messages]
+      summary: List secure message threads
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Threads the caller is a party to.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/MessageThread" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Messages]
+      summary: Start a thread or reply to one
+      description: Provide `clinicianId` + `subject` to start a thread, or `threadId` to reply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessagePost" }
+      responses:
+        "200":
+          description: Reply appended to an existing thread.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  message: { $ref: "#/components/schemas/MessageThread" }
+        "201":
+          description: New thread created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  message: { $ref: "#/components/schemas/MessageThread" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/messages/{id}/read:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Messages]
+      summary: Mark a thread read for the caller
+      responses:
+        "200":
+          description: Thread marked read.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List the caller's notifications
+      responses:
+        "200":
+          description: The authenticated user's inbox.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  notifications:
+                    type: array
+                    items: { $ref: "#/components/schemas/Notification" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/notifications/{id}/read:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Notifications]
+      summary: Mark a single notification read
+      responses:
+        "200":
+          description: Notification marked read.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark the whole inbox read
+      responses:
+        "200":
+          description: All notifications marked read.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Tenant summary counters
+      responses:
+        "200":
+          description: Aggregate counts for the tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  stats: { $ref: "#/components/schemas/AdminStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: List user accounts
+      responses:
+        "200":
+          description: User accounts in the tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin]
+      summary: Create a user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserCreate" }
+      responses:
+        "201":
+          description: User created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  userId: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/admin/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    delete:
+      tags: [Admin]
+      summary: Delete a user account
+      description: An admin cannot delete their own account.
+      responses:
+        "200":
+          description: User deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/audit:
+    get:
+      tags: [Admin]
+      summary: Read the tenant audit log
+      responses:
+        "200":
+          description: Recent audit events.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  events:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/admin/tenants:
+    get:
+      tags: [Admin]
+      summary: List tenants
+      responses:
+        "200":
+          description: Tenants.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  tenants:
+                    type: array
+                    items: { $ref: "#/components/schemas/Tenant" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/admin/clinicians:
+    post:
+      tags: [Admin]
+      summary: Onboard a clinician (optionally with a linked login)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClinicianCreate" }
+      responses:
+        "201":
+          description: Clinician created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  clinician: { $ref: "#/components/schemas/Clinician" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/platform/health:
+    get:
+      tags: [Platform]
+      summary: Operational health and metrics
+      responses:
+        "200":
+          description: Service health and runtime metrics.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformHealth" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/platform/incidents:
+    get:
+      tags: [Platform]
+      summary: Active incident feed
+      responses:
+        "200":
+          description: Current incidents (empty when healthy).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  incidents:
+                    type: array
+                    items: { type: object }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: A 15-minute access token issued by /api/v1/auth/login or /refresh.
+
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: Resource identifier (UUID).
+
+  responses:
+    Unauthorized:
+      description: Missing, malformed, or expired access token.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Authenticated but not permitted for this resource.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Resource not found within the tenant.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ValidationError:
+      description: Request body or query failed validation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: The request conflicts with existing state.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   schemas:
-    Error:
+    OkResponse:
       type: object
       properties:
+        ok: { type: boolean, example: true }
+    HealthResponse:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+        service: { type: string, example: api-gateway }
+        version: { type: string, example: "1.0.0" }
+    ErrorResponse:
+      type: object
+      properties:
+        ok: { type: boolean, example: false }
+        error:
+          type: string
+          description: Stable machine-readable error code.
+          example: validation_failed
         message:
           type: string
-        code:
-          type: integer
+          description: Human-readable explanation.
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    SignupRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+    SessionResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        token:
+          type: string
+          description: Bearer access token (15-minute lifetime).
+        refreshToken:
+          type: string
+          description: Single-use rotating refresh token.
+        role:
+          type: string
+          enum: [admin, clinician, patient, frontdesk, ops]
+        user: { $ref: "#/components/schemas/User" }
+    MeResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        user: { $ref: "#/components/schemas/User" }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role:
+          type: string
+          enum: [admin, clinician, patient, frontdesk, ops]
+        linkedEntityId:
+          type: string
+          nullable: true
+          description: Patient or clinician entity this login is attached to.
     Patient:
       type: object
       properties:
-        id:
-          type: string
-        name:
-          type: string
-        age:
-          type: integer
-        gender:
-          type: string
+        id: { type: string }
+        mrn: { type: string, example: PW-26-00001 }
+        name: { type: string }
+        dob: { type: string, format: date }
+        phone: { type: string }
+        email: { type: string, format: email }
+        allergies:
+          type: array
+          items: { type: string }
+    PatientCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        dob: { type: string, format: date }
+        phone: { type: string }
+        email: { type: string, format: email }
+    PatientUpdate:
+      type: object
+      properties:
+        phone: { type: string }
+        email: { type: string, format: email }
+        allergiesJson:
+          type: array
+          items: { type: string }
+    Clinician:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        specialty: { type: string }
+        email: { type: string, format: email }
+    ClinicianCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        specialty: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
     Appointment:
       type: object
       properties:
-        id:
+        id: { type: string }
+        patientId: { type: string }
+        clinicianId: { type: string }
+        startsAt: { type: integer, description: Unix epoch seconds. }
+        durationMinutes: { type: integer }
+        status:
           type: string
-        patientId:
+          enum: [scheduled, checked-in, in-progress, completed, cancelled, no-show]
+    AppointmentCreate:
+      type: object
+      required: [clinicianId, startsAt]
+      properties:
+        patientId: { type: string }
+        clinicianId: { type: string }
+        startsAt: { type: integer }
+        durationMinutes: { type: integer, default: 30 }
+        reason: { type: string }
+    Note:
+      type: object
+      properties:
+        id: { type: string }
+        patientId: { type: string }
+        clinicianId: { type: string }
+        body: { type: string }
+        signedAt: { type: string, format: date-time, nullable: true }
+    NoteCreate:
+      type: object
+      required: [patientId, body]
+      properties:
+        patientId: { type: string }
+        body: { type: string }
+    LabOrder:
+      type: object
+      properties:
+        id: { type: string }
+        patientId: { type: string }
+        panel: { type: string }
+        status:
           type: string
-        clinicianId:
+          enum: [ordered, in-lab, resulted, reviewed]
+        results: { type: string, nullable: true }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+    LabCreate:
+      type: object
+      required: [patientId, panel]
+      properties:
+        patientId: { type: string }
+        panel: { type: string }
+    Prescription:
+      type: object
+      properties:
+        id: { type: string }
+        patientId: { type: string }
+        drug: { type: string }
+        dosage: { type: string }
+        status:
           type: string
-        date:
-          type: string
-          format: date-time
+          enum: [active, discontinued, completed]
+    PrescriptionCreate:
+      type: object
+      required: [patientId, drug]
+      properties:
+        patientId: { type: string }
+        drug: { type: string }
+        dosage: { type: string }
+    MessageThread:
+      type: object
+      properties:
+        id: { type: string }
+        patientId: { type: string }
+        clinicianId: { type: string }
+        subject: { type: string }
+        readByPatient: { type: boolean }
+        readByClinician: { type: boolean }
+        thread:
+          type: array
+          items:
+            type: object
+            properties:
+              authorRole: { type: string }
+              text: { type: string }
+              at: { type: string, format: date-time }
+    MessagePost:
+      type: object
+      required: [text]
+      properties:
+        threadId: { type: string, description: Present when replying. }
+        clinicianId: { type: string, description: Present when starting a thread. }
+        subject: { type: string }
+        text: { type: string, minLength: 1 }
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        readAt: { type: string, format: date-time, nullable: true }
+    AdminStats:
+      type: object
+      properties:
+        patientCount: { type: integer }
+        clinicianCount: { type: integer }
+        appointmentCount: { type: integer }
+        userCount: { type: integer }
+    AuditEvent:
+      type: object
+      properties:
+        id: { type: string }
+        actor: { type: string }
+        action: { type: string }
+        scope: { type: string }
+        at: { type: string, format: date-time }
+    Tenant:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+    PlatformHealth:
+      type: object
+      properties:
+        ok: { type: boolean }
+        services:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              status: { type: string }
+        metrics:
+          type: object
+          properties:
+            uptimeSeconds: { type: number }
+            users: { type: integer }

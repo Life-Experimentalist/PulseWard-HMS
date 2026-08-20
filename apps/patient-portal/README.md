@@ -1,39 +1,47 @@
-﻿# PulseWard Patient Portal
+# PulseWard Patient Portal
 
-Framework-based patient-facing experience built with React + Vite.
+The patient-facing portal for PulseWard HMS — a React 18 + Vite single-page app.
+Dev server runs on **port 4313** and proxies `/api` to the API gateway on `:8787`.
 
-## Scope
+## What It Covers
 
-- Appointment and reminder-centric patient dashboard
-- Care snapshot and self-service quick actions
-- Compile-first static deployment model
+- **Dashboard** — care snapshot and quick actions
+- **Appointments** — book and review appointments
+- **Labs** — lab orders and results
+- **Prescriptions** — active and past prescriptions
+- **Records** — personal clinical records
+- **Messages** — secure messaging with the care team
+- **Notifications** — delivery history and reminders
 
 ## Development
 
-From repository root:
+From the repository root, start everything (API gateway + all four portals with HMR):
 
 ```powershell
-pnpm run install:patient
-pnpm run start:patient:dev
+pnpm run dev
 ```
 
-Default Vite dev host runs with automatic port selection near `4313`.
-
-## Production-Fast Start
-
-From repository root:
+Or run just this portal (the API gateway must already be running via `pnpm run start`):
 
 ```powershell
-pnpm run build:patient
-pnpm run start:patient
+pnpm --dir apps/patient-portal dev
 ```
 
-`start:patient` serves prebuilt static output from `dist` and avoids runtime bundling.
-Default static port is `4183` with automatic fallback to the next available port.
+The dev server listens on `http://localhost:4313` (override with `PATIENT_PORTAL_PORT`).
+
+## Production Build
+
+```powershell
+pnpm run build                       # builds all four portals to apps/*/dist
+pnpm --dir apps/patient-portal build # or just this one
+pnpm --dir apps/patient-portal preview
+```
+
+The build emits static assets to `apps/patient-portal/dist`, served by any static
+host or reverse proxy that forwards `/api/v1/*` to the gateway.
 
 ## Related Documentation
 
-- API catalog: `../../docs/api/api-catalog.md`
-- Governance charter: `../../governance/project-management-charter.md`
-- Project docs: `../../docs/README.md`
-
+- API reference: [`docs/site/api.md`](../../docs/site/api.md)
+- Architecture: [`docs/site/architecture/`](../../docs/site/architecture/)
+- Multi-tenancy: [`docs/site/multi-tenancy.md`](../../docs/site/multi-tenancy.md)

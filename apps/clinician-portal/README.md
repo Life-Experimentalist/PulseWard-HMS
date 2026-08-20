@@ -1,39 +1,45 @@
-﻿# PulseWard Clinician Portal
+# PulseWard Clinician Portal
 
-Framework-based clinician workspace built with React + Vite.
+The clinician workspace for PulseWard HMS — a React 18 + Vite single-page app for
+doctors and providers. Dev server runs on **port 4311** and proxies `/api` to the
+API gateway on `:8787`.
 
-## Scope
+## What It Covers
 
-- Day view with consultation queue and clinical action checklist
-- Role-focused layout aligned with PulseWard operational workflows
-- Fast local development and compile-first production serving
+- **Schedule** — daily consultation queue and appointment view
+- **Patients** — patient roster with search
+- **Patient detail** — records, labs, prescriptions, and history for one patient
+- **Note writer** — author clinical notes tied to a patient encounter
 
 ## Development
 
-From repository root:
+From the repository root, start everything (API gateway + all four portals with HMR):
 
 ```powershell
-pnpm run install:clinician
-pnpm run start:clinician:dev
+pnpm run dev
 ```
 
-Default Vite dev host runs with automatic port selection near `4311`.
-
-## Production-Fast Start
-
-From repository root:
+Or run just this portal (the API gateway must already be running via `pnpm run start`):
 
 ```powershell
-pnpm run build:clinician
-pnpm run start:clinician
+pnpm --dir apps/clinician-portal dev
 ```
 
-`start:clinician` serves prebuilt static output from `dist` and does not bundle at runtime.
-Default static port is `4181` with automatic fallback to the next available port.
+The dev server listens on `http://localhost:4311` (override with `CLINICIAN_PORTAL_PORT`).
+
+## Production Build
+
+```powershell
+pnpm run build                         # builds all four portals to apps/*/dist
+pnpm --dir apps/clinician-portal build # or just this one
+pnpm --dir apps/clinician-portal preview
+```
+
+The build emits static assets to `apps/clinician-portal/dist`, served by any static
+host or reverse proxy that forwards `/api/v1/*` to the gateway.
 
 ## Related Documentation
 
-- API catalog: `../../docs/api/api-catalog.md`
-- Governance charter: `../../governance/project-management-charter.md`
-- Architecture references: `../../docs/architecture/`
-
+- API reference: [`docs/site/api.md`](../../docs/site/api.md)
+- Architecture: [`docs/site/architecture/`](../../docs/site/architecture/)
+- Data model: [`docs/site/architecture/data-model.md`](../../docs/site/architecture/data-model.md)

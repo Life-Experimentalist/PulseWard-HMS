@@ -1,73 +1,52 @@
-name: Security Checks
+name: Security Audit
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+  schedule:
+    # Weekly re-scan catches CVEs disclosed after a dependency was last installed.
+    - cron: "0 5 * * 1"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  security:
+  dependency-audit:
+    name: Dependency vulnerability audit
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "pnpm"
+          node-version: "24"
 
-      - name: Enable Corepack and pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: Fail on critical advisories
+        run: pnpm audit --audit-level critical
 
-      - name: Install Python security tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install bandit
-
-      - name: Detect Python files
-        id: python-files
-        shell: bash
-        run: |
-          if git ls-files '*.py' | grep -q .; then
-            echo "has_python=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_python=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run bandit check
-        if: steps.python-files.outputs.has_python == 'true'
-        run: bandit -r . -f json -o bandit-report.json
-
-      - name: Generate pnpm audit report
+      - name: Generate full audit report
+        if: always()
         run: pnpm audit --json > pnpm-audit-report.json || true
 
-      - name: Run eslint check
-        run: pnpm run lint
-
-      - name: Upload security reports
+      - name: Upload audit report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-reports
+          name: pnpm-audit-report
           if-no-files-found: warn
-          path: |
-            pnpm-audit-report.json
-            bandit-report.json
+          path: pnpm-audit-report.json

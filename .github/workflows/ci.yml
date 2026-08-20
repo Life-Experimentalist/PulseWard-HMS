@@ -1,54 +1,127 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, develop]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "pnpm"
+          node-version: "24"
 
-      - name: Enable Corepack and pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check contract compatibility (M1)
-        run: pnpm run contracts:check -- --strict
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Build applications
-        run: pnpm run build:apps:ci
-
-      - name: Lint code
+      - name: Lint
         run: pnpm run lint
 
-      - name: Publish artifacts
-        if: github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p artifacts
-          cp -r apps/* artifacts/
-          cp -r services/* artifacts/
-          echo "Artifacts published."
+  test:
+    name: Test & Contract check
+    needs: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Contract coverage check
+        run: pnpm run contracts:check -- --strict
+
+      - name: Unit tests
+        run: pnpm run test:quick
+
+  build:
+    name: Build frontends
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all frontend apps
+        run: pnpm run build:apps
+
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: |
+            apps/patient-portal/dist
+            apps/clinician-portal/dist
+            apps/admin-console/dist
+            apps/operations-dashboard/dist
+          retention-days: 14
+
+  docker:
+    name: Build Docker image (main only)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api-gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/api-gateway/Dockerfile
+          push: false
+          tags: pulseward/api-gateway:${{ github.sha }},pulseward/api-gateway:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

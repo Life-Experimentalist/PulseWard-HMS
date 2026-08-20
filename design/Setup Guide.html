@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PulseWard HMS — Setup Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0e1e26; --ink-2:#233039; --ink-3:#3d4b54; --muted:#6b7a83; --mute-2:#93a1aa;
+    --line:#dfe7ea; --line-soft:#eaf0f2; --paper:#f6f9fa; --paper-2:#f0f4f5; --panel:#ffffff;
+    --teal:#0f4c5c; --teal-2:#1a6b7e; --teal-50:#e5f0f2; --teal-100:#c9dfe4;
+    --sun:#ea8f3b; --ok:#1f8a5b; --ok-50:#e3f4ec; --warn:#c98a14; --warn-50:#fbf1d9;
+    --danger:#c0382a; --danger-50:#fbe5e2; --info:#2a6ea1; --info-50:#e3eef6;
+    --font-sans:"IBM Plex Sans", system-ui, sans-serif;
+    --font-display:"Space Grotesk", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--paper);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em;margin:0;font-weight:600;}
+  a{color:var(--teal);}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:14px;z-index:10;}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--teal),var(--teal-2));color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;}
+  .brand{font-family:var(--font-display);font-weight:700;color:var(--teal);}
+  .top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:white;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:28px;}
+  .hero{padding:36px 32px;background:linear-gradient(155deg,#fff,#e6f1ee 60%,#fdf3e6);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;}
+  .hero .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--teal-2);}
+  .hero h1{font-size:32px;line-height:1.1;margin-top:8px;font-weight:600;letter-spacing:-0.02em;}
+  .hero p{color:var(--muted);margin-top:10px;font-size:14.5px;max-width:64ch;}
+
+  .path-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:22px;}
+  .path{background:rgba(255,255,255,0.7);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:12px;}
+  .path .wk{font-family:var(--font-mono);font-size:10.5px;color:var(--teal-2);font-weight:700;}
+  .path .lbl{font-weight:600;color:var(--ink);font-family:var(--font-display);margin-top:2px;}
+
+  h2.sec{font-size:22px;margin:38px 0 4px;padding-top:12px;font-weight:600;}
+  .sec-sub{color:var(--muted);margin-bottom:18px;font-size:13.5px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;}
+  .card h3{font-size:15px;margin-bottom:6px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:10px;}
+
+  .grid{display:grid;gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:900px){.cols-2,.cols-3,.path-strip{grid-template-columns:1fr;}}
+
+  pre{background:#0e1e26;color:#dfe7ea;padding:14px 16px;border-radius:10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;overflow-x:auto;margin:10px 0;}
+  pre .c{color:#6b7a83;}
+  pre .k{color:#6fc6d7;}
+  pre .s{color:#e0b358;}
+  code.inl{background:var(--paper-2);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2);}
+
+  ol.checklist, ul.checklist{padding-left:0;list-style:none;margin:8px 0;}
+  ol.checklist li, ul.checklist li{padding:5px 0 5px 26px;position:relative;font-size:13.5px;}
+  ol.checklist{counter-reset:item;}
+  ol.checklist li::before{content:counter(item);counter-increment:item;position:absolute;left:0;top:6px;width:18px;height:18px;background:var(--teal-50);color:var(--teal);border-radius:99px;display:grid;place-items:center;font-weight:700;font-size:10.5px;font-family:var(--font-mono);}
+  ul.checklist li::before{content:"";position:absolute;left:4px;top:13px;width:6px;height:6px;border-radius:99px;background:var(--teal);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--paper-2);color:var(--ink-3);border:1px solid var(--line);}
+  .badge.ok{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .badge.warn{background:var(--warn-50);color:var(--warn);border-color:transparent;}
+  .badge.info{background:var(--info-50);color:var(--info);border-color:transparent;}
+  .badge.teal{background:var(--teal-50);color:var(--teal);border-color:transparent;}
+
+  .callout{padding:12px 16px;border-radius:10px;margin:12px 0;font-size:13px;border-left:3px solid;}
+  .callout.info{background:var(--info-50);color:var(--info);border-left-color:var(--info);}
+  .callout.warn{background:var(--warn-50);color:var(--warn);border-left-color:var(--warn);}
+  .callout.ok{background:var(--ok-50);color:var(--ok);border-left-color:var(--ok);}
+  .callout.danger{background:var(--danger-50);color:var(--danger);border-left-color:var(--danger);}
+
+  table.spec{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-top:6px;}
+  table.spec th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mute-2);background:var(--paper-2);border-bottom:1px solid var(--line);}
+  table.spec td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  table.spec td:first-child{font-weight:600;}
+  .mono{font-family:var(--font-mono);font-size:12px;}
+  .card.tight{padding:0;overflow:hidden;}
+  .card.tight table.spec th, .card.tight table.spec td{padding-left:18px;padding-right:18px;}
+
+  .step{display:grid;grid-template-columns:46px 1fr;gap:18px;padding:18px 18px 18px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--line);margin-bottom:12px;}
+  .step .n{width:38px;height:38px;border-radius:99px;background:var(--teal);color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:16px;}
+  .step .body h4{font-size:16px;font-weight:600;margin-bottom:4px;}
+  .step .body .why{color:var(--muted);font-size:12.5px;margin-bottom:8px;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px;}
+  .toc a{font-size:11.5px;background:white;border:1px solid var(--line);padding:5px 10px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-weight:500;}
+
+  .files{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);background:var(--paper-2);padding:14px;border-radius:8px;white-space:pre;overflow-x:auto;line-height:1.5;}
+  .files .dir{color:var(--teal);font-weight:600;}
+  .files .anno{color:var(--mute-2);}
+
+  details{margin-top:6px;}
+  details summary{cursor:pointer;font-size:12px;color:var(--teal-2);font-weight:600;}
+
+  .keytable td:first-child{font-family:var(--font-mono);font-weight:500;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">P</div>
+  <div>
+    <div class="brand">PulseWard HMS</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Setup Guide · zero to running</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="Architecture.html">Architecture</a>
+    <a class="btn" href="LLD.html">LLD</a>
+    <a class="btn" href="Build Notes.html">Build notes</a>
+    <a class="btn" href="Operations Runbook.html">Runbook</a>
+    <a class="btn" href="PulseWard HMS.html">← App</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">Setup · 60 minutes · zero to all six apps running locally</div>
+    <h1>Get the whole stack on your laptop, then deploy it.</h1>
+    <p>This is the single document a new engineer reads on day one. Follow it top to bottom and you'll have all six React apps running against three Node services with a seeded local database, plus a clear path to staging and production.</p>
+    <div class="path-strip">
+      <div class="path"><div class="wk">PART 1</div><div class="lbl">Prereqs &amp; clone</div></div>
+      <div class="path"><div class="wk">PART 2</div><div class="lbl">Run locally</div></div>
+      <div class="path"><div class="wk">PART 3</div><div class="lbl">Configure</div></div>
+      <div class="path"><div class="wk">PART 4</div><div class="lbl">Deploy</div></div>
+    </div>
+  </section>
+
+  <div class="toc">
+    <a href="#prereq">Prereqs</a>
+    <a href="#clone">Clone &amp; install</a>
+    <a href="#layout">Repo layout</a>
+    <a href="#run">Run locally</a>
+    <a href="#ports">Ports</a>
+    <a href="#env">Env variables</a>
+    <a href="#smoke">First-run smoke</a>
+    <a href="#mobile">Mobile app</a>
+    <a href="#troubleshoot">Troubleshooting</a>
+    <a href="#staging">Staging</a>
+    <a href="#prod">Production</a>
+    <a href="#daily">Daily workflow</a>
+  </div>
+
+  <!-- ───── PREREQ ───── -->
+  <h2 id="prereq" class="sec">Part 1 · Prerequisites</h2>
+  <div class="sec-sub">Install once. Verify before you continue.</div>
+
+  <div class="card">
+    <h3>Tools you need</h3>
+    <table class="spec">
+      <thead><tr><th>Tool</th><th>Version</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Node.js</td><td>22.x (LTS)</td><td>All services + Vite dev servers</td></tr>
+        <tr><td>pnpm</td><td>9.15.0</td><td>Monorepo package manager</td></tr>
+        <tr><td>Git</td><td>2.40+</td><td>Source control</td></tr>
+        <tr><td>SQLite CLI</td><td>3.40+</td><td>Inspect local D1 file</td></tr>
+        <tr><td>Wrangler</td><td>3.80+</td><td>Cloudflare Workers + D1 + R2</td></tr>
+        <tr><td>Expo CLI</td><td>latest</td><td>Mobile app (Android first)</td></tr>
+        <tr><td>Android Studio</td><td>Hedgehog+</td><td>Emulator or device install</td></tr>
+        <tr><td>Xcode</td><td>15+ (macOS only)</td><td>Optional — iOS native build</td></tr>
+        <tr><td>k6</td><td>0.50+</td><td>Load testing before launch</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:14px;">Install on macOS / Linux</h3>
+<pre><span class="c"># Node + pnpm via nvm</span>
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install 22 &amp;&amp; nvm use 22
+corepack enable &amp;&amp; corepack prepare <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aedec0dec3ee97809f9b809e">[email&#160;protected]</a> --activate
+
+<span class="c"># Global tools</span>
+npm i -g wrangler @expo/cli
+brew install sqlite k6                    <span class="c"># macOS</span>
+sudo apt install sqlite3 &amp;&amp; brew install k6 <span class="c"># Linux (k6 via brew or repo)</span>
+
+<span class="c"># Verify</span>
+node --version    <span class="c"># v22.x</span>
+pnpm --version    <span class="c"># 9.15.0</span>
+wrangler --version
+expo --version</pre>
+
+    <h3>Install on Windows (PowerShell)</h3>
+<pre><span class="c"># Use nvm-windows (or scoop)</span>
+nvm install 22.11.0
+nvm use 22.11.0
+corepack enable; corepack prepare <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e2928c928fa2dbccd3d7ccd2">[email&#160;protected]</a> --activate
+
+npm i -g wrangler @expo/cli
+choco install sqlite k6     <span class="c"># or scoop install sqlite k6</span></pre>
+  </div>
+
+  <!-- ───── CLONE ───── -->
+  <h2 id="clone" class="sec">Part 1.5 · Clone &amp; install dependencies</h2>
+
+  <div class="step">
+    <div class="n">1</div>
+    <div class="body">
+      <h4>Clone the monorepo</h4>
+      <div class="why">All apps, services, packages live here.</div>
+<pre>git clone <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a3c4cad7e3c4cad7cbd6c18dc0ccce">[email&#160;protected]</a>:your-org/pulseward-hms.git
+cd pulseward-hms</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">2</div>
+    <div class="body">
+      <h4>Install workspace dependencies</h4>
+      <div class="why">pnpm hoists shared deps so a single install covers all apps + services.</div>
+<pre>pnpm install</pre>
+      <div class="callout warn"><strong>Don't run <code class="inl">npm install</code></strong> — it ignores the workspace topology and will leave broken symlinks. If you see "module not found" errors after install, you almost certainly have a stale <code class="inl">node_modules</code>; nuke it with <code class="inl">pnpm -r exec rm -rf node_modules</code> and re-run.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">3</div>
+    <div class="body">
+      <h4>Bootstrap secrets &amp; local .env</h4>
+      <div class="why">Copies <code class="inl">.env.example</code> templates into place. None of these are real credentials — they just unblock dev.</div>
+<pre>pnpm run setup:env</pre>
+      <p style="font-size:12.5px;color:var(--muted);">If the script doesn't exist yet (greenfield setup), copy by hand:</p>
+<pre><span class="c"># For each app + service that ships a .env.example:</span>
+find . -name <span class="s">'.env.example'</span> -not -path <span class="s">'*/node_modules/*'</span> -exec sh -c <span class="s">'cp "$1" "${1%.example}"'</span> _ {} \;</pre>
+    </div>
+  </div>
+
+  <!-- ───── LAYOUT ───── -->
+  <h2 id="layout" class="sec">Part 2 · Repo layout</h2>
+  <p class="sec-sub">The shape you'll see after install. Use it as a map when reading the code.</p>
+
+  <div class="card">
+<div class="files"><span class="dir">pulseward-hms/</span>
+├─ <span class="dir">apps/</span>                          <span class="anno"># client deploy targets</span>
+│  ├─ <span class="dir">patient-portal/</span>             <span class="anno"># React + Vite — port 4183 (4313 dev)</span>
+│  ├─ <span class="dir">clinician-portal/</span>           <span class="anno"># React + Vite — port 4181 (4311 dev)</span>
+│  ├─ <span class="dir">admin-console/</span>              <span class="anno"># React + Vite — port 4180</span>
+│  ├─ <span class="dir">operations-dashboard/</span>       <span class="anno"># React + Vite — port 4182 (4312 dev)</span>
+│  ├─ <span class="dir">landing-page/</span>               <span class="anno"># Static + service worker — port 4173</span>
+│  └─ <span class="dir">mobile-notifications/</span>       <span class="anno"># Expo (RN) — Android first</span>
+├─ <span class="dir">services/</span>                      <span class="anno"># backend (Node servers locally, Workers in prod)</span>
+│  ├─ <span class="dir">api-gateway/</span>                <span class="anno"># :8087 — Hono routing + auth + audit</span>
+│  ├─ <span class="dir">auth-service/</span>               <span class="anno"># :5101</span>
+│  ├─ <span class="dir">notification-service/</span>       <span class="anno"># :5102 (legacy) + :8088 (telemetry)</span>
+│  ├─ <span class="dir">appointment-service/</span>        <span class="anno"># :5103</span>
+│  ├─ <span class="dir">ehr-service/</span>                <span class="anno"># :5104</span>
+│  ├─ <span class="dir">lab-service/</span>                <span class="anno"># :5105</span>
+│  ├─ <span class="dir">pharmacy-service/</span>           <span class="anno"># :5106</span>
+│  ├─ <span class="dir">abha-service/</span>               <span class="anno"># :5107</span>
+│  └─ <span class="dir">backup-service/</span>             <span class="anno"># cron only</span>
+├─ <span class="dir">packages/</span>                      <span class="anno"># shared code</span>
+│  ├─ <span class="dir">schema/</span>                     <span class="anno"># Zod schemas + types + OpenAPI</span>
+│  ├─ <span class="dir">ui/</span>                         <span class="anno"># shared React components</span>
+│  └─ <span class="dir">sdk/</span>                        <span class="anno"># typed HTTP client</span>
+├─ <span class="dir">migrations/</span>                    <span class="anno"># drizzle SQL — apply with `pnpm db:migrate`</span>
+├─ <span class="dir">scripts/</span>
+│  ├─ seed.ts                       <span class="anno"># 50 patients, 3 clinicians, sample data</span>
+│  ├─ restore.ts                    <span class="anno"># R2 snapshot → D1</span>
+│  └─ load/                         <span class="anno"># k6 scripts</span>
+├─ <span class="dir">docs/</span>
+│  ├─ api/api-catalog.md
+│  ├─ runbooks/
+│  └─ architecture/
+├─ <span class="dir">governance/</span>
+│  └─ project-management-charter.md
+├─ <span class="dir">.github/workflows/</span>
+└─ pnpm-workspace.yaml</div>
+  </div>
+
+  <!-- ───── RUN LOCALLY ───── -->
+  <h2 id="run" class="sec">Part 2 · Run it all locally</h2>
+  <p class="sec-sub">Three terminals minimum. Five is more comfortable.</p>
+
+  <div class="step">
+    <div class="n">1</div>
+    <div class="body">
+      <h4>Initialize the local database</h4>
+      <div class="why">Drizzle migrations against a local SQLite file. Seed adds 50 demo patients + 3 clinicians.</div>
+<pre>pnpm run db:migrate          <span class="c"># applies migrations/*.sql to .data/local.db</span>
+pnpm run db:seed             <span class="c"># tenants, users, patients, appointments, notifications</span></pre>
+      <p style="font-size:12.5px;color:var(--muted);">Inspect with: <code class="inl">sqlite3 .data/local.db ".tables"</code>.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">2</div>
+    <div class="body">
+      <h4>Start the backend services (terminal #1)</h4>
+      <div class="why">A single command spawns all seven services on their assigned ports. Watch mode reloads on file change.</div>
+<pre>pnpm run dev:services</pre>
+      <p style="font-size:12.5px;color:var(--muted);">Or start individually:</p>
+<pre>pnpm run start:auth          <span class="c"># :5101</span>
+pnpm run start:notification  <span class="c"># :5102 + :8088</span>
+pnpm run start:appointment   <span class="c"># :5103</span>
+pnpm --filter ehr-service dev
+pnpm --filter lab-service dev
+pnpm --filter pharmacy-service dev
+pnpm --filter abha-service dev</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">3</div>
+    <div class="body">
+      <h4>Start each web app (terminal #2 onward)</h4>
+      <div class="why">Vite dev servers proxy <code class="inl">/api/v1</code> → local services. Each gets its own port so you can run them side by side.</div>
+<pre><span class="c"># Patient portal</span>
+pnpm run install:patient
+pnpm run start:patient:dev     <span class="c"># http://localhost:4313</span>
+
+<span class="c"># Clinician portal</span>
+pnpm run start:clinician:dev   <span class="c"># http://localhost:4311</span>
+
+<span class="c"># Admin console</span>
+pnpm run start:admin:dev       <span class="c"># http://localhost:4180</span>
+
+<span class="c"># Operations dashboard</span>
+pnpm run start:operations:dev  <span class="c"># http://localhost:4312</span>
+
+<span class="c"># Landing page (static, no API needed)</span>
+pnpm run start:landing         <span class="c"># http://localhost:4173</span></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">4</div>
+    <div class="body">
+      <h4>One-shot: bring everything up</h4>
+      <div class="why"><code class="inl">turbo</code> handles dependency order across services + apps.</div>
+<pre>pnpm run dev                 <span class="c"># turbo run dev — services first, then apps</span></pre>
+      <div class="callout info"><strong>Tip:</strong> open <code class="inl">http://localhost:4173</code> first — the landing console links to every other surface and tells you which services it can or can't reach.</div>
+    </div>
+  </div>
+
+  <!-- ───── PORTS ───── -->
+  <h2 id="ports" class="sec">Port reference</h2>
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Surface</th><th>Dev</th><th>Static prod</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Landing page</td><td class="mono">4173</td><td class="mono">4173</td><td>Static; service worker for offline shell</td></tr>
+        <tr><td>Admin console</td><td class="mono">4180</td><td class="mono">4180</td><td>Auto-falls forward to next free port</td></tr>
+        <tr><td>Clinician portal</td><td class="mono">4311</td><td class="mono">4181</td><td>Compile-first start serves <code class="inl">dist/</code></td></tr>
+        <tr><td>Operations dashboard</td><td class="mono">4312</td><td class="mono">4182</td><td>Proxies <code class="inl">/api/v1</code> to <code class="inl">:8088</code></td></tr>
+        <tr><td>Patient portal</td><td class="mono">4313</td><td class="mono">4183</td><td>—</td></tr>
+        <tr><td>api-gateway</td><td class="mono">8087</td><td>n/a (Worker)</td><td>Public API surface in prod</td></tr>
+        <tr><td>auth-service</td><td class="mono">5101</td><td>n/a (Worker)</td><td>—</td></tr>
+        <tr><td>notification-service</td><td class="mono">5102 / 8088</td><td>n/a (Worker)</td><td>Two ports while migrating telemetry to <code class="inl">8088</code></td></tr>
+        <tr><td>appointment-service</td><td class="mono">5103</td><td>n/a (Worker)</td><td>—</td></tr>
+        <tr><td>ehr-service</td><td class="mono">5104</td><td>n/a (Worker)</td><td>—</td></tr>
+        <tr><td>lab-service</td><td class="mono">5105</td><td>n/a (Worker)</td><td>Lab webhook receiver</td></tr>
+        <tr><td>pharmacy-service</td><td class="mono">5106</td><td>n/a (Worker)</td><td>—</td></tr>
+        <tr><td>abha-service</td><td class="mono">5107</td><td>n/a (Worker)</td><td>ABDM proxy</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── ENV ───── -->
+  <h2 id="env" class="sec">Part 3 · Environment variables</h2>
+  <p class="sec-sub">Authoritative list. Anything you change for local dev goes in <code class="inl">.env</code> (gitignored). Anything that ships to staging/prod goes through Workers Secrets or GitHub Action secrets.</p>
+
+  <h3 style="margin-top:10px;">Shared backend</h3>
+  <div class="card tight">
+    <table class="spec keytable">
+      <thead><tr><th>Key</th><th>Where</th><th>Local dev value</th><th>Prod source</th></tr></thead>
+      <tbody>
+        <tr><td>NODE_ENV</td><td>all</td><td><span class="mono">development</span></td><td><span class="mono">production</span></td></tr>
+        <tr><td>JWT_SECRET</td><td>auth, gateway</td><td>32-byte hex (any)</td><td><span class="mono">wrangler secret put</span></td></tr>
+        <tr><td>PEPPER</td><td>auth</td><td>16-byte hex</td><td>Secret</td></tr>
+        <tr><td>DATABASE_URL</td><td>all DB users</td><td><span class="mono">file:./.data/local.db</span></td><td>D1 binding</td></tr>
+        <tr><td>R2_ENDPOINT</td><td>lab, ehr, backup</td><td><span class="mono">http://127.0.0.1:9000</span></td><td>R2 binding</td></tr>
+        <tr><td>SENTRY_DSN</td><td>all</td><td>(empty, no-op)</td><td>Secret</td></tr>
+        <tr><td>LOG_LEVEL</td><td>all</td><td><span class="mono">debug</span></td><td><span class="mono">info</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:14px;">Notification providers</h3>
+  <div class="card tight">
+    <table class="spec keytable">
+      <thead><tr><th>Key</th><th>Channel</th><th>How to get one</th></tr></thead>
+      <tbody>
+        <tr><td>TELEGRAM_BOT_TOKEN</td><td>Telegram</td><td>@BotFather → <code class="inl">/newbot</code></td></tr>
+        <tr><td>TELEGRAM_WEBHOOK_SECRET</td><td>Telegram</td><td>Random 32-byte hex; set via <code class="inl">setWebhook</code></td></tr>
+        <tr><td>RESEND_API_KEY</td><td>Email</td><td><a href="https://resend.com">resend.com</a> — 3k/mo free</td></tr>
+        <tr><td>MSG91_AUTH_KEY</td><td>SMS (India)</td><td><a href="https://msg91.com">msg91.com</a></td></tr>
+        <tr><td>EXPO_ACCESS_TOKEN</td><td>Push (Expo)</td><td>expo.dev → access tokens</td></tr>
+        <tr><td>FCM_SERVER_KEY</td><td>Push (Android)</td><td>Firebase Console → Cloud Messaging</td></tr>
+        <tr><td>APNS_KEY_ID</td><td>Push (iOS)</td><td>Apple Developer → Keys</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:14px;">ABDM / ABHA</h3>
+  <div class="card tight">
+    <table class="spec keytable">
+      <thead><tr><th>Key</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>ABDM_BASE</td><td>Sandbox: <span class="mono">https://dev.abdm.gov.in/gateway</span> · Prod: <span class="mono">https://abdm.gov.in/gateway</span></td></tr>
+        <tr><td>ABDM_CLIENT_ID</td><td>From sandbox console</td></tr>
+        <tr><td>ABDM_CLIENT_SECRET</td><td>From sandbox console — never commit</td></tr>
+        <tr><td>ABDM_PUBLIC_CERT</td><td>RSA cert used to encrypt Aadhaar</td></tr>
+        <tr><td>HFR_ID</td><td>Health Facility Registry ID after onboarding</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:14px;">Frontend (Vite)</h3>
+  <div class="card tight">
+    <table class="spec keytable">
+      <thead><tr><th>Key</th><th>App</th><th>Default</th></tr></thead>
+      <tbody>
+        <tr><td>VITE_API_BASE_URL</td><td>all SPAs</td><td class="mono">/api/v1</td></tr>
+        <tr><td>VITE_AUTH_API_BASE_URL</td><td>operations</td><td class="mono">/api/auth-v1</td></tr>
+        <tr><td>VITE_NOTIFICATION_PROXY_TARGET</td><td>operations</td><td class="mono">http://127.0.0.1:8088</td></tr>
+        <tr><td>VITE_AUTH_PROXY_TARGET</td><td>operations</td><td class="mono">http://127.0.0.1:5101</td></tr>
+        <tr><td>EXPO_PUBLIC_PULSEWARD_HOST</td><td>mobile</td><td>your LAN IP, e.g. <span class="mono">192.168.1.50</span></td></tr>
+        <tr><td>EXPO_PUBLIC_PULSEWARD_API_BASE_URL</td><td>mobile</td><td><span class="mono">http://192.168.1.50:5102</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── SMOKE TEST ───── -->
+  <h2 id="smoke" class="sec">First-run smoke test</h2>
+  <p class="sec-sub">~5 minutes. If anything below fails, jump to <a href="#troubleshoot">Troubleshooting</a> before going further.</p>
+
+  <div class="card">
+    <ol class="checklist">
+      <li><b>API reachable:</b> <code class="inl">curl http://127.0.0.1:8087/health</code> → <code class="inl">{ "ok": true, "ver": "1.0.0" }</code></li>
+      <li><b>Auth signup works:</b> open <code class="inl">localhost:4313</code> → "Create account" → expect to land in patient dashboard.</li>
+      <li><b>Appointment booking:</b> book any clinician for tomorrow 10:00 → returns 201 → shows on dashboard.</li>
+      <li><b>Clinician sees it:</b> log in as <code class="inl"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="284c5a064c4d454768585d445b4d5f495a4c0644474b4944">[email&#160;protected]</a></code> (seed) on <code class="inl">localhost:4311</code> → appointment shows on tomorrow's day view.</li>
+      <li><b>Notification fan-out:</b> in the operations dashboard, the notification telemetry trend should tick by 1.</li>
+      <li><b>Admin reachability check:</b> <code class="inl">localhost:4180</code> → all three services show <span class="badge ok">healthy</span>.</li>
+      <li><b>Local restore drill:</b> <code class="inl">pnpm run backup:snapshot --local</code> → file lands in <code class="inl">.data/backups/</code>; <code class="inl">pnpm run db:restore .data/backups/&lt;file&gt;.json sandbox</code> succeeds.</li>
+    </ol>
+    <div class="callout ok"><strong>Done?</strong> You have a working dev stack. Commit your <code class="inl">.env</code> templates with placeholders (never values) and open a PR.</div>
+  </div>
+
+  <!-- ───── MOBILE ───── -->
+  <h2 id="mobile" class="sec">Mobile app</h2>
+  <p class="sec-sub">Expo managed workflow. Android first; iOS optional once you have a $99 Apple Developer account.</p>
+
+  <div class="card">
+    <ol class="checklist">
+      <li>Install <code class="inl">Expo Go</code> from Play Store on your phone.</li>
+      <li>Make sure phone + laptop are on <strong>the same Wi-Fi</strong>.</li>
+      <li>Find your laptop's LAN IP (<code class="inl">ipconfig getifaddr en0</code> on macOS).</li>
+      <li>Set env in PowerShell or bash:
+<pre>EXPO_PUBLIC_PULSEWARD_HOST=192.168.1.50
+EXPO_PUBLIC_PULSEWARD_API_BASE_URL=http://192.168.1.50:5102
+EXPO_PUBLIC_PULSEWARD_AUTH_BASE_URL=http://192.168.1.50:5101
+pnpm run start:mobile:lan</pre>
+      </li>
+      <li>Scan the QR code in the terminal with the camera app (iOS) or Expo Go (Android).</li>
+      <li>Tap <strong>Enable push and get token</strong> → <strong>Send test push</strong>.</li>
+      <li>Notification arrives within seconds.</li>
+    </ol>
+    <div class="callout warn"><strong>Don't use <code class="inl">127.0.0.1</code>.</strong> Your phone can't reach your laptop's loopback. Always use the LAN IP.</div>
+  </div>
+
+  <!-- ───── TROUBLESHOOTING ───── -->
+  <h2 id="troubleshoot" class="sec">Troubleshooting</h2>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Vite errors with <span class="mono">EADDRINUSE</span></td><td>Port collision</td><td>Vite auto-falls forward; check terminal for the new port. Or kill the squatter: <code class="inl">lsof -ti :4180 | xargs kill</code>.</td></tr>
+        <tr><td><span class="mono">module not found: @pulseward/sdk</span></td><td>Workspace links broken</td><td><code class="inl">pnpm -r exec rm -rf node_modules &amp;&amp; pnpm install</code></td></tr>
+        <tr><td>API requests get CORS errors</td><td>Vite proxy not configured for that path</td><td>Add the route to <code class="inl">apps/&lt;app&gt;/vite.config.js</code> proxy</td></tr>
+        <tr><td><span class="mono">401 no_session</span> right after login</td><td>JWT clock skew or wrong <code class="inl">JWT_SECRET</code></td><td>Confirm same secret in auth-service + gateway; check your laptop clock</td></tr>
+        <tr><td><span class="mono">SQLITE_BUSY</span></td><td>Two processes hold the file</td><td>Stop one. Or move to <code class="inl">wrangler d1 execute</code> with the local D1 SDK.</td></tr>
+        <tr><td>Telegram <span class="mono">webhook 401</span></td><td><code class="inl">TELEGRAM_WEBHOOK_SECRET</code> mismatch</td><td>Reset webhook with the exact secret in your <code class="inl">.env</code></td></tr>
+        <tr><td>ABDM <span class="mono">CERT_INVALID</span></td><td>Expired sandbox cert</td><td>Re-download from facility.abdm.gov.in; replace <code class="inl">ABDM_PUBLIC_CERT</code></td></tr>
+        <tr><td>Expo can't reach API</td><td>LAN IP wrong or phone on cellular</td><td>Re-check Wi-Fi, set <code class="inl">EXPO_PUBLIC_PULSEWARD_HOST</code> correctly</td></tr>
+        <tr><td>Seed script complains "no tenant"</td><td>Migrations haven't run</td><td><code class="inl">pnpm run db:migrate</code> first, then <code class="inl">pnpm run db:seed</code></td></tr>
+        <tr><td>Operations dashboard "no telemetry"</td><td>notification-service not on :8088</td><td>Check <code class="inl">VITE_NOTIFICATION_PROXY_TARGET</code> and that notif-svc is up on both 5102 + 8088</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───── STAGING ───── -->
+  <h2 id="staging" class="sec">Part 4 · Deploy to staging</h2>
+  <p class="sec-sub">One push to <code class="inl">main</code> triggers staging deploy. Confirm via the URL printed in CI.</p>
+
+  <div class="step">
+    <div class="n">1</div>
+    <div class="body">
+      <h4>Provision Cloudflare resources (one-time per environment)</h4>
+<pre>wrangler d1 create pulseward-staging
+wrangler kv namespace create SESSIONS_STAGING
+wrangler kv namespace create RATELIMIT_STAGING
+wrangler r2 bucket create pulseward-staging-uploads
+wrangler r2 bucket create pulseward-staging-backups</pre>
+      <p style="font-size:12.5px;color:var(--muted);">Note each ID; paste into <code class="inl">services/*/wrangler.toml</code> under <code class="inl">[env.staging]</code>.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">2</div>
+    <div class="body">
+      <h4>Push secrets</h4>
+<pre>cd services/api-gateway
+wrangler secret put JWT_SECRET --env staging
+wrangler secret put PEPPER --env staging
+wrangler secret put ABDM_CLIENT_ID --env staging
+wrangler secret put ABDM_CLIENT_SECRET --env staging
+wrangler secret put ABDM_PUBLIC_CERT --env staging
+wrangler secret put TELEGRAM_BOT_TOKEN --env staging
+wrangler secret put RESEND_API_KEY --env staging
+wrangler secret put MSG91_AUTH_KEY --env staging
+wrangler secret put SENTRY_DSN --env staging</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">3</div>
+    <div class="body">
+      <h4>Run migrations</h4>
+<pre>wrangler d1 migrations apply pulseward-staging --remote --env staging</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">4</div>
+    <div class="body">
+      <h4>Push <code class="inl">main</code> — CI does the rest</h4>
+<pre>git push origin main
+<span class="c"># GitHub Actions: pnpm test → build:apps → wrangler deploy --env staging</span></pre>
+      <p style="font-size:12.5px;color:var(--muted);">Each service is its own Worker; CI deploys them in parallel. Pages are atomic per build.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">5</div>
+    <div class="body">
+      <h4>Smoke test staging</h4>
+<pre>curl https://staging-api.your-hospital.in/health
+<span class="c"># {"ok":true,"ver":"1.0.x","env":"staging"}</span>
+
+<span class="c"># Run the end-to-end Playwright suite against staging</span>
+pnpm run e2e -- --env=staging</pre>
+    </div>
+  </div>
+
+  <!-- ───── PRODUCTION ───── -->
+  <h2 id="prod" class="sec">Production deploy</h2>
+  <p class="sec-sub">Manual trigger; protected by a <code class="inl">production-approver</code> GitHub team. Two humans on the call, always.</p>
+
+  <div class="card">
+    <h3>Pre-deploy (5 min)</h3>
+    <ol class="checklist">
+      <li>Confirm staging green for ≥ 24 hours.</li>
+      <li>Manual snapshot via <code class="inl">backup-service</code> webhook trigger — labelled <span class="mono">pre-deploy-YYYY-MM-DD</span>.</li>
+      <li>Open the prod Cloudflare Analytics dashboard in another tab.</li>
+      <li>Post in <code class="inl">#ops</code>: "Deploying #&lt;sha&gt; to prod, approver: @&lt;name&gt;".</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Deploy</h3>
+<pre><span class="c"># In GitHub Actions UI</span>
+Run workflow → deploy-production
+Inputs:
+  ref: main
+  approver: &lt;your GH handle&gt;
+  migrate: <span class="k">true</span>      <span class="c"># run migrations before app deploy</span></pre>
+    <p style="font-size:12.5px;color:var(--muted);">The job: (1) takes a snapshot, (2) runs migrations, (3) deploys services in parallel, (4) deploys pages atomically, (5) runs the post-deploy probe.</p>
+  </div>
+
+  <div class="card">
+    <h3>Post-deploy (15 min)</h3>
+    <ol class="checklist">
+      <li>Probe: <code class="inl">curl https://api.your-hospital.in/health</code> returns the new SHA.</li>
+      <li>Hit five hot endpoints from a real browser session.</li>
+      <li>Watch Sentry for new error fingerprints — none should appear in the first 10 min.</li>
+      <li>Watch p95 latency — no &gt; 20% regression vs. previous deploy.</li>
+      <li>If anything looks off: <code class="inl">wrangler rollback --env production</code> — back online in &lt; 60 s.</li>
+      <li>Update <code class="inl">#ops</code>: "Deployed #&lt;sha&gt; ✓".</li>
+    </ol>
+  </div>
+
+  <div class="callout danger">
+    <strong>Never deploy on a Friday afternoon.</strong> Deploy windows: Tue/Wed/Thu 10:00–15:00 IST. Any other slot needs an explicit override in the PR description.
+  </div>
+
+  <!-- ───── DAILY WORKFLOW ───── -->
+  <h2 id="daily" class="sec">Daily workflow</h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Morning</h3>
+      <ul class="checklist">
+        <li><code class="inl">git pull --rebase</code></li>
+        <li><code class="inl">pnpm install</code> if lockfile changed</li>
+        <li><code class="inl">pnpm run dev</code> brings everything up</li>
+        <li>Skim Sentry digest, check overnight alerts</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Per change</h3>
+      <ul class="checklist">
+        <li>Branch off <code class="inl">main</code> with a ticket prefix</li>
+        <li>Co-locate schema → service → SDK → UI changes in one PR</li>
+        <li><code class="inl">pnpm test</code> before pushing</li>
+        <li>PR requires 1 review + CI green</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Weekly</h3>
+      <ul class="checklist">
+        <li>Dependabot PR review (Monday)</li>
+        <li>One restore drill on staging</li>
+        <li>Read Sentry weekly report</li>
+        <li>Walk the audit log for any unusual actor activity</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Quarterly</h3>
+      <ul class="checklist">
+        <li>Rotate all Workers Secrets</li>
+        <li>Refresh ABDM sandbox creds</li>
+        <li>Run DPIA refresh checklist</li>
+        <li>On-call rotation review</li>
+      </ul>
+    </div>
+  </div>
+
+  <p style="margin-top:36px;font-size:12px;color:var(--mute-2);text-align:center;">
+    PulseWard HMS · Setup Guide v1 · Last updated <span id="d"></span>
+  </p>
+
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>document.getElementById('d').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });</script>
+</body>
+</html>

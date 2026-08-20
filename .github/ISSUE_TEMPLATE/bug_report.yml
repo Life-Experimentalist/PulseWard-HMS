@@ -42,9 +42,9 @@ body:
   - type: textarea
     id: contracts
     attributes:
-      label: Contracts or services affected
-      description: Mention APIs/events/services impacted.
-      placeholder: auth-service, appointment-service, contracts/rest/internal/... etc.
+      label: Routes or portals affected
+      description: Mention the API routes and/or portals impacted.
+      placeholder: "/api/v1/appointments, clinician-portal, admin-console ... etc."
   - type: textarea
     id: logs
     attributes:

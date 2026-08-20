@@ -5,3 +5,12 @@ coverage/
 package-lock.json
 pnpm-lock.yaml
 *.min.js
+
+# Local agent tooling memory — never formatted
+.remember/
+
+# Exported design reference documents (hand-authored HTML, not source)
+design/
+
+# Generated VitePress output
+**/.vitepress/cache/

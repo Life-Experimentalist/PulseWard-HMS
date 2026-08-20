@@ -1,138 +1,81 @@
+# PulseWard HMS — Docker Compose
+# Production stack: api-gateway + 4 static frontend apps behind nginx
+#
+# Usage:
+#   docker compose up -d          # start all services
+#   docker compose logs -f        # tail logs
+#   docker compose down -v        # stop and remove volumes
+#
+# Before first run:
+#   cp .env.example .env          # fill in JWT_SECRET, CORS_ALLOWED_ORIGINS etc.
+
 services:
-  pulseward-postgres:
-    image: postgres:16
-    container_name: pulseward-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: pulseward
-      POSTGRES_USER: pulseward_local
-      POSTGRES_PASSWORD: change_me_local_only
-    ports:
-      - "5432:5432"
-    volumes:
-      - pulseward-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulseward_local -d pulseward"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - pulseward-network
-
-  pulseward-mongo:
-    image: mongo:7
-    container_name: pulseward-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - pulseward-mongo-data:/data/db
-    networks:
-      - pulseward-network
-
+  # ─── API GATEWAY (Hono + SQLite) ─────────────────────────────────────────────
   api-gateway:
     build:
-      context: ./services/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: pulseward-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      API_PORT: "8787"
+      DB_PATH: /data/pulseward.db
+    volumes:
+      - pulseward-data:/data
+    networks:
+      - pulseward-internal
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ─── FRONTEND BUILDER (builds all 4 Vite apps) ───────────────────────────────
+  frontend-builder:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: >
+      sh -c "corepack enable &&
+             corepack prepare pnpm@9.15.0 --activate &&
+             pnpm install --frozen-lockfile &&
+             pnpm run build:apps"
+    profiles:
+      - build
+
+  # ─── NGINX (reverse proxy + static file server) ──────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pulseward-nginx
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./apps/patient-portal/dist:/srv/patient:ro
+      - ./apps/clinician-portal/dist:/srv/clinician:ro
+      - ./apps/admin-console/dist:/srv/admin:ro
+      - ./apps/operations-dashboard/dist:/srv/ops:ro
     depends_on:
-      - auth-service
-      - patient-service
-      - appointment-service
-      - ehr-service
-      - billing-service
-      - pharmacy-service
-      - lab-service
-      - notification-service
+      api-gateway:
+        condition: service_healthy
     networks:
-      - pulseward-network
-
-  auth-service:
-    build:
-      context: ./services/auth-service
-      dockerfile: Dockerfile
-    ports:
-      - "8081:8080"
-    networks:
-      - pulseward-network
-
-  patient-service:
-    build:
-      context: ./services/patient-service
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8080"
-    networks:
-      - pulseward-network
-
-  appointment-service:
-    build:
-      context: ./services/appointment-service
-      dockerfile: Dockerfile
-    ports:
-      - "8083:8080"
-    networks:
-      - pulseward-network
-
-  ehr-service:
-    build:
-      context: ./services/ehr-service
-      dockerfile: Dockerfile
-    ports:
-      - "8084:8080"
-    networks:
-      - pulseward-network
-
-  billing-service:
-    build:
-      context: ./services/billing-service
-      dockerfile: Dockerfile
-    ports:
-      - "8085:8080"
-    networks:
-      - pulseward-network
-
-  pharmacy-service:
-    build:
-      context: ./services/pharmacy-service
-      dockerfile: Dockerfile
-    ports:
-      - "8086:8080"
-    networks:
-      - pulseward-network
-
-  lab-service:
-    build:
-      context: ./services/lab-service
-      dockerfile: Dockerfile
-    ports:
-      - "8087:8080"
-    networks:
-      - pulseward-network
-
-  notification-service:
-    build:
-      context: ./services/notification-service
-      dockerfile: Dockerfile
-    ports:
-      - "8088:8080"
-    networks:
-      - pulseward-network
-
-  ai-project-manager-agent:
-    build:
-      context: ./services/ai-project-manager-agent
-      dockerfile: Dockerfile
-    ports:
-      - "8089:8080"
-    networks:
-      - pulseward-network
+      - pulseward-internal
+      - pulseward-public
 
 networks:
-  pulseward-network:
+  pulseward-internal:
+    driver: bridge
+  pulseward-public:
     driver: bridge
 
 volumes:
-  pulseward-postgres-data:
-  pulseward-mongo-data:
+  pulseward-data:
+    driver: local

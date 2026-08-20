@@ -3,9 +3,9 @@ contact_links:
   - name: Security disclosure
     url: https://github.com/Life-Experimentalist/PulseWard-HMS/security/advisories/new
     about: Report sensitive security issues privately.
-  - name: Incident response runbook
-    url: https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/docs/runbooks/incident-response.md
-    about: Use this guide before or while filing incidents.
-  - name: Branding configuration guide
-    url: https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/docs/architecture/hospital-branding-config.md
-    about: Understand tenant branding configuration before opening branding requests.
+  - name: Documentation
+    url: https://github.com/Life-Experimentalist/PulseWard-HMS/tree/main/docs/site
+    about: API reference, architecture, and local development guides.
+  - name: Deployment & operations
+    url: https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/docs/site/architecture/deployment.md
+    about: Review the deployment model before filing operational issues.

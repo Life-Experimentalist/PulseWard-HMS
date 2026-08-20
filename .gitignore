@@ -21,5 +21,27 @@ logs/
 Thumbs.db
 .vscode/
 
-# Runtime service data
-services/auth-service/data/*.json
+# Local agent tooling memory (never committed)
+.remember/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# Windows Explorer metadata (keep locally, don't track in git)
+desktop.ini
+Desktop.ini
+
+# Release binary artifacts (committed structure; binary files via GitHub Releases)
+releases/**/*.tar
+releases/**/*.zip
+releases/**/*.gz
+!releases/**/RELEASE-NOTES.md
+!releases/**/checksums.sha256
+
+# Root-level zip dumps
+/*.zip
+.devprune.json
+.devprune-ignore
+ignore.devprune.json

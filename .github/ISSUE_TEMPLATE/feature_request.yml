@@ -24,9 +24,9 @@ body:
   - type: textarea
     id: architecture
     attributes:
-      label: Architecture and contracts
-      description: Services, APIs, and events this change touches.
-      placeholder: api-gateway + appointment-service + contracts/events/... etc.
+      label: Architecture and routes
+      description: The API routes and portals this change touches.
+      placeholder: "api-gateway (/api/v1/appointments) + clinician-portal ... etc."
   - type: textarea
     id: data
     attributes:

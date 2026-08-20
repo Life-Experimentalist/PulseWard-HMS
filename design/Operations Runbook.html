@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PulseWard HMS — Operations Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0e1e26; --ink-2:#233039; --ink-3:#3d4b54; --muted:#6b7a83; --mute-2:#93a1aa;
+    --line:#dfe7ea; --line-soft:#eaf0f2; --paper:#f6f9fa; --paper-2:#f0f4f5; --panel:#ffffff;
+    --teal:#0f4c5c; --teal-2:#1a6b7e; --teal-50:#e5f0f2; --teal-100:#c9dfe4;
+    --sun:#ea8f3b; --ok:#1f8a5b; --ok-50:#e3f4ec; --warn:#c98a14; --warn-50:#fbf1d9;
+    --danger:#c0382a; --danger-50:#fbe5e2; --info:#2a6ea1; --info-50:#e3eef6;
+    --violet:#6b46c1; --violet-50:#ede7f6;
+    --font-sans:"IBM Plex Sans", system-ui, sans-serif;
+    --font-display:"Space Grotesk", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--paper);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em;margin:0;font-weight:600;}
+  a{color:var(--teal);}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:14px;z-index:10;}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--teal),var(--teal-2));color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;}
+  .brand{font-family:var(--font-display);font-weight:700;color:var(--teal);}
+  .top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:white;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+
+  .wrap{max-width:1140px;margin:0 auto;padding:28px;}
+  .hero{padding:36px 32px;background:linear-gradient(155deg,#fff,#fbe5e2 60%,#fdf3e6);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;}
+  .hero .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--danger);}
+  .hero h1{font-size:32px;line-height:1.1;margin-top:8px;font-weight:600;letter-spacing:-0.02em;}
+  .hero p{color:var(--muted);margin-top:10px;font-size:14.5px;max-width:62ch;}
+
+  h2.sec{font-size:22px;margin:38px 0 4px;padding-top:12px;font-weight:600;}
+  .sec-sub{color:var(--muted);margin-bottom:18px;font-size:13.5px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;}
+  .card h3{font-size:15px;margin-bottom:6px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:10px;}
+
+  .grid{display:grid;gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  .cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.cols-2,.cols-3,.cols-4{grid-template-columns:1fr;}}
+
+  pre{background:#0e1e26;color:#dfe7ea;padding:14px 16px;border-radius:10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;overflow-x:auto;margin:10px 0;}
+  pre .c{color:#6b7a83;}
+  pre .k{color:#6fc6d7;}
+  pre .s{color:#e0b358;}
+  code.inl{background:var(--paper-2);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2);}
+
+  ol.checklist, ul.checklist{padding-left:0;list-style:none;margin:8px 0;}
+  ol.checklist li, ul.checklist li{padding:5px 0 5px 24px;position:relative;font-size:13.5px;}
+  ol.checklist{counter-reset:item;}
+  ol.checklist li::before{content:counter(item);counter-increment:item;position:absolute;left:0;top:6px;width:18px;height:18px;background:var(--teal-50);color:var(--teal);border-radius:99px;display:grid;place-items:center;font-weight:700;font-size:10.5px;font-family:var(--font-mono);}
+  ul.checklist li::before{content:"";position:absolute;left:4px;top:12px;width:6px;height:6px;border-radius:99px;background:var(--teal);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--paper-2);color:var(--ink-3);border:1px solid var(--line);}
+  .badge.ok{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .badge.warn{background:var(--warn-50);color:var(--warn);border-color:transparent;}
+  .badge.danger{background:var(--danger-50);color:var(--danger);border-color:transparent;}
+  .badge.info{background:var(--info-50);color:var(--info);border-color:transparent;}
+  .badge.teal{background:var(--teal-50);color:var(--teal);border-color:transparent;}
+
+  .callout{padding:12px 16px;border-radius:10px;margin:12px 0;font-size:13px;border-left:3px solid;}
+  .callout.info{background:var(--info-50);color:var(--info);border-left-color:var(--info);}
+  .callout.warn{background:var(--warn-50);color:var(--warn);border-left-color:var(--warn);}
+  .callout.ok{background:var(--ok-50);color:var(--ok);border-left-color:var(--ok);}
+  .callout.danger{background:var(--danger-50);color:var(--danger);border-left-color:var(--danger);}
+
+  table.spec{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-top:6px;}
+  table.spec th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mute-2);background:var(--paper-2);border-bottom:1px solid var(--line);}
+  table.spec td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  table.spec td:first-child{font-weight:600;}
+  .mono{font-family:var(--font-mono);font-size:12px;}
+  .card.tight{padding:0;overflow:hidden;}
+  .card.tight table.spec th, .card.tight table.spec td{padding-left:18px;padding-right:18px;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px;}
+  .toc a{font-size:11.5px;background:white;border:1px solid var(--line);padding:5px 10px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-weight:500;}
+
+  /* incident runbook block */
+  .ir{padding:18px;border-radius:14px;background:var(--panel);border:1px solid var(--line);margin-bottom:14px;}
+  .ir h4{font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+  .ir .sev{font-family:var(--font-mono);font-size:10.5px;padding:2px 7px;border-radius:5px;font-weight:700;color:white;}
+  .ir .sev.s1{background:var(--danger);}
+  .ir .sev.s2{background:var(--warn);color:#5a3d00;background:var(--warn-50);}
+  .ir .sev.s3{background:var(--info-50);color:var(--info);}
+  .ir .symptom{color:var(--muted);font-size:12.5px;margin-bottom:8px;}
+  .ir .row{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13px;align-items:start;}
+  .ir .row:last-child{border-bottom:none;}
+  .ir .row .lbl{font-weight:600;color:var(--ink-2);font-size:12.5px;}
+
+  .pager{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;font-size:12.5px;margin:8px 0;}
+  .pager .who{font-weight:600;color:var(--ink);font-family:var(--font-display);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">P</div>
+  <div>
+    <div class="brand">PulseWard HMS</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Operations Runbook · v1</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="Architecture.html">Architecture</a>
+    <a class="btn" href="LLD.html">LLD</a>
+    <a class="btn" href="Setup Guide.html">Setup guide</a>
+    <a class="btn" href="Build Notes.html">Build notes</a>
+    <a class="btn" href="PulseWard HMS.html">← App</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">runbook · on-call · incidents · drills</div>
+    <h1>What to do when things break — and how to prevent that.</h1>
+    <p>This is the on-call's pocket card. Every incident you're likely to face is here with a symptom, a verification step, and the smallest action that resolves it. Drills, escalation paths, and recovery procedures live at the bottom.</p>
+  </section>
+
+  <div class="toc">
+    <a href="#oncall">On-call</a>
+    <a href="#severity">Severity</a>
+    <a href="#triage">Triage</a>
+    <a href="#incidents">Incidents</a>
+    <a href="#deploy">Deploy</a>
+    <a href="#rollback">Rollback</a>
+    <a href="#backup">Backup</a>
+    <a href="#restore">Restore</a>
+    <a href="#secrets">Secret rotation</a>
+    <a href="#capacity">Capacity</a>
+    <a href="#drills">Drills</a>
+    <a href="#postmortem">Postmortem</a>
+  </div>
+
+  <!-- ──────────────── ON-CALL ──────────────── -->
+  <h2 id="oncall" class="sec">1 · On-call</h2>
+  <p class="sec-sub">One primary, one secondary, in 7-day rotations. Handoff Mondays at 10:00 IST.</p>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Primary</h3>
+      <p class="sub">First responder. Acknowledges within 5 min.</p>
+      <ul class="checklist">
+        <li>Carries the pager (PagerDuty)</li>
+        <li>Owns mitigation, not root cause</li>
+        <li>Posts updates every 15 min until resolved</li>
+        <li>Cuts the incident channel</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Secondary</h3>
+      <p class="sub">Backup if primary doesn't ack in 5 min.</p>
+      <ul class="checklist">
+        <li>Pulled in for S1 incidents</li>
+        <li>Helps with comms and timeline</li>
+        <li>Runs the postmortem the next week</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Escalation</h3>
+      <p class="sub">When you need help.</p>
+      <ul class="checklist">
+        <li>Engineering lead — S1 unresolved 30 min</li>
+        <li>CTO — patient safety risk identified</li>
+        <li>Hospital ops lead — patient-facing outage &gt; 15 min</li>
+        <li>DPO — any PII exposure suspected</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The on-call kit</h3>
+    <ul class="checklist">
+      <li>Laptop with <code class="inl">wrangler</code> logged into the prod account.</li>
+      <li>Phone with PagerDuty + 2FA app.</li>
+      <li>Bookmarks: Sentry · CF Analytics · CF Workers logs · D1 console · status page.</li>
+      <li>VPN credentials for admin console access.</li>
+      <li>This runbook printed and pinned somewhere physical.</li>
+    </ul>
+  </div>
+
+  <!-- ──────────────── SEVERITY ──────────────── -->
+  <h2 id="severity" class="sec">2 · Severity levels</h2>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Sev</th><th>Definition</th><th>Examples</th><th>Response</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge danger">S1</span></td><td>Patient safety risk, or hospital can't operate</td><td>Auth fully down · Critical alerts not delivering · Wrong patient data shown · PII exposure</td><td>5-min ack · 30-min mitigation target · all hands</td></tr>
+        <tr><td><span class="badge warn">S2</span></td><td>Major feature broken, workaround exists</td><td>Lab webhooks failing · Appointment booking degraded · ABHA enrolment failing</td><td>15-min ack · same-day fix</td></tr>
+        <tr><td><span class="badge info">S3</span></td><td>Minor degradation, only some users affected</td><td>Slow search · Stale dashboard tile · Telegram bot lag &lt; 1 min</td><td>Next business day</td></tr>
+        <tr><td><span class="badge">S4</span></td><td>Cosmetic, doesn't affect operations</td><td>Typo · Layout glitch on edge case · Stale doc link</td><td>Next sprint</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ──────────────── TRIAGE ──────────────── -->
+  <h2 id="triage" class="sec">3 · The first 5 minutes</h2>
+  <p class="sec-sub">When the pager goes off, do these in order. Don't skip steps.</p>
+
+  <div class="card">
+    <ol class="checklist">
+      <li><b>Ack</b> the page in PagerDuty.</li>
+      <li><b>Open a Slack thread</b> in <code class="inl">#ops-incidents</code>. Pin the alert. Name it <span class="mono">INC-YYYY-MM-DD-&lt;short&gt;</span>.</li>
+      <li><b>Confirm</b> the symptom yourself: hit <code class="inl">/health</code>, open the affected SPA, look at Sentry.</li>
+      <li><b>Classify severity</b> using the table above. Update the channel.</li>
+      <li><b>Stop the bleeding</b> before investigating. Common mitigations:
+        <ul style="margin-top:4px;">
+          <li>Rollback the last deploy — <code class="inl">wrangler rollback --env production</code></li>
+          <li>Flip a feature flag in KV — see <a href="#flags">feature flags</a></li>
+          <li>Disable a noisy notification channel via the admin console</li>
+          <li>Add a CF rule to rate-limit an abusive IP</li>
+        </ul>
+      </li>
+      <li><b>Update</b> the channel every 15 min, even with "still investigating".</li>
+    </ol>
+    <div class="callout danger"><strong>Stop the bleeding before you investigate.</strong> Restoring service is more important than knowing why it broke. Root cause is for the postmortem.</div>
+  </div>
+
+  <!-- ──────────────── INCIDENT RUNBOOKS ──────────────── -->
+  <h2 id="incidents" class="sec">4 · Incident runbooks</h2>
+  <p class="sec-sub">Symptom → verify → mitigate → confirm.</p>
+
+  <!-- IR-1 auth down -->
+  <div class="ir">
+    <h4>IR-1 · Authentication is down <span class="sev s1">S1</span></h4>
+    <div class="symptom">Symptom: <em>users can't log in</em>; spike of 5xx on <code class="inl">/v1/auth/login</code>.</div>
+    <div class="row"><div class="lbl">Verify</div><div><code class="inl">curl https://api.&hellip;/v1/auth/login -d '&hellip;'</code> returns 5xx · Sentry has new <code class="inl">auth-service</code> errors</div></div>
+    <div class="row"><div class="lbl">Common causes</div><div>Last deploy broke a route · D1 binding mis-set · <code class="inl">JWT_SECRET</code> rotated only in one service · KV exhausted limit</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>(1) <code class="inl">wrangler rollback --env production</code> on <code class="inl">auth-service</code>. (2) If KV: temporarily extend rate-limit TTL via dashboard. (3) If JWT mismatch: re-deploy gateway + auth together with same secret.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>Synthetic <code class="inl">/me</code> probe goes green · login succeeds from incognito · Sentry error rate drops to baseline within 5 min</div></div>
+  </div>
+
+  <!-- IR-2 critical notifs failing -->
+  <div class="ir">
+    <h4>IR-2 · Critical notifications not delivering <span class="sev s1">S1</span></h4>
+    <div class="symptom">Symptom: ops dashboard escalation queue grows · MSG91 or push delivery rate &lt; 90%.</div>
+    <div class="row"><div class="lbl">Verify</div><div>Ops dashboard → escalations export · <code class="inl">notifications.sent_to_json[].status</code> = <code class="inl">failed</code></div></div>
+    <div class="row"><div class="lbl">Common causes</div><div>Provider outage · Credentials expired · Rate-limited at provider · Bad phone numbers in seed/import</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>(1) Admin console → flip primary channel to backup (SMS → Telegram, etc.). (2) Replay failed deliveries from the escalation export. (3) If MSG91 throttling: stagger sends over 2 min.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>Delivery rate &gt; 95% on the next 100 messages · No new entries in escalation queue for 10 min</div></div>
+  </div>
+
+  <!-- IR-3 ABHA -->
+  <div class="ir">
+    <h4>IR-3 · ABDM / ABHA upstream errors <span class="sev s2">S2</span></h4>
+    <div class="symptom">Symptom: <code class="inl">abdm_upstream</code> errors on enrol / link · ABDM status page shows red.</div>
+    <div class="row"><div class="lbl">Verify</div><div><code class="inl">curl &hellip;/api/v1/platform/abha/operational-readiness</code> · ABDM public status page</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>Set <code class="inl">FF_ABHA_ENROLL</code> = <code class="inl">false</code> in KV — UI shows "ABHA temporarily unavailable, you can still register without it." Patient flow keeps working.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>Signup completes via Profile ID fallback · No ABHA calls fail in the last 5 min after flag flip</div></div>
+  </div>
+
+  <!-- IR-4 database hot -->
+  <div class="ir">
+    <h4>IR-4 · Database hot path <span class="sev s2">S2</span></h4>
+    <div class="symptom">Symptom: D1 query p95 &gt; 1 s · API write latency tripled.</div>
+    <div class="row"><div class="lbl">Verify</div><div>CF Analytics D1 panel · trace a single slow request in Sentry to find the query</div></div>
+    <div class="row"><div class="lbl">Common causes</div><div>Missing index on a new query · A long-running migration · Big JSON column read on hot endpoint</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>(1) Add the missing index via <code class="inl">wrangler d1 execute</code> (additive, safe). (2) Cache the offending read in KV for 30 s. (3) Restrict to projected columns, defer JSON read.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>p95 returns to &lt; 250 ms · D1 panel shows query gone from top-N</div></div>
+  </div>
+
+  <!-- IR-5 lab webhook -->
+  <div class="ir">
+    <h4>IR-5 · Lab webhook backlog <span class="sev s2">S2</span></h4>
+    <div class="symptom">Symptom: <code class="inl">lab.resulted</code> events not arriving for &gt; 30 min · external lab dashboard shows queued.</div>
+    <div class="row"><div class="lbl">Verify</div><div>Sentry filter <code class="inl">service:lab-service</code> · Ops dashboard "lab last seen" tile</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>If our endpoint is up: ask lab to replay. If our verification rejected (HMAC mismatch): rotate the shared secret in admin console, ask lab to replay.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>Latest order moves from <code class="inl">in-lab</code> → <code class="inl">resulted</code> · Patient + clinician notified</div></div>
+  </div>
+
+  <!-- IR-6 telegram webhook -->
+  <div class="ir">
+    <h4>IR-6 · Telegram bot stops responding <span class="sev s3">S3</span></h4>
+    <div class="symptom">Symptom: bot stops echoing <code class="inl">/start</code>; webhook 4xx in CF logs.</div>
+    <div class="row"><div class="lbl">Verify</div><div><code class="inl">curl https://api.telegram.org/bot&lt;TOKEN&gt;/getWebhookInfo</code> — look at <code class="inl">last_error_message</code></div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>(1) Re-set webhook with correct secret. (2) Confirm <code class="inl">TELEGRAM_WEBHOOK_SECRET</code> matches in Workers Secrets. (3) Use ops dashboard "drill checklist" to ping all bot routes.</div></div>
+  </div>
+
+  <!-- IR-7 pii leak suspected -->
+  <div class="ir">
+    <h4>IR-7 · PII exposure suspected <span class="sev s1">S1</span></h4>
+    <div class="symptom">Symptom: log line shows Aadhaar or full DOB · audit shows out-of-tenant read.</div>
+    <div class="row"><div class="lbl">Verify</div><div>Grep the last 24h of logs for the offending field · re-run the audit query that flagged it</div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>(1) <strong>Stop new writes</strong> — flip <code class="inl">FF_READ_ONLY</code> = <code class="inl">true</code>. (2) Page the DPO. (3) Begin breach assessment per DPDP playbook. (4) Don't delete logs — preserve evidence.</div></div>
+    <div class="row"><div class="lbl">Confirm</div><div>Source plugged · Affected users counted · DPIA breach template started · 72-hour clock noted</div></div>
+    <div class="callout danger" style="margin-top:8px;"><strong>DPDP Act 2023:</strong> data breach must be reported to the Data Protection Board within 72 hours.</div>
+  </div>
+
+  <!-- IR-8 cf outage -->
+  <div class="ir">
+    <h4>IR-8 · Cloudflare regional outage <span class="sev s1">S1</span></h4>
+    <div class="symptom">Symptom: edge unreachable from some geos · CF status page yellow/red.</div>
+    <div class="row"><div class="lbl">Verify</div><div>cloudflarestatus.com · independent test from <code class="inl">downforeveryoneorjustme.com</code></div></div>
+    <div class="row"><div class="lbl">Mitigate</div><div>Communicate to hospital ops — front-desk should switch to offline intake forms (paper). Update status page. Wait it out; nothing useful we can do at edge layer.</div></div>
+  </div>
+
+  <h2 id="flags" class="sec" style="margin-top:24px;">Feature flags (KV)</h2>
+  <p class="sec-sub">Live operational levers. Flip via admin console or <code class="inl">wrangler kv key put</code>.</p>
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Key</th><th>Effect when true</th><th>When to use</th></tr></thead>
+      <tbody>
+        <tr><td>FF_READ_ONLY</td><td>All write endpoints return 503</td><td>PII triage · suspected data corruption</td></tr>
+        <tr><td>FF_ABHA_ENROLL</td><td>Disables ABHA enrol flow, shows fallback message</td><td>ABDM upstream outage</td></tr>
+        <tr><td>FF_TELEGRAM</td><td>Skips Telegram channel; everything else proceeds</td><td>Telegram bot outage</td></tr>
+        <tr><td>FF_MAINTENANCE</td><td>SPAs show a maintenance banner</td><td>Planned deploys, long migrations</td></tr>
+        <tr><td>FF_ADMIN_IP_ALLOW</td><td>Locks admin console to allow-list only</td><td>Suspected admin abuse</td></tr>
+        <tr><td>FF_LAB_DEDUPE_WINDOW</td><td>Increases lab webhook dedupe window</td><td>External lab replay storm</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ──────────────── DEPLOY ──────────────── -->
+  <h2 id="deploy" class="sec">5 · Deploy procedure</h2>
+  <p class="sec-sub">Two humans on the call. Pre + post checklists.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Pre-deploy</h3>
+      <ol class="checklist">
+        <li>Staging green for ≥ 24 h.</li>
+        <li>Migration plan reviewed by 2 engineers.</li>
+        <li>Manual snapshot labelled <span class="mono">pre-deploy-…</span>.</li>
+        <li>Slack post in <code class="inl">#ops</code> with SHA + approver.</li>
+        <li>Sentry + CF Analytics open in tabs.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Deploy</h3>
+      <ol class="checklist">
+        <li>GitHub Actions → <code class="inl">deploy-production</code> → ref <code class="inl">main</code>.</li>
+        <li>Watch the job: snapshot → migrate → services → pages → probe.</li>
+        <li>If probe fails, abort and rollback (next section).</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Post-deploy</h3>
+      <ol class="checklist">
+        <li>Synthetic probes green for 5 min.</li>
+        <li>No new Sentry fingerprints in first 10 min.</li>
+        <li>p95 latency within +20% of previous baseline.</li>
+        <li>Confirm in <code class="inl">#ops</code>: "Deployed #&lt;sha&gt; ✓".</li>
+        <li>Watch the system for 30 min before logging off.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Deploy windows</h3>
+      <ul class="checklist">
+        <li>Tue / Wed / Thu, 10:00–15:00 IST.</li>
+        <li><strong>No Friday afternoon</strong> deploys.</li>
+        <li>No deploys during a critical event (hospital launch day, big patient drive).</li>
+        <li>Off-hours emergency deploys require CTO approval in writing.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ──────────────── ROLLBACK ──────────────── -->
+  <h2 id="rollback" class="sec">6 · Rollback</h2>
+  <p class="sec-sub">Fast. Atomic. Tested every quarter.</p>
+
+  <div class="card">
+    <h3>Worker rollback (services)</h3>
+<pre><span class="c"># revert to previous deployed version of a single service</span>
+cd services/&lt;svc&gt;
+wrangler deployments list --env production
+wrangler rollback --env production --message <span class="s">"INC-2026-05-21"</span></pre>
+    <p style="font-size:12.5px;color:var(--muted);">Takes &lt; 60 s. Affects only that service. Repeat per service if multiple were deployed.</p>
+  </div>
+
+  <div class="card">
+    <h3>Pages rollback (apps)</h3>
+<pre><span class="c"># Cloudflare Pages dashboard → choose previous deployment → "Rollback"</span></pre>
+    <p style="font-size:12.5px;color:var(--muted);">Atomic — old version is restored at all edges in under a minute.</p>
+  </div>
+
+  <div class="card">
+    <h3>Migration rollback</h3>
+    <p>Migrations are <strong>additive only</strong>: new tables, new columns, new indices. Drop columns are scheduled in a separate "removal" PR ≥ 1 sprint later, after all callers stop using them.</p>
+    <p>If a migration causes incident: revert the Worker (so old code stops writing the new column), leave the column in place, schedule a fix.</p>
+  </div>
+
+  <!-- ──────────────── BACKUP ──────────────── -->
+  <h2 id="backup" class="sec">7 · Backup</h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Schedule</h3>
+      <ul class="checklist">
+        <li><b>Auto:</b> daily 03:00 IST → R2 <code class="inl">pulseward-backups/auto/YYYY-MM-DD.json</code></li>
+        <li><b>Retention:</b> last 7 hot, then weekly to cold tier for 1 year, then archive.</li>
+        <li><b>Manual:</b> <code class="inl">curl -X POST https://api.&hellip;/v1/backup/snapshot</code> with admin token</li>
+        <li><b>Pre-deploy:</b> CI takes a snapshot before any prod migration</li>
+        <li>All snapshots are AES-256 encrypted at rest with a per-tenant envelope key</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Verify a snapshot exists today</h3>
+<pre>wrangler r2 object list pulseward-backups --prefix auto/
+
+<span class="c"># expect: auto/&lt;today&gt;.json with size &gt; 1 MB and recent uploaded timestamp</span></pre>
+    </div>
+  </div>
+
+  <!-- ──────────────── RESTORE ──────────────── -->
+  <h2 id="restore" class="sec">8 · Restore</h2>
+  <p class="sec-sub">Test it. Quarterly drill is non-negotiable.</p>
+
+  <div class="card">
+    <h3>Full restore procedure</h3>
+    <ol class="checklist">
+      <li><b>Decide the snapshot:</b> <code class="inl">wrangler r2 object list pulseward-backups --prefix auto/</code></li>
+      <li><b>Download it:</b> <code class="inl">wrangler r2 object get pulseward-backups/auto/2026-05-19.json &gt; snap.json</code></li>
+      <li><b>Restore to sandbox first:</b>
+<pre>node scripts/restore.js \
+  --input snap.json \
+  --target sandbox \
+  --tenant main \
+  --confirm</pre>
+      </li>
+      <li><b>Smoke test the sandbox tenant</b> — log in, fetch a few records, run a booking.</li>
+      <li><b>Announce maintenance:</b> flip <code class="inl">FF_MAINTENANCE</code> = <code class="inl">true</code> on production.</li>
+      <li><b>Apply restore to production:</b> <code class="inl">node scripts/restore.js --target production --tenant main --confirm</code></li>
+      <li><b>Smoke test production:</b> same as step 4.</li>
+      <li><b>Flip back:</b> <code class="inl">FF_MAINTENANCE</code> = <code class="inl">false</code>.</li>
+      <li><b>Audit-log the action</b> automatically captured; verify it appears.</li>
+    </ol>
+    <div class="callout warn"><strong>RTO target: &lt; 1 hour</strong> from "decide" to "users back in". RPO &lt; 24 hours (worst case lose a day).</div>
+  </div>
+
+  <!-- ──────────────── SECRETS ──────────────── -->
+  <h2 id="secrets" class="sec">9 · Secret rotation</h2>
+  <p class="sec-sub">Quarterly. Schedule the maintenance window for JWT rotation; rest are zero-downtime.</p>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Secret</th><th>Strategy</th><th>Downtime</th></tr></thead>
+      <tbody>
+        <tr><td>JWT_SECRET</td><td>Schedule window. All active sessions invalidated. New secret only.</td><td>None — but users re-login</td></tr>
+        <tr><td>PEPPER</td><td>Rotate by adding a new pepper. Verify against both during transition for 90 days.</td><td>None</td></tr>
+        <tr><td>ABDM_CLIENT_SECRET</td><td>Get new one from ABDM console; update Workers Secret; restart service.</td><td>≤ 5 s on restart</td></tr>
+        <tr><td>TELEGRAM_BOT_TOKEN</td><td>Use <code class="inl">@BotFather</code> to revoke + reissue; update; re-set webhook.</td><td>5–15 min bot outage</td></tr>
+        <tr><td>RESEND / MSG91 keys</td><td>Generate new; update; revoke old.</td><td>None</td></tr>
+        <tr><td>CF API token</td><td>Generate new scoped token; update in GitHub Actions; revoke old.</td><td>None</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout danger">
+    <strong>If a secret leaks:</strong> rotate immediately, then audit logs for misuse in the leak window. Don't wait for the next scheduled rotation. Inform DPO.
+  </div>
+
+  <!-- ──────────────── CAPACITY ──────────────── -->
+  <h2 id="capacity" class="sec">10 · Capacity planning</h2>
+
+  <div class="card tight">
+    <table class="spec">
+      <thead><tr><th>Metric</th><th>Today (MVP)</th><th>Headroom</th><th>Action when threshold hit</th></tr></thead>
+      <tbody>
+        <tr><td>D1 storage</td><td>~80 MB</td><td>5 GB (free)</td><td>Move large JSON columns to R2; or upgrade D1</td></tr>
+        <tr><td>R2 storage</td><td>~2 GB lab PDFs / month</td><td>10 GB (free)</td><td>Add cold-tier rule; archive after 1 year</td></tr>
+        <tr><td>Workers requests</td><td>~50k / day</td><td>100k / day (free)</td><td>Upgrade to Workers Paid; cache more heavily</td></tr>
+        <tr><td>KV operations</td><td>~10k / day</td><td>100k / day (free)</td><td>Increase TTLs; batch rate-limit windows</td></tr>
+        <tr><td>Queues</td><td>~5k jobs / day</td><td>1M / month (free)</td><td>—</td></tr>
+        <tr><td>SMS budget</td><td>~500 / month</td><td>Buy 1k credit</td><td>Top up earlier in the month</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ──────────────── DRILLS ──────────────── -->
+  <h2 id="drills" class="sec">11 · Drills</h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Restore drill — quarterly</h3>
+      <ol class="checklist">
+        <li>Pick a random 7-day-old auto-backup.</li>
+        <li>Restore to a fresh sandbox tenant.</li>
+        <li>Time the operation from kickoff to "users could log in".</li>
+        <li>Run a fixed smoke-test script against the restored data.</li>
+        <li>Compare row counts to source-of-truth from that day.</li>
+        <li>Document the time + any surprises in the runbook diff.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Failover drill — quarterly</h3>
+      <ol class="checklist">
+        <li>Pick one service. Simulate failure with <code class="inl">FF_&lt;svc&gt;_DEGRADED</code>.</li>
+        <li>Confirm the system continues with degraded mode (e.g. notifications drop to fewer channels).</li>
+        <li>Time recovery once flag flips back.</li>
+        <li>Update the IR runbook if behavior was unexpected.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Security drill — annual</h3>
+      <ol class="checklist">
+        <li>OWASP ZAP scan against staging.</li>
+        <li>Pen-test by a third party.</li>
+        <li>Tabletop exercise: pretend a clinician account is compromised.</li>
+        <li>Verify DPIA + breach playbook are current.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Load drill — pre-launch + bi-annual</h3>
+      <ol class="checklist">
+        <li>k6: 100 concurrent users for 30 minutes against staging.</li>
+        <li>k6: spike to 500 for 60 s; expect graceful 503s on overflow.</li>
+        <li>Confirm no DB corruption; alert thresholds fired correctly.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ──────────────── POSTMORTEM ──────────────── -->
+  <h2 id="postmortem" class="sec">12 · Postmortem template</h2>
+  <p class="sec-sub">For any S1 / S2 incident. Blameless. Within 5 business days.</p>
+
+  <div class="card">
+<pre><span class="c"># INC-2026-MM-DD — &lt;short title&gt;</span>
+
+<span class="k">Severity:</span> S1 / S2
+<span class="k">Duration:</span> HH:MM IST → HH:MM IST (Xm)
+<span class="k">Detected by:</span> alert | user report | manual
+<span class="k">Owner:</span> @&lt;name&gt;
+<span class="k">Author:</span> @&lt;name&gt;
+
+<span class="k">## Impact</span>
+- Users affected: N
+- Records mis-served: N
+- SLO budget consumed: X%
+
+<span class="k">## Timeline (IST, 24h)</span>
+- 09:12 — first alert fires
+- 09:14 — primary acks
+- 09:18 — rolled back to #abc123
+- 09:22 — confirmed mitigation
+- 09:45 — incident closed
+
+<span class="k">## What went wrong</span>
+&lt;technical narrative&gt;
+
+<span class="k">## What went right</span>
+&lt;detection, comms, mitigation&gt;
+
+<span class="k">## Root cause</span>
+&lt;the actual underlying mechanism — code, config, ops&gt;
+
+<span class="k">## Action items</span>
+- [ ] (owner, due) Add alert on metric X
+- [ ] (owner, due) Add test for case Y
+- [ ] (owner, due) Update runbook IR-N
+- [ ] (owner, due) Migration approved by 2 engineers gate</pre>
+  </div>
+
+  <div class="callout ok">
+    <strong>Blameless rule:</strong> postmortems describe systems, not people. "The deploy process let a missing migration ship" — not "<em>X</em> forgot to run the migration". The fix lives in the system.
+  </div>
+
+  <p style="margin-top:36px;font-size:12px;color:var(--mute-2);text-align:center;">
+    PulseWard HMS · Operations Runbook v1 · Last updated <span id="d"></span>
+  </p>
+
+</div>
+
+<script>document.getElementById('d').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });</script>
+</body>
+</html>

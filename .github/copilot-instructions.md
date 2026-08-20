@@ -1,67 +1,38 @@
 # PulseWard Copilot Instructions
 
-These instructions guide all AI-assisted work in this repository.
+Guidance for AI-assisted work in this repository. `CLAUDE.md` at the repo root is the
+canonical, detailed reference; this file is the short version for GitHub Copilot.
 
-## Mission
+## What this project is
 
-Deliver safe, modular, cost-aware, production-ready outcomes for PulseWard HMS.
+PulseWard is a multi-tenant hospital management system:
 
-## Critical Rules
+- **One backend** — a single Hono API gateway (Node 24, `node:sqlite` in WAL mode) holding
+  all REST routes, auth, multi-tenancy, auditing, and in-app notifications. There are no
+  separate microservices; treat the gateway as the single runtime process.
+- **Four frontends** — Vite + React 18 single-page apps (patient, clinician, operations,
+  admin), each with its own `src/api.js` fetch wrapper.
 
-- Protect patient privacy and confidentiality in all code, logs, and examples.
-- Keep APIs and event schemas aligned with documented contracts.
-- Ensure behavior is configurable for admins where feasible.
-- Prefer low-cost and low-operations defaults.
-- Keep third-party provider logic behind adapter interfaces.
+## Critical rules
 
-## Architecture Expectations
+- Protect patient privacy: never log or hard-code PHI/PII, secrets, or tokens.
+- Every database row is tenant-scoped by `tenant_id`; never write a query that can cross
+  tenants.
+- Keep routes aligned with `services/api-gateway/openapi.yaml` — the contract check
+  (`pnpm run contracts:check -- --strict`) fails on any drift.
+- Auth is JWT (HS256 via `jose`) with bcrypt-hashed passwords; do not weaken either.
+- Prefer minimal, surgical changes that match existing style.
 
-- Maintain service boundaries between gateway, domain services, and shared packages.
-- Do not hardcode provider-specific behavior in core domain modules.
-- Reuse shared error, event, and identifier schemas.
-- Include migration and rollback notes for breaking changes.
+## Before you finish a change
 
-## Engineering Process
+- `pnpm run verify` passes (lint, format, tests, contract parity).
+- Docs under `docs/site/` are updated when architecture, API, or behavior changes.
+- Breaking changes describe their migration and rollback path.
 
-- Work in small iterations with explicit assumptions.
-- Include test strategy and operational impact for each significant change.
-- Update relevant docs when architecture, API, or workflow behavior changes.
-- Highlight risks and unresolved dependencies before merge.
+## Review priorities
 
-## Review Priorities
-
-1. Patient safety and privacy risk
-2. Scheduling correctness and conflict handling
+1. Patient safety and privacy
+2. Scheduling and clinical-data correctness
 3. API contract compatibility
-4. Configurability and module isolation
-5. Cost and operational simplicity
-
-## Required Delivery Signals
-
-- Contracts validated
-- Documentation updated
-- Monitoring/alerting impact considered
-- Rollback path described
-
-## Slice Budget Tracking
-
-For milestone slicing work (especially M6 contract-hardening waves), every response must include budget tracking in two places:
-
-- Module Slice Budget (Initial): at the top of the response before execution details.
-- Module Slice Budget (Updated): near the end of the response after execution details.
-
-Each budget block must include:
-
-- Scope name (for example: M6 command-surface tranche, full verify-attempt schema surface)
-- Total estimated slices
-- Completed slices
-- Remaining slices
-- Current wave size
-- Prompt count used (count each user prompt as 1)
-
-When estimates change, include an explicit delta line:
-
-- Estimate change: <old> -> <new>
-- Reason for change
-
-If multiple scopes are tracked (narrow tranche and full-surface), show both scopes in the same budget block.
+4. Multi-tenant isolation
+5. Operational simplicity

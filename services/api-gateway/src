@@ -1,61 +1,12 @@
-require("dotenv").config();
+// Thin process launcher for the PulseWard API gateway.
+// All routes and middleware live in ./app.js so the app can be imported by
+// integration tests (via app.request()) and measured by coverage tooling.
+import { serve } from '@hono/node-server';
+import { app, PORT } from './app.js';
 
-const express = require("express");
-const { withRequestContext } = require("../../packages/shared-utils/request-context");
+console.log(`\n🏥  PulseWard HMS — API Gateway (Hono + SQLite)`);
+console.log(`    Port: ${PORT}\n`);
 
-const app = express();
-const PORT = Number(process.env.API_PORT || process.env.PORT || 3000);
-
-app.use(express.json());
-app.use(withRequestContext("api-gateway"));
-
-const patients = [];
-const appointments = [];
-
-app.post("/auth", (req, res) => {
-  const payload = req.body || {};
-  if (!payload.username || !payload.password) {
-    res.status(400).json({ message: "username and password are required" });
-    return;
-  }
-
-  res.json({ token: "gateway-demo-token" });
-});
-
-app.get("/patients", (_req, res) => {
-  res.json(patients);
-});
-
-app.post("/patients", (req, res) => {
-  const payload = req.body || {};
-  const record = {
-    id: String(patients.length + 1),
-    name: payload.name || "Unknown",
-    age: Number(payload.age || 0),
-    gender: payload.gender || "unknown",
-  };
-
-  patients.push(record);
-  res.status(201).json(record);
-});
-
-app.get("/appointments", (_req, res) => {
-  res.json(appointments);
-});
-
-app.post("/appointments", (req, res) => {
-  const payload = req.body || {};
-  const record = {
-    id: String(appointments.length + 1),
-    patientId: payload.patientId || "",
-    clinicianId: payload.clinicianId || "",
-    date: payload.date || new Date().toISOString(),
-  };
-
-  appointments.push(record);
-  res.status(201).json(record);
-});
-
-app.listen(PORT, () => {
-  console.log(`API Gateway running on port ${PORT}`);
+serve({ fetch: app.fetch, port: PORT }, (info) => {
+  console.log(`✓ Listening on http://localhost:${info.port}\n`);
 });

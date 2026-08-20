@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PulseWard HMS — Architecture & Backend Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0e1e26; --ink-2:#233039; --ink-3:#3d4b54; --muted:#6b7a83; --mute-2:#93a1aa;
+    --line:#dfe7ea; --line-soft:#eaf0f2; --paper:#f6f9fa; --paper-2:#f0f4f5; --panel:#ffffff;
+    --teal:#0f4c5c; --teal-2:#1a6b7e; --teal-50:#e5f0f2; --teal-100:#c9dfe4;
+    --sun:#ea8f3b; --ok:#1f8a5b; --ok-50:#e3f4ec; --warn:#c98a14; --warn-50:#fbf1d9;
+    --danger:#c0382a; --danger-50:#fbe5e2; --info:#2a6ea1; --info-50:#e3eef6; --violet:#6b46c1; --violet-50:#ede7f6;
+    --font-sans:"IBM Plex Sans", system-ui, sans-serif;
+    --font-display:"Space Grotesk", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--paper);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em;margin:0;}
+  a{color:var(--teal);}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:14px;z-index:10;}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--teal),var(--teal-2));color:white;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;}
+  .brand{font-family:var(--font-display);font-weight:700;color:var(--teal);}
+  .top-actions{margin-left:auto;display:flex;gap:8px;}
+  .btn{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:white;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+  .btn.primary{background:var(--teal);color:white;border-color:transparent;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px;}
+
+  .hero{padding:40px 30px;background:linear-gradient(155deg,#fff,#e6f1ee 60%,#fdf3e6);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;}
+  .hero .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--teal-2);}
+  .hero h1{font-size:34px;line-height:1.1;margin-top:8px;font-weight:600;letter-spacing:-0.02em;}
+  .hero p{color:var(--muted);margin-top:10px;font-size:15px;max-width:60ch;}
+  .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px;}
+  .stat{background:rgba(255,255,255,0.7);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--mute-2);}
+  .stat .val{font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--teal);}
+
+  h2.sec{font-size:22px;margin:36px 0 6px;font-weight:600;}
+  .sec-sub{color:var(--muted);margin-bottom:18px;font-size:14px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
+  .card h3{font-size:15px;font-weight:600;margin-bottom:6px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:12px;}
+
+  .grid{display:grid;gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:900px){.cols-2,.cols-3,.stat-strip{grid-template-columns:1fr;}}
+
+  pre, .codeblock{background:#0e1e26;color:#dfe7ea;padding:14px 16px;border-radius:10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;overflow-x:auto;}
+  code.inl{background:var(--paper-2);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:12px;}
+
+  table.spec{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;}
+  table.spec th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mute-2);background:var(--paper-2);border-bottom:1px solid var(--line);}
+  table.spec td{padding:11px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  table.spec td:first-child{font-weight:600;}
+  table.spec .mono{font-family:var(--font-mono);font-size:12px;}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--paper-2);color:var(--ink-3);border:1px solid var(--line);}
+  .badge.ok{background:var(--ok-50);color:var(--ok);border-color:transparent;}
+  .badge.warn{background:var(--warn-50);color:var(--warn);border-color:transparent;}
+  .badge.info{background:var(--info-50);color:var(--info);border-color:transparent;}
+  .badge.teal{background:var(--teal-50);color:var(--teal);border-color:transparent;}
+  .badge.violet{background:var(--violet-50);color:var(--violet);border-color:transparent;}
+  .badge.sun{background:#fdf1e4;color:var(--sun);border-color:transparent;}
+
+  .arch{display:grid;gap:6px;font-family:var(--font-mono);font-size:12px;}
+  .arch .layer{padding:13px 16px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;gap:12px;}
+  .arch .layer .who{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--teal);min-width:160px;}
+  .arch .layer .what{color:var(--ink-2);flex:1;}
+  .arch .layer.client{background:#e7f0f4;}
+  .arch .layer.edge{background:#fdf1e4;}
+  .arch .layer.api{background:#f6e9fc;}
+  .arch .layer.svc{background:#e3f4ec;}
+  .arch .layer.data{background:#fbf1d9;}
+  .arch .layer.ext{background:#fbe5e2;}
+
+  .seq{display:grid;gap:8px;margin:14px 0;}
+  .seq .step{display:grid;grid-template-columns:32px 1fr;gap:14px;padding:10px 12px;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;}
+  .seq .step .n{width:28px;height:28px;border-radius:99px;background:var(--teal);color:white;display:grid;place-items:center;font-weight:700;font-family:var(--font-display);font-size:13px;}
+  .seq .step .lbl{font-weight:600;font-size:13px;}
+  .seq .step .desc{color:var(--ink-3);font-size:12px;margin-top:2px;}
+  .seq .step .mono{font-family:var(--font-mono);font-size:11.5px;color:var(--teal-2);margin-top:4px;}
+
+  ul.feats{margin:8px 0 0;padding-left:18px;}
+  ul.feats li{margin-bottom:4px;}
+
+  .cost-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13px;}
+  .cost-row .price{font-family:var(--font-mono);font-weight:600;color:var(--teal);}
+
+  .pill-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .pill-row .badge{font-size:10.5px;padding:2px 7px;}
+
+  .callout{padding:12px 14px;background:var(--info-50);color:var(--info);border-left:3px solid var(--info);border-radius:8px;margin:12px 0;font-size:12.5px;}
+  .callout.warn{background:var(--warn-50);color:var(--warn);border-left-color:var(--warn);}
+  .callout.ok{background:var(--ok-50);color:var(--ok);border-left-color:var(--ok);}
+
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px;}
+  .toc a{font-size:11.5px;background:white;border:1px solid var(--line);padding:4px 10px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-weight:500;}
+  .toc a:hover{background:var(--paper-2);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">P</div>
+  <div>
+    <div class="brand">PulseWard HMS</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Architecture &amp; Backend Plan</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="LLD.html">LLD</a>
+    <a class="btn" href="Build Notes.html">Build notes</a>
+    <a class="btn" href="Setup Guide.html">Setup guide</a>
+    <a class="btn" href="Operations Runbook.html">Runbook</a>
+    <a class="btn" href="PulseWard HMS.html">← App</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">v1 — Single-hospital MVP, multi-tenant ready</div>
+    <h1>End-to-end deployment plan for one hospital.</h1>
+    <p>How the PulseWard HMS prototype maps onto a real, low-cost production stack — with ABDM/ABHA, Telegram bot, mobile push, and operations baked in. Built to run a real facility at ~&#8377;3–5k/month while you have under 5,000 patient records.</p>
+    <div class="stat-strip">
+      <div class="stat"><div class="lbl">Monthly infra</div><div class="val">~$5–35</div></div>
+      <div class="stat"><div class="lbl">Cold-start</div><div class="val">&lt; 50 ms</div></div>
+      <div class="stat"><div class="lbl">Backups</div><div class="val">Daily, off-site</div></div>
+      <div class="stat"><div class="lbl">Compliance</div><div class="val">ABDM-aligned</div></div>
+    </div>
+  </section>
+
+  <div class="toc">
+    <a href="#stack">Stack</a>
+    <a href="#layers">Architecture</a>
+    <a href="#codebase">Single codebase</a>
+    <a href="#data">Data model</a>
+    <a href="#auth">Auth &amp; sessions</a>
+    <a href="#abha">ABHA / ABDM</a>
+    <a href="#notify">Notifications</a>
+    <a href="#availability">Availability</a>
+    <a href="#tasks">Tasks</a>
+    <a href="#backups">Backups</a>
+    <a href="#cost">Cost</a>
+    <a href="#ops">Ops</a>
+    <a href="#roadmap">Roadmap</a>
+  </div>
+
+  <!-- ───── STACK ───── -->
+  <h2 id="stack" class="sec">Recommended stack</h2>
+  <p class="sec-sub">Chosen to keep operational cost near zero while you ramp up. Every choice has a free tier that covers a small hospital, and a clean upgrade path.</p>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Web &amp; Mobile</h3>
+      <div class="sub">What the user sees</div>
+      <ul class="feats">
+        <li><b>Web app:</b> the current React build, served as a static site (Cloudflare Pages).</li>
+        <li><b>Mobile shell:</b> Capacitor wraps the same web build; one codebase, native push.</li>
+        <li><b>Telegram bot:</b> webhook handler on the same Workers runtime.</li>
+      </ul>
+      <div class="pill-row">
+        <span class="badge teal">React + Vite</span>
+        <span class="badge teal">Capacitor</span>
+        <span class="badge teal">PWA</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>API &amp; logic</h3>
+      <div class="sub">Stateless, edge-deployed</div>
+      <ul class="feats">
+        <li><b>Runtime:</b> Cloudflare Workers (or Vercel Edge / Hono on Bun) — pennies per million requests.</li>
+        <li><b>Framework:</b> Hono for routing, Zod for validation.</li>
+        <li><b>API style:</b> tRPC or simple REST. Per-route role &amp; tenant guards.</li>
+      </ul>
+      <div class="pill-row">
+        <span class="badge violet">Workers</span>
+        <span class="badge violet">Hono</span>
+        <span class="badge violet">Zod</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Data</h3>
+      <div class="sub">Relational + object</div>
+      <ul class="feats">
+        <li><b>Primary DB:</b> Cloudflare D1 (managed SQLite, 5 GB free) — or Neon Postgres if you need pgcrypto / full-text.</li>
+        <li><b>Object store:</b> R2 for lab PDFs, scans, profile photos.</li>
+        <li><b>Cache:</b> KV for sessions, suggestion lists, rate limits.</li>
+      </ul>
+      <div class="pill-row">
+        <span class="badge sun">D1 / Postgres</span>
+        <span class="badge sun">R2 / S3</span>
+        <span class="badge sun">KV</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── ARCH LAYERS ───── -->
+  <h2 id="layers" class="sec">System layers</h2>
+  <p class="sec-sub">How a single request (e.g. <code class="inl">POST /v1/appointments</code>) flows through.</p>
+
+  <div class="arch">
+    <div class="layer client"><div class="who">Client</div><div class="what">Patient web · Clinician web · Admin web · Mobile (Capacitor) · Telegram chat — all use the same JSON API.</div></div>
+    <div class="layer edge"><div class="who">Edge</div><div class="what">Cloudflare Pages serves static React. Workers handle <code class="inl">api.your-hospital.in/v1/*</code>, including bot webhooks &amp; ABDM callbacks. WAF + rate-limiting on the edge.</div></div>
+    <div class="layer api"><div class="who">API Gateway</div><div class="what">Hono router → Auth middleware (JWT validate) → Tenant middleware (resolve hospital from JWT claim) → Audit logger → Route handler.</div></div>
+    <div class="layer svc"><div class="who">Services</div><div class="what">Modular service files: <code class="inl">auth</code>, <code class="inl">patient</code>, <code class="inl">appointment</code>, <code class="inl">ehr</code>, <code class="inl">lab</code>, <code class="inl">pharmacy</code>, <code class="inl">billing</code>, <code class="inl">notification</code>. Same shape as the existing <code class="inl">services/*</code> folders in the repo.</div></div>
+    <div class="layer data"><div class="who">Data</div><div class="what">D1 (relational) · R2 (blobs) · KV (cache &amp; sessions). All tagged with <code class="inl">tenant_id</code>; every query filters by it.</div></div>
+    <div class="layer ext"><div class="who">External</div><div class="what">ABDM Sandbox / Prod · Telegram Bot API · FCM &amp; APNs · SMTP (Resend / SES) · Insurance APIs (later).</div></div>
+  </div>
+
+  <!-- ───── DATA MODEL ───── -->
+  <h2 id="data" class="sec">Data model (core tables)</h2>
+  <p class="sec-sub">Multi-tenant by design — every row carries a <code class="inl">tenant_id</code>. Single-hospital MVP just has one tenant row; you can onboard a second hospital later without schema changes.</p>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="spec">
+      <thead><tr><th style="width:18%;">Table</th><th style="width:38%;">Key columns</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>tenants</td><td class="mono">id, slug, name, hfr_id, accent, branding_json</td><td>One row per hospital. <code class="inl">hfr_id</code> is the ABDM Health Facility Registry ID.</td></tr>
+        <tr><td>users</td><td class="mono">id, tenant_id, email, password_hash, role, linked_entity_id, last_login_at</td><td>Roles: <code class="inl">admin</code>, <code class="inl">clinician</code>, <code class="inl">patient</code>, <code class="inl">frontdesk</code>, <code class="inl">ops</code>. <code class="inl">linked_entity_id</code> points to <code class="inl">patients.id</code> or <code class="inl">clinicians.id</code>.</td></tr>
+        <tr><td>sessions</td><td class="mono">id, user_id, refresh_token_hash, expires_at, device, ip</td><td>Kept short. Access token is a JWT (15 min); refresh token is a 30-day opaque token stored in KV.</td></tr>
+        <tr><td>patients</td><td class="mono">id, tenant_id, mrn, profile_id, abha_number, abha_address, dob, gender, blood_type, demographics_json, conditions_json, allergies_json</td><td>MRN is hospital-scoped &amp; unique. <code class="inl">abha_*</code> is null until linked.</td></tr>
+        <tr><td>clinicians</td><td class="mono">id, tenant_id, name, npi, department, languages_json, color</td><td>Multi-hospital model uses a join table <code class="inl">clinician_tenants</code> (omitted in MVP).</td></tr>
+        <tr><td>appointments</td><td class="mono">id, tenant_id, patient_id, clinician_id, starts_at, duration_min, kind, status, room, reason, notes</td><td>Index on <code class="inl">(clinician_id, starts_at)</code> for daily schedule. Status: scheduled / checked-in / in-progress / completed / cancelled / no-show.</td></tr>
+        <tr><td>lab_orders</td><td class="mono">id, tenant_id, patient_id, clinician_id, panel, ordered_at, status, results_json, reviewed_at</td><td>Specimen and integration metadata in <code class="inl">results_json</code>.</td></tr>
+        <tr><td>prescriptions</td><td class="mono">id, tenant_id, patient_id, clinician_id, drug, form, freq, duration, refills, status</td><td>Refill events emit notifications to the patient via configured channels.</td></tr>
+        <tr><td>notes</td><td class="mono">id, tenant_id, patient_id, clinician_id, type, title, body, diagnoses_json, signed_at</td><td>SOAP / Progress / Tele-consult / Admission / Discharge. Append-only once signed.</td></tr>
+        <tr><td>messages</td><td class="mono">id, tenant_id, patient_id, clinician_id, subject, thread_json, last_at</td><td>Thread is an array. Could be split into a child <code class="inl">message_events</code> table for high volume.</td></tr>
+        <tr><td>consents</td><td class="mono">id, tenant_id, patient_id, scope, granted, granted_at, expires_at, abdm_consent_id</td><td>One row per ABDM-aligned consent action. Surfaced in patient's Consent Ledger.</td></tr>
+        <tr><td>audit_events</td><td class="mono">id, tenant_id, at, actor, action, scope, ip, user_agent</td><td>Append-only. Daily roll-up to R2 for cheap long-term retention.</td></tr>
+        <tr><td>notifications</td><td class="mono">id, tenant_id, audience, kind, title, body, payload_json, sent_to_json, status, at</td><td>Audience = <code class="inl">patient | clinician | ops | all</code> + a specific <code class="inl">user_id</code>. <code class="inl">sent_to_json</code> records per-channel results.</td></tr>
+        <tr><td>providers</td><td class="mono">id, tenant_id, key, category, status, config_json, last_test_at, success_rate</td><td>Per-tenant routing: e.g. telegram bot token, SMTP creds, webhook URL.</td></tr>
+        <tr><td>incidents</td><td class="mono">id, severity, title, service, status, opened_at, resolved_at, owner</td><td>Platform-wide, not tenant-scoped.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout ok">
+    <strong>Storage envelope:</strong> at 2,000 patients with 20 visits/year and 10 KB notes per visit, raw row data fits in ~80 MB; lab PDFs &amp; scans in R2 typically 5–10 GB / year. D1's 5 GB free tier covers years of operation before you must upgrade.
+  </div>
+
+  <!-- ───── AUTH ───── -->
+  <h2 id="auth" class="sec">Authentication</h2>
+  <p class="sec-sub">Email + password is enough for v1. ABHA-OAuth is a v1.1 follow-up (the patient can sign in with their ABHA address instead).</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Sign-up (patient)</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Form submit</div><div class="desc">Name, DOB, gender, phone, email, password.</div><div class="mono">POST /v1/auth/signup</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Server-side hash</div><div class="desc"><code class="inl">argon2id</code> with per-user salt + tenant pepper.</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Create patient + MRN</div><div class="desc">Single transaction: insert <code class="inl">patients</code> + <code class="inl">users</code>. MRN is <code class="inl">{tenant.short}-{seq}</code>.</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Issue tokens</div><div class="desc">JWT access (15m) + opaque refresh in KV.</div></div></div>
+        <div class="step"><div class="n">5</div><div><div class="lbl">Optional ABHA link</div><div class="desc">Prompt to link/create ABHA on first sign-in. See ABHA section.</div></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sign-in</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Look up</div><div class="desc">By email; tenant inferred from email domain or sub-domain.</div><div class="mono">POST /v1/auth/login</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Verify</div><div class="desc">Constant-time hash compare.</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Rate-limit</div><div class="desc">10 attempts / 15 min per email + IP, in KV.</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Issue tokens</div><div class="desc">Set httpOnly secure refresh cookie. Return access JWT in body.</div></div></div>
+        <div class="step"><div class="n">5</div><div><div class="lbl">Audit</div><div class="desc">Append <code class="inl">audit_events</code> row.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Current prototype:</strong> uses <code class="inl">SHA-256 + salt</code> in the browser (via <code class="inl">SubtleCrypto</code>) since it has no backend. In production, hashing happens server-side with <code class="inl">argon2id</code>. The client never holds the salt.
+  </div>
+
+  <!-- ───── ABHA ───── -->
+  <h2 id="abha" class="sec">ABHA / ABDM integration</h2>
+  <p class="sec-sub">Aligned with ABDM v3 endpoints. The hospital onboards once (Health Facility Registry); patients then create or link an ABHA from inside the portal.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Hospital onboarding (one-time)</h3>
+      <ul class="feats">
+        <li>Apply at <code class="inl">facility.abdm.gov.in</code> → receive HFR ID.</li>
+        <li>Register an ABDM client at <code class="inl">facility.abdm.gov.in/sandbox</code> → get <code class="inl">client_id</code> / <code class="inl">client_secret</code>.</li>
+        <li>Store secrets in CF Secrets; cache short-lived access tokens in KV.</li>
+        <li>Stand up the Health Information Provider (HIP) callback at <code class="inl">/v1/abdm/callback</code>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Patient ABHA creation</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Request OTP</div><div class="desc">Patient enters Aadhaar (12 digits) or mobile (10 digits) in the portal.</div><div class="mono">POST /v3/enrollment/request/otp</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Verify OTP &amp; enrol</div><div class="desc">ABDM returns ABHA number + tokens.</div><div class="mono">POST /v3/enrollment/enrol/byAadhaar</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Pick address</div><div class="desc">Show 4–5 suggestions; let patient pick <code class="inl">name@abdm</code>.</div><div class="mono">GET  /v3/enrollment/enrol/suggestion<br>POST /v3/enrollment/enrol/abha-address</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Persist</div><div class="desc">Save <code class="inl">abha_number</code> + <code class="inl">abha_address</code> on the patient row. Emit audit + welcome notification.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fallback: Profile ID</h3>
+    <div class="sub">For patients who can't / won't link ABHA right away.</div>
+    <p style="font-size:13px;">A <code class="inl">profile_id</code> (<code class="inl">PID-XXXXX</code>) is auto-generated at signup and works inside the hospital. It cannot share records outside the facility — that's the only feature gap vs. ABHA. The portal nags gently to link ABHA but never blocks care.</p>
+  </div>
+
+  <pre>// Worker route — request ABHA OTP
+import { Hono } from 'hono';
+const app = new Hono();
+
+app.post('/v1/abha/request-otp', async (c) => {
+  const { aadhaar } = await c.req.json();
+  const abdmToken = await getAbdmToken(c.env);   // KV-cached
+  const encrypted = await rsaEncrypt(aadhaar, ABDM_PUBLIC_CERT);
+  const r = await fetch(`${c.env.ABDM_BASE}/v3/enrollment/request/otp`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${abdmToken}`, 'Content-Type': 'application/json',
+               REQUEST-ID: crypto.randomUUID(), TIMESTAMP: new Date().toISOString() },
+    body: JSON.stringify({ txnId: '', scope: ['abha-enrol'], loginHint: 'aadhaar',
+                           loginId: encrypted, otpSystem: 'aadhaar' }),
+  });
+  return c.json(await r.json());
+});</pre>
+
+  <!-- ───── NOTIFICATIONS ───── -->
+  <h2 id="notify" class="sec">Notifications — Telegram, push, email, SMS</h2>
+  <p class="sec-sub">Notification-service decides which channels to fan out to per the patient's preferences.</p>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="spec">
+      <thead><tr><th>Channel</th><th>Provider</th><th>Cost</th><th>Setup</th></tr></thead>
+      <tbody>
+        <tr><td>Telegram bot</td><td>Telegram Bot API</td><td><b>Free</b></td><td>BotFather → token. Webhook → Worker. Identity matched by phone number / one-time link code.</td></tr>
+        <tr><td>Mobile push (Android)</td><td>FCM</td><td><b>Free</b></td><td>Capacitor plugin emits device token; stored per-user; Worker calls FCM HTTP v1.</td></tr>
+        <tr><td>Mobile push (iOS)</td><td>APNs</td><td><b>Free</b> (Apple Dev account ~$99/yr)</td><td>Same as FCM via Capacitor.</td></tr>
+        <tr><td>Web push</td><td>VAPID</td><td><b>Free</b></td><td>Service Worker + VAPID keypair. Already wired in the prototype's existing PWA.</td></tr>
+        <tr><td>Email</td><td>Resend / Postmark / SES</td><td>~$0–10/mo</td><td>Resend has 3k free / month — enough for a small facility.</td></tr>
+        <tr><td>SMS (India)</td><td>MSG91 / Twilio / Gupshup</td><td>~₹0.15–0.20 per SMS</td><td>Reserved for OTP and critical reminders.</td></tr>
+        <tr><td>WhatsApp</td><td>Meta Cloud API</td><td>Free tier + per-message after</td><td>Optional v2. Pre-approved templates only.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <strong>Cost tip:</strong> default to Telegram + Email + Web/Mobile push (all free). Use SMS only for OTP and "you're about to miss your appointment" alerts. This is what drives the &lt;$10/mo operating budget.
+  </div>
+
+  <!-- ───── SINGLE CODEBASE ───── -->
+  <h2 id="codebase" class="sec">One codebase for everything</h2>
+  <p class="sec-sub">Lowest operational cost = fewer codebases to maintain. PulseWard is built so the same React build covers web, mobile, and (with one shim) the admin console.</p>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Patient + Clinician web</h3>
+      <div class="sub">React + Vite, served as static from Cloudflare Pages</div>
+      <ul class="feats">
+        <li>Same JSX trees, same components, same data layer.</li>
+        <li>Role is loaded from the JWT on sign-in and routes are guarded.</li>
+        <li>Installable as a PWA — works offline once seeded.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Mobile (iOS &amp; Android)</h3>
+      <div class="sub">Capacitor — same web build wrapped natively</div>
+      <ul class="feats">
+        <li>No React Native fork; <code class="inl">npx cap add ios android</code> on the existing repo.</li>
+        <li>Native plugins for push (FCM/APNs), camera (photo upload), biometric unlock.</li>
+        <li>Submit to App Store / Play Store from the same git tag that ships web.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Admin console</h3>
+      <div class="sub">Optionally a separate origin for security</div>
+      <ul class="feats">
+        <li>Same React codebase, different entry HTML — <code class="inl">admin.html</code> mounts only the admin routes.</li>
+        <li>Deployed to a different sub-domain (<code class="inl">admin.your-hospital.in</code>) with stricter WAF rules: IP allow-list, hardware key 2FA, no public sign-up.</li>
+        <li>Front-end auth blocks any session whose role ≠ admin/ops.</li>
+        <li>Backend rejects admin endpoints from anywhere except the admin origin via CORS + signed origin headers.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <strong>Why split admin?</strong> Defence-in-depth. Even if a patient/clinician session token leaks, it can't reach admin endpoints — they require both a different JWT scope AND a different origin. The cost is one extra static deploy, not a separate codebase.
+  </div>
+
+  <!-- ───── BACKUPS ───── -->
+  <h2 id="backups" class="sec">Backups &amp; disaster recovery</h2>
+  <p class="sec-sub">In production, the prototype's IndexedDB layer is replaced by D1 / Postgres — the snapshot routine is the same shape, just running server-side on cron.</p>
+
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Automatic (rolling 7 days)</h3>
+      <div class="sub">Every 24h</div>
+      <ul class="feats">
+        <li>Cloudflare Cron Trigger fires the backup Worker at 03:00 IST.</li>
+        <li>Dumps each table to a <code class="inl">.jsonl.zst</code> stream into R2.</li>
+        <li>Rolling retention: most recent 7 daily snapshots kept hot, older ones moved to R2 cold tier.</li>
+        <li>Encrypted at-rest (R2 default) + AES-256 per-tenant key.</li>
+      </ul>
+      <pre style="margin-top:10px;">// wrangler.toml
+[triggers]
+crons = ["0 21 * * *"]   # 03:00 IST</pre>
+    </div>
+    <div class="card">
+      <h3>Manual (kept forever)</h3>
+      <div class="sub">On-demand from Admin Console</div>
+      <ul class="feats">
+        <li>Admin → Backups → "Manual snapshot" creates a labelled forever-kept backup.</li>
+        <li>Use before release, schema migration, or bulk delete.</li>
+        <li>Downloadable as a single JSON file for off-platform archive.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Restore</h3>
+      <div class="sub">Two paths</div>
+      <ul class="feats">
+        <li><b>One-click in Admin Console</b> — overwrites everything atomically.</li>
+        <li><b>Off-platform JSON</b> — upload via the Admin restore-from-file picker.</li>
+        <li>Quarterly DR drills: practice restore on a sandbox tenant, score RTO &lt; 1h, RPO &lt; 24h.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="spec">
+      <thead><tr><th>Snapshot type</th><th>Frequency</th><th>Retention</th><th>Storage</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Auto — hot</td><td>Daily 03:00 IST</td><td>Last 7 days</td><td>R2 standard</td><td>~$0.015 / GB / mo</td></tr>
+        <tr><td>Auto — cold</td><td>Weekly roll-up</td><td>52 weeks</td><td>R2 infrequent access</td><td>~$0.005 / GB / mo</td></tr>
+        <tr><td>Manual</td><td>On demand</td><td>Forever</td><td>R2 + downloadable</td><td>$0 — kept by admin</td></tr>
+        <tr><td>Off-platform</td><td>Quarterly drill</td><td>Per policy</td><td>Hospital's own NAS / external drive</td><td>$0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <strong>In the prototype:</strong> the same routine writes snapshots to the browser's IndexedDB <code class="inl">backups</code> store and rolls off after 7 days. The schema and the audit ledger are identical to production — just swap the storage adapter.
+  </div>
+
+  <!-- ───── AVAILABILITY ───── -->
+  <h2 id="availability" class="sec">Clinician availability &amp; reassignment</h2>
+  <p class="sec-sub">Doctors block leave / holidays / emergency directly from their portal. Conflicts feed into the admin queue.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Clinician blocks time</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Open Availability tab</div><div class="desc">Calendar shows next 4 weeks, blocked windows shaded.</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Pick type</div><div class="desc">Personal leave, Holiday, Training, or Emergency (same-day).</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Set window</div><div class="desc">All-day or hourly range. Date span up to 30 days.</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Conflict modal opens</div><div class="desc">If existing appointments fall inside the window.</div></div></div>
+        <div class="step"><div class="n">5</div><div><div class="lbl">Per-appt decision</div><div class="desc">Queue for admin · Reschedule same clinician · Cancel.</div></div></div>
+        <div class="step"><div class="n">6</div><div><div class="lbl">Apply</div><div class="desc">Block saved · appointments updated · patients notified via configured channels.</div></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Admin resolves reassignments</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div><div class="lbl">Queue alerts admin</div><div class="desc"><code class="inl">reassignment_queue</code> rows + push notification to ops.</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="lbl">Open Reassignments page</div><div class="desc">Cards sorted by appointment time; high-risk patients flagged.</div></div></div>
+        <div class="step"><div class="n">3</div><div><div class="lbl">Resolve modal</div><div class="desc">Three modes: <strong>Reassign clinician</strong> · <strong>Prepone/Postpone</strong> · <strong>Cancel</strong>.</div></div></div>
+        <div class="step"><div class="n">4</div><div><div class="lbl">Smart candidates</div><div class="desc">Replacement list sorted by same-department + lowest current load; blocked clinicians shown but disabled.</div></div></div>
+        <div class="step"><div class="n">5</div><div><div class="lbl">Confirm</div><div class="desc">Appointment updated · patient notified · audit logged · queue item marked resolved.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── TASKS ───── -->
+  <h2 id="tasks" class="sec">Clinician tasks — Eisenhower matrix</h2>
+  <p class="sec-sub">Tasks auto-sort into four quadrants for natural prioritization.</p>
+
+  <div class="grid cols-2">
+    <div class="card" style="border-left:3px solid var(--danger);"><h3>Do first</h3><div class="sub">Urgent · Important</div><p style="font-size:13px;">Drop everything and finish. Examples: sign off on critical labs, return urgent patient call.</p></div>
+    <div class="card" style="border-left:3px solid var(--info);"><h3>Schedule</h3><div class="sub">Important · Not urgent</div><p style="font-size:13px;">Block calendar time. Examples: CME, case conference prep, journal reading.</p></div>
+    <div class="card" style="border-left:3px solid var(--warn);"><h3>Delegate</h3><div class="sub">Urgent · Not important</div><p style="font-size:13px;">Hand to nursing / admin if possible. Examples: insurance forms, routine refills.</p></div>
+    <div class="card" style="border-left:3px solid var(--mute-2);"><h3>Eliminate or later</h3><div class="sub">Not urgent · Not important</div><p style="font-size:13px;">Trim. Examples: low-priority surveys, optional reading.</p></div>
+  </div>
+
+  <!-- ───── COST ───── -->
+  <h2 id="cost" class="sec">Cost breakdown</h2>
+  <p class="sec-sub">Per month, at ~2,000 active patients and ~15 staff using the system daily.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Free tier coverage</h3>
+      <div class="cost-row"><span>Cloudflare Pages — static hosting</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Cloudflare Workers — 100k req/day free</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>D1 — 5 GB + 5M reads/day</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>KV — 100k reads/day</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>R2 — 10 GB storage</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Telegram bot</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>FCM / Web Push</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>Resend — 3k emails/month</span><span class="price">$0</span></div>
+      <div class="cost-row"><span>GitHub Actions CI (public repo)</span><span class="price">$0</span></div>
+      <div class="cost-row" style="border-bottom:none;font-weight:600;color:var(--ok);"><span>Subtotal — typical month</span><span class="price" style="color:var(--ok);">$0</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Likely paid items</h3>
+      <div class="cost-row"><span>Custom domain (.in)</span><span class="price">~$10/yr</span></div>
+      <div class="cost-row"><span>SMS OTPs (~500/month at ₹0.20)</span><span class="price">~₹100 ($1.20)</span></div>
+      <div class="cost-row"><span>Apple Developer (for iOS push)</span><span class="price">$99/yr (~$8/mo)</span></div>
+      <div class="cost-row"><span>Postgres upgrade (if &gt; 5 GB)</span><span class="price">$10–20/mo</span></div>
+      <div class="cost-row"><span>R2 above 10 GB (lab PDFs)</span><span class="price">$0.015/GB/mo</span></div>
+      <div class="cost-row"><span>ABDM Production access</span><span class="price">Free</span></div>
+      <div class="cost-row" style="border-bottom:none;font-weight:600;color:var(--teal);"><span>Realistic month at MVP scale</span><span class="price">~$5–35</span></div>
+    </div>
+  </div>
+
+  <!-- ───── OPS ───── -->
+  <h2 id="ops" class="sec">Operations &amp; runbooks</h2>
+  <p class="sec-sub">Pulled straight from the repo's <code class="inl">docs/runbooks/</code> directory — the prototype's Operations Dashboard mirrors these.</p>
+
+  <div class="grid cols-3">
+    <div class="card"><h3>Backups</h3><div class="sub">Every 24h</div><ul class="feats"><li>D1 nightly export → R2 (encrypted, 30-day retention).</li><li>R2 cross-region replication for lab PDFs.</li><li>Quarterly restore drills, scored on RTO &lt; 1h, RPO &lt; 24h.</li></ul></div>
+    <div class="card"><h3>SLO &amp; alerts</h3><div class="sub">Per service</div><ul class="feats"><li>p95 latency budgets baked into <code class="inl">services.json</code>.</li><li>Workers Analytics → log drains to S3.</li><li>PagerDuty for severity P1/P2 only.</li></ul></div>
+    <div class="card"><h3>Audit &amp; consent</h3><div class="sub">Append-only</div><ul class="feats"><li>Every write logs to <code class="inl">audit_events</code> with actor + IP.</li><li>ABDM consent IDs stored on consent rows.</li><li>Daily reconciliation cron at 03:00 IST.</li></ul></div>
+  </div>
+
+  <!-- ───── ROADMAP ───── -->
+  <h2 id="roadmap" class="sec">From prototype → production</h2>
+  <p class="sec-sub">Every screen in the current prototype is wireable to a real endpoint. This is the order I'd build them in.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Week 1 — backend skeleton</h3>
+      <ul class="feats">
+        <li>Provision Cloudflare account + D1 + R2 + KV.</li>
+        <li>Bring up Hono on Workers with <code class="inl">/health</code>.</li>
+        <li>Apply schema migrations (drizzle-kit).</li>
+        <li>Auth: <code class="inl">/v1/auth/signup</code>, <code class="inl">/login</code>, <code class="inl">/refresh</code>.</li>
+        <li>Patient CRUD: <code class="inl">/v1/patients</code>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Week 2 — clinical workflows</h3>
+      <ul class="feats">
+        <li>Appointments &amp; scheduling.</li>
+        <li>Notes, prescriptions, lab orders.</li>
+        <li>Notifications service: in-app + email.</li>
+        <li>Replace IndexedDB store in the React app with real fetch calls (one tiny client per resource).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Week 3 — ABHA + bot</h3>
+      <ul class="feats">
+        <li>HFR onboarding completed.</li>
+        <li>ABHA enrolment endpoints proxied.</li>
+        <li>Telegram bot webhook live; link-by-phone command.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Week 4 — mobile + go-live</h3>
+      <ul class="feats">
+        <li>Capacitor wrap; FCM/APNs push wired.</li>
+        <li>Restore drill, load test, security review.</li>
+        <li>Soft launch with a single department for 2 weeks before rolling hospital-wide.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p style="margin-top:30px;font-size:12px;color:var(--mute-2);text-align:center;">
+    PulseWard HMS · Architecture document v1 · Last updated <span id="d"></span>
+  </p>
+
+</div>
+
+<script>document.getElementById('d').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });</script>
+
+</body>
+</html>

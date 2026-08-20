@@ -1,396 +1,758 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PulseWard Demo Console</title>
+    <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0f4c5c" />
+    <title>PulseWard HMS — Modern Hospital Management</title>
+    <meta
+      name="description"
+      content="Open-source, multi-tenant hospital management system: patient portal, clinician portal, admin console, and operations dashboard behind a single API gateway. Self-host with Docker in minutes."
+    />
+    <meta
+      name="keywords"
+      content="hospital management system, HMS, open source, self-hosted, multi-tenant, patient portal, EHR, clinician, Docker, healthcare software"
+    />
+    <meta name="author" content="Life Experimentalist" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://life-experimentalist.github.io/PulseWard-HMS/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PulseWard HMS" />
+    <meta property="og:title" content="PulseWard HMS — Modern Hospital Management" />
+    <meta
+      property="og:description"
+      content="Open-source, multi-tenant hospital management: four role-based portals behind a single API gateway. Self-host with Docker in minutes."
+    />
+    <meta property="og:url" content="https://life-experimentalist.github.io/PulseWard-HMS/" />
+    <meta
+      property="og:image"
+      content="https://life-experimentalist.github.io/PulseWard-HMS/og-banner.png"
+    />
+    <meta property="og:image:width" content="1348" />
+    <meta property="og:image:height" content="758" />
+    <meta property="og:image:alt" content="PulseWard HMS" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PulseWard HMS — Modern Hospital Management" />
+    <meta
+      name="twitter:description"
+      content="Open-source, multi-tenant hospital management: four role-based portals behind a single API gateway. Self-host with Docker."
+    />
+    <meta
+      name="twitter:image"
+      content="https://life-experimentalist.github.io/PulseWard-HMS/og-banner.png"
+    />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚕</text></svg>"
+    />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "PulseWard HMS",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "Docker, Node.js 24",
+        "description": "Open-source, multi-tenant hospital management system with patient, clinician, admin, and operations portals behind a single API gateway.",
+        "url": "https://life-experimentalist.github.io/PulseWard-HMS/",
+        "author": {
+          "@type": "Organization",
+          "name": "Life Experimentalist",
+          "url": "https://github.com/Life-Experimentalist"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
-    <div class="bg-aurora" aria-hidden="true"></div>
-
-    <div id="setup-wizard" class="wizard hidden" role="dialog" aria-modal="true">
-      <article class="wizard-card">
-        <p class="eyebrow">First Time Setup</p>
-        <h2>Initialize Your Hospital Workspace</h2>
-        <p class="subtle">
-          No real patient data is used in this demo. Start with generic placeholders and customize
-          everything through admin controls.
-        </p>
-
-        <div class="step-track">
-          <button type="button" data-step="1" class="step-dot active">1</button>
-          <button type="button" data-step="2" class="step-dot">2</button>
-          <button type="button" data-step="3" class="step-dot">3</button>
-          <button type="button" data-step="4" class="step-dot">4</button>
-        </div>
-
-        <form id="setup-form">
-          <section class="step-pane active" data-step="1">
-            <h3>Hospital Profile</h3>
-            <label for="setupHospitalName">Hospital Name</label>
-            <input id="setupHospitalName" name="hospitalName" value="Generic Care Hospital" />
-
-            <label for="setupTenantKey">Tenant Key</label>
-            <input id="setupTenantKey" name="tenantKey" value="default" />
-
-            <label for="setupDomain">Public Domain</label>
-            <input id="setupDomain" name="domain" value="generic-care.local" />
-          </section>
-
-          <section class="step-pane" data-step="2">
-            <h3>Admin Bootstrap</h3>
-            <label for="setupAdminEmail">Admin Email</label>
-            <input
-              id="setupAdminEmail"
-              name="adminEmail"
-              type="email"
-              value="admin@generic-care.local"
-            />
-
-            <label for="setupAdminPassword">Admin Password</label>
-            <input id="setupAdminPassword" name="adminPassword" type="password" value="Admin@123" />
-
-            <label for="setupTimezone">Timezone</label>
-            <input id="setupTimezone" name="timezone" value="Asia/Kolkata" />
-          </section>
-
-          <section class="step-pane" data-step="3">
-            <h3>Modules and Providers</h3>
-            <label
-              ><input type="checkbox" name="setupProviderTelegram" checked /> Telegram Bot</label
-            >
-            <label><input type="checkbox" name="setupProviderEmail" checked /> SMTP Email</label>
-            <label
-              ><input type="checkbox" name="setupProviderWebhook" checked /> Generic Webhook</label
-            >
-            <label><input type="checkbox" name="setupProviderWhatsApp" /> WhatsApp Cloud API</label>
-            <label
-              ><input type="checkbox" name="setupProviderAppleCalendar" checked /> Apple
-              Calendar</label
-            >
-
-            <label for="setupMode">Demo Data Mode</label>
-            <select id="setupMode" name="mode">
-              <option value="local">Local Browser Data</option>
-              <option value="live">Live Service APIs</option>
-            </select>
-          </section>
-
-          <section class="step-pane" data-step="4">
-            <h3>Service Endpoints</h3>
-            <label for="setupAuthUrl">Auth API Base URL</label>
-            <input id="setupAuthUrl" name="authUrl" value="http://localhost:5101/api/v1" />
-
-            <label for="setupNotificationUrl">Notification API Base URL</label>
-            <input
-              id="setupNotificationUrl"
-              name="notificationUrl"
-              value="http://localhost:5102/api/v1"
-            />
-
-            <label for="setupAppointmentUrl">Appointment API Base URL</label>
-            <input
-              id="setupAppointmentUrl"
-              name="appointmentUrl"
-              value="http://localhost:5103/api/v1"
-            />
-          </section>
-
-          <div class="wizard-actions">
-            <button id="setupBack" type="button" class="ghost">Back</button>
-            <button id="setupNext" type="button" class="cta">Next</button>
-            <button id="setupFinish" type="submit" class="cta hidden">Finish Setup</button>
-          </div>
-        </form>
-      </article>
-    </div>
-
-    <header class="site-header">
-      <div class="logo-pill" id="brandLogo">PulseWard</div>
-      <nav>
-        <a href="#overview">Overview</a>
-        <a href="pages/overview.html">Demo Pages</a>
-        <a href="#admin-console">Admin</a>
-        <a href="#data-lab">Data Lab</a>
-        <a href="#backup-center">Backup</a>
-        <a href="#pwa">PWA</a>
+    <!-- ─── NAV ─────────────────────────────────────────────────────────────────── -->
+    <header class="nav" role="banner">
+      <div class="nav-inner container">
+        <a href="#" class="nav-brand" aria-label="PulseWard HMS home">
+          <span class="nav-icon" aria-hidden="true">⚕</span>
+          <span class="nav-name">PulseWard<span class="nav-name-sub">HMS</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#features">Features</a>
+          <a href="#deploy">Deploy</a>
+          <a href="#demo">Demo</a>
+          <a href="docs/" class="nav-docs-link">Docs ↗</a>
+          <a
+            href="https://github.com/Life-Experimentalist/PulseWard-HMS"
+            class="nav-gh"
+            target="_blank"
+            rel="noopener"
+            aria-label="View on GitHub"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12c0-5.523-4.477-10-10-10z"
+              />
+            </svg>
+          </a>
+        </nav>
+        <button
+          class="nav-toggle"
+          aria-label="Toggle menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+      <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation" hidden>
+        <a href="#features">Features</a>
+        <a href="#deploy">Deploy</a>
+        <a href="#demo">Demo</a>
+        <a href="docs/">Documentation ↗</a>
+        <a
+          href="https://github.com/Life-Experimentalist/PulseWard-HMS"
+          target="_blank"
+          rel="noopener"
+          >GitHub ↗</a
+        >
       </nav>
-      <button class="ghost" id="restart-setup-btn" type="button">Restart Setup</button>
     </header>
 
+    <!-- ─── HERO ─────────────────────────────────────────────────────────────────── -->
     <main>
-      <section id="overview" class="hero">
-        <p class="eyebrow">Operational Demo Workspace</p>
-        <h1 id="hospitalNameHeading">Generic Care Hospital Demo</h1>
-        <p id="hospitalSubheading">
-          Multi-tenant setup with modular providers, admin-owned controls, and demo-safe synthetic
-          data only.
-        </p>
-        <div class="hero-actions">
-          <button class="cta" id="run-demo-flow-btn" type="button">Run Demo Flow</button>
-          <button class="ghost" id="view-admin-btn" type="button">Open Admin Console</button>
-          <a class="ghost" href="pages/overview.html">Open Multi-Page Demo</a>
-        </div>
-        <div class="hero-stats">
-          <article>
-            <h3 id="statMode">Local</h3>
-            <p>Data Mode</p>
-          </article>
-          <article>
-            <h3 id="statAppointments">0</h3>
-            <p>Appointments</p>
-          </article>
-          <article>
-            <h3 id="statNotifications">0</h3>
-            <p>Notifications</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="auth" class="card-grid two-up">
-        <article class="panel">
-          <h2>Role Login Test</h2>
-          <form id="role-login-form" class="stack-form">
-            <label for="tenantKey">Hospital Tenant</label>
-            <input id="tenantKey" name="tenantKey" value="default" />
-
-            <label for="role">Role</label>
-            <select id="role" name="role">
-              <option value="admin">Admin</option>
-              <option value="doctor">Doctor</option>
-              <option value="nurse">Nurse</option>
-              <option value="patient">Patient</option>
-              <option value="frontdesk">Frontdesk</option>
-              <option value="operations">Operations</option>
-            </select>
-
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" />
-
-            <label for="password">Password</label>
-            <input id="password" name="password" type="password" />
-
-            <div class="button-row">
-              <button type="submit" class="cta">Login</button>
-              <button type="button" class="ghost" id="google-oauth-btn">Google OAuth URL</button>
-              <button type="button" class="ghost" id="clerk-oauth-btn">Clerk Config</button>
-            </div>
-          </form>
-          <pre id="auth-output" class="terminal"></pre>
-        </article>
-
-        <article class="panel">
-          <h2>System Links</h2>
-          <div class="link-list" id="system-link-list"></div>
-          <p class="subtle">
-            Use these links after starting auth, notification, and appointment services in parallel.
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="container hero-inner">
+          <div class="hero-badge">
+            <span class="badge-dot" aria-hidden="true"></span>
+            Open Source · Self-Hostable · Multi-Tenant
+          </div>
+          <h1 id="hero-heading" class="hero-title">
+            Hospital Management<br />
+            <span class="hero-title-accent">Built for the Real World</span>
+          </h1>
+          <p class="hero-sub">
+            PulseWard HMS delivers patient care, clinician workflows, administration, and operations
+            in a single cohesive system — deployable to any hospital in under five minutes.
           </p>
-        </article>
+          <div class="hero-cta">
+            <a href="#deploy" class="btn btn-primary">Deploy with Docker</a>
+            <a href="docs/" class="btn btn-ghost">Read the Docs ↗</a>
+          </div>
+          <div class="hero-stats" role="list">
+            <div role="listitem"><strong>4</strong> <span>Portals</span></div>
+            <div class="stat-sep" aria-hidden="true"></div>
+            <div role="listitem"><strong>5</strong> <span>Roles</span></div>
+            <div class="stat-sep" aria-hidden="true"></div>
+            <div role="listitem"><strong>Multi</strong> <span>Tenant</span></div>
+            <div class="stat-sep" aria-hidden="true"></div>
+            <div role="listitem"><strong>Node 24</strong> <span>Runtime</span></div>
+          </div>
+        </div>
       </section>
 
-      <section id="admin-console" class="panel">
-        <h2>Admin Configuration Center</h2>
-        <p class="subtle">
-          Every setting here is modular and tenant-configurable. No source-code edits are required.
-        </p>
+      <!-- ─── FEATURES ─────────────────────────────────────────────────────────────── -->
+      <section id="features" class="section" aria-labelledby="features-heading">
+        <div class="container">
+          <div class="section-header">
+            <p class="section-eyebrow">Four Portals, One System</p>
+            <h2 id="features-heading" class="section-title">Everything a Hospital Needs</h2>
+            <p class="section-sub">
+              Each portal is a standalone Vite+React app. Deploy all four or only the ones you need.
+            </p>
+          </div>
+          <div class="features-grid">
+            <article class="feature-card" aria-label="Patient Portal">
+              <div class="feature-icon feature-icon--green" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div class="feature-port-badge">:4313</div>
+              <h3>Patient Portal</h3>
+              <p>
+                Book appointments, view health records, track prescriptions and lab results, and
+                message your care team — all in one place.
+              </p>
+              <ul class="feature-list" aria-label="Features">
+                <li>Self-registration with auto-assigned MRN</li>
+                <li>Appointment scheduling with clinician picker</li>
+                <li>Lab results with normalized panel view</li>
+                <li>Secure messaging threads</li>
+                <li>Notification inbox</li>
+              </ul>
+            </article>
 
-        <form id="admin-config-form" class="card-grid three-up">
-          <article class="mini-panel">
-            <h3>Branding</h3>
-            <label for="adminHospitalName">Hospital Name</label>
-            <input id="adminHospitalName" name="hospitalName" />
+            <article class="feature-card" aria-label="Clinician Portal">
+              <div class="feature-icon feature-icon--blue" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </div>
+              <div class="feature-port-badge">:4311</div>
+              <h3>Clinician Portal</h3>
+              <p>
+                Manage your patient list, write and sign SOAP notes, order labs, prescribe
+                medications, and track your daily schedule.
+              </p>
+              <ul class="feature-list" aria-label="Features">
+                <li>Daily appointment schedule view</li>
+                <li>Patient chart with full clinical history</li>
+                <li>SOAP note authoring and digital signing</li>
+                <li>Lab ordering and result entry</li>
+                <li>Prescription management</li>
+              </ul>
+            </article>
 
-            <label for="adminPrimaryColor">Primary Color</label>
-            <input id="adminPrimaryColor" name="primaryColor" type="color" value="#0f4c5c" />
+            <article class="feature-card" aria-label="Admin Console">
+              <div class="feature-icon feature-icon--amber" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div class="feature-port-badge">:4180</div>
+              <h3>Admin Console</h3>
+              <p>
+                Create and manage users, onboard clinicians, review the full audit trail, and
+                configure tenant settings.
+              </p>
+              <ul class="feature-list" aria-label="Features">
+                <li>User management with role assignment</li>
+                <li>Clinician onboarding with specialty/department</li>
+                <li>Complete audit log with actor/IP tracking</li>
+                <li>Stats dashboard (patients, appointments, labs)</li>
+                <li>Multi-tenant overview</li>
+              </ul>
+            </article>
 
-            <label for="adminAccentColor">Accent Color</label>
-            <input id="adminAccentColor" name="accentColor" type="color" value="#ea8f3b" />
-          </article>
+            <article class="feature-card" aria-label="Operations Dashboard">
+              <div class="feature-icon feature-icon--teal" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </div>
+              <div class="feature-port-badge">:4312</div>
+              <h3>Ops Dashboard</h3>
+              <p>
+                Monitor service and database health, watch platform metrics and uptime, and review
+                the incident feed — all behind authenticated admin/ops access.
+              </p>
+              <ul class="feature-list" aria-label="Features">
+                <li>Overall status: operational, degraded, or outage</li>
+                <li>Per-service latency and uptime</li>
+                <li>Platform metrics: users and appointments</li>
+                <li>Incident feed</li>
+                <li>Admin &amp; ops authenticated access</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
 
-          <article class="mini-panel">
-            <h3>Messaging Providers</h3>
-            <label><input type="checkbox" name="providerTelegram" /> Telegram Bot</label>
-            <label><input type="checkbox" name="providerEmail" /> SMTP Email</label>
-            <label><input type="checkbox" name="providerWebhook" /> Webhook</label>
-            <label><input type="checkbox" name="providerWhatsApp" /> WhatsApp</label>
+      <!-- ─── ARCHITECTURE ──────────────────────────────────────────────────────────── -->
+      <section class="section section--alt" aria-labelledby="arch-heading">
+        <div class="container">
+          <div class="section-header">
+            <p class="section-eyebrow">Under the Hood</p>
+            <h2 id="arch-heading" class="section-title">Clean, Modular Architecture</h2>
+          </div>
+          <div
+            class="arch-diagram"
+            role="img"
+            aria-label="Architecture: 4 React portals talk to the API Gateway on :8787, which reads and writes SQLite and records in-app notifications and audit events"
+          >
+            <div class="arch-row arch-row--clients">
+              <div class="arch-node arch-node--client">Patient<br /><span>:4313</span></div>
+              <div class="arch-node arch-node--client">Clinician<br /><span>:4311</span></div>
+              <div class="arch-node arch-node--client">Admin<br /><span>:4180</span></div>
+              <div class="arch-node arch-node--client">Ops<br /><span>:4312</span></div>
+            </div>
+            <div class="arch-connector" aria-hidden="true">
+              <span>HTTPS / JWT</span>
+              <svg
+                viewBox="0 0 24 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                preserveAspectRatio="none"
+              >
+                <path d="M12 0v10M8 6l4 6 4-6" />
+              </svg>
+            </div>
+            <div class="arch-row arch-row--gateway">
+              <div class="arch-node arch-node--gateway">
+                <strong>API Gateway</strong>
+                <span>Hono · Node 24 · :8787 → nginx :80</span>
+              </div>
+            </div>
+            <div class="arch-split-row">
+              <div class="arch-split-branch">
+                <svg
+                  class="arch-mini-arrow"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path d="M12 0v10M8 6l4 6 4-6" />
+                </svg>
+                <div class="arch-node arch-node--db">
+                  <strong>SQLite (WAL)</strong>
+                  <span>node:sqlite built-in</span>
+                </div>
+              </div>
+              <div class="arch-split-branch">
+                <svg
+                  class="arch-mini-arrow"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path d="M12 0v10M8 6l4 6 4-6" />
+                </svg>
+                <div class="arch-node arch-node--notif">
+                  <strong>Notifications</strong>
+                  <span>In-app inbox · audit trail</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="arch-pillars">
+            <div class="pillar">
+              <span class="pillar-icon" aria-hidden="true">🔐</span>
+              <h4>JWT Auth</h4>
+              <p>15-min access tokens, 30-day refresh, bcrypt passwords, full audit trail</p>
+            </div>
+            <div class="pillar">
+              <span class="pillar-icon" aria-hidden="true">🏥</span>
+              <h4>Multi-Tenant</h4>
+              <p>Every row scoped to <code>tenant_id</code>. Add a new hospital in minutes</p>
+            </div>
+            <div class="pillar">
+              <span class="pillar-icon" aria-hidden="true">📦</span>
+              <h4>Zero-dep DB</h4>
+              <p>Node 24 built-in SQLite. No Postgres, no MongoDB, no connection pool</p>
+            </div>
+            <div class="pillar">
+              <span class="pillar-icon" aria-hidden="true">🐳</span>
+              <h4>Docker Ready</h4>
+              <p>
+                Single <code>docker compose up</code> starts the full stack with nginx reverse proxy
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <label for="defaultMessagingProvider">Default Messaging Provider</label>
-            <select id="defaultMessagingProvider" name="defaultMessagingProvider">
-              <option value="telegram-bot">Telegram Bot</option>
-              <option value="email-smtp">SMTP Email</option>
-              <option value="generic-webhook">Generic Webhook</option>
-              <option value="whatsapp-cloud-api">WhatsApp Cloud API</option>
-            </select>
-          </article>
+      <!-- ─── QUICK DEPLOY ───────────────────────────────────────────────────────────── -->
+      <section id="deploy" class="section" aria-labelledby="deploy-heading">
+        <div class="container">
+          <div class="section-header">
+            <p class="section-eyebrow">Get Started in 5 Minutes</p>
+            <h2 id="deploy-heading" class="section-title">One Command Deploy</h2>
+            <p class="section-sub">
+              The entire stack — API, 4 frontends, nginx, SQLite — starts with a single command.
+            </p>
+          </div>
+          <div class="deploy-box">
+            <div class="deploy-cmd-wrap">
+              <span class="deploy-prompt" aria-hidden="true">$</span>
+              <code class="deploy-cmd" id="deploy-cmd">docker compose up -d</code>
+              <button
+                class="copy-btn"
+                onclick="copyDeploy()"
+                aria-label="Copy command to clipboard"
+              >
+                <svg
+                  id="copy-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                <span id="copy-label">Copy</span>
+              </button>
+            </div>
+          </div>
 
-          <article class="mini-panel">
-            <h3>Calendar and OAuth</h3>
-            <label
-              ><input type="checkbox" name="providerGoogleCalendar" checked /> Google
-              Calendar</label
+          <details class="setup-steps">
+            <summary class="setup-summary">
+              <span>Full setup walkthrough (5 steps)</span>
+              <svg
+                class="setup-chevron"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <ol class="steps-list">
+              <li>
+                <div class="step-num" aria-hidden="true">1</div>
+                <div class="step-body">
+                  <h4>Prerequisites</h4>
+                  <p>
+                    Install
+                    <a href="https://docs.docker.com/get-docker/" target="_blank" rel="noopener"
+                      >Docker Desktop</a
+                    >
+                    and <a href="https://git-scm.com" target="_blank" rel="noopener">Git</a>. Node
+                    24+ required for local dev only.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div class="step-num" aria-hidden="true">2</div>
+                <div class="step-body">
+                  <h4>Clone the repository</h4>
+                  <div class="code-block">
+                    <code
+                      >git clone https://github.com/Life-Experimentalist/PulseWard-HMS.git cd
+                      PulseWard-HMS</code
+                    >
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="step-num" aria-hidden="true">3</div>
+                <div class="step-body">
+                  <h4>Configure environment</h4>
+                  <div class="code-block">
+                    <code>cp .env.example .env node scripts/generate-jwt-secret.mjs</code>
+                  </div>
+                  <p>
+                    Edit <code>.env</code> and set <code>JWT_SECRET</code> to the generated value.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div class="step-num" aria-hidden="true">4</div>
+                <div class="step-body">
+                  <h4>Start the stack</h4>
+                  <div class="code-block"><code>docker compose up -d</code></div>
+                  <p>
+                    Starts the API Gateway (internal :8787) and an nginx reverse proxy on :80/:443
+                    serving all four portals as static files. Want hot reload for local development
+                    instead? Run <code>pnpm run dev</code>.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div class="step-num" aria-hidden="true">5</div>
+                <div class="step-body">
+                  <h4>Open your portals</h4>
+                  <p>
+                    In the Docker stack, nginx serves each portal on the hostname you set in
+                    <code>nginx/nginx.conf</code> (<code>portal.</code>, <code>clinician.</code>,
+                    <code>admin.</code>, <code>ops.</code>). Running
+                    <code>pnpm run dev</code> serves them directly at:
+                  </p>
+                  <div class="port-grid">
+                    <a href="http://localhost:4313" target="_blank" rel="noopener" class="port-link"
+                      >Patient Portal<span>:4313</span></a
+                    >
+                    <a href="http://localhost:4311" target="_blank" rel="noopener" class="port-link"
+                      >Clinician Portal<span>:4311</span></a
+                    >
+                    <a href="http://localhost:4180" target="_blank" rel="noopener" class="port-link"
+                      >Admin Console<span>:4180</span></a
+                    >
+                    <a href="http://localhost:4312" target="_blank" rel="noopener" class="port-link"
+                      >Ops Dashboard<span>:4312</span></a
+                    >
+                  </div>
+                </div>
+              </li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <!-- ─── DEMO ACCOUNTS ─────────────────────────────────────────────────────────── -->
+      <section id="demo" class="section section--alt" aria-labelledby="demo-heading">
+        <div class="container">
+          <div class="section-header">
+            <p class="section-eyebrow">Try it locally</p>
+            <h2 id="demo-heading" class="section-title">Demo Accounts</h2>
+            <p class="section-sub">
+              Pre-seeded on first boot. No signup required — just log in and explore.
+            </p>
+          </div>
+          <div class="demo-table-wrap">
+            <table class="demo-table" aria-label="Demo login credentials">
+              <thead>
+                <tr>
+                  <th scope="col">Role</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Password</th>
+                  <th scope="col">Portal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="role-badge role--admin">Admin</span></td>
+                  <td><code>admin@pulseward.com</code></td>
+                  <td><code>Admin@123</code></td>
+                  <td><a href="http://localhost:4180" target="_blank" rel="noopener">:4180</a></td>
+                </tr>
+                <tr>
+                  <td><span class="role-badge role--clinician">Clinician</span></td>
+                  <td><code>dr.sharma@pulseward.com</code></td>
+                  <td><code>Doctor@123</code></td>
+                  <td><a href="http://localhost:4311" target="_blank" rel="noopener">:4311</a></td>
+                </tr>
+                <tr>
+                  <td><span class="role-badge role--clinician">Clinician</span></td>
+                  <td><code>dr.mehta@pulseward.com</code></td>
+                  <td><code>Doctor@123</code></td>
+                  <td><a href="http://localhost:4311" target="_blank" rel="noopener">:4311</a></td>
+                </tr>
+                <tr>
+                  <td><span class="role-badge role--patient">Patient</span></td>
+                  <td><code>patient@pulseward.com</code></td>
+                  <td><code>Patient@123</code></td>
+                  <td><a href="http://localhost:4313" target="_blank" rel="noopener">:4313</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="demo-note">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
             >
-            <label><input type="checkbox" name="providerAppleCalendar" /> Apple Calendar</label>
-            <label><input type="checkbox" name="providerOutlookCalendar" /> Outlook Calendar</label>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+            Demo data is pre-seeded automatically on first boot. Change credentials before any
+            production use.
+          </p>
+        </div>
+      </section>
 
-            <label><input type="checkbox" name="oauthGoogle" /> Google OAuth</label>
-            <label><input type="checkbox" name="oauthClerk" /> Clerk</label>
-
-            <label for="dataMode">Data Mode</label>
-            <select id="dataMode" name="dataMode">
-              <option value="local">Local Browser Data</option>
-              <option value="live">Live Service APIs</option>
-            </select>
-          </article>
-
-          <article class="mini-panel span-all">
-            <h3>Service Endpoints</h3>
-            <div class="grid-endpoints">
-              <div>
-                <label for="authApiUrl">Auth API URL</label>
-                <input id="authApiUrl" name="authApiUrl" />
-              </div>
-              <div>
-                <label for="notificationApiUrl">Notification API URL</label>
-                <input id="notificationApiUrl" name="notificationApiUrl" />
-              </div>
-              <div>
-                <label for="appointmentApiUrl">Appointment API URL</label>
-                <input id="appointmentApiUrl" name="appointmentApiUrl" />
+      <!-- ─── RELEASE ───────────────────────────────────────────────────────────────── -->
+      <section class="section" aria-labelledby="release-heading">
+        <div class="container">
+          <div class="release-card">
+            <div class="release-left">
+              <p class="section-eyebrow" id="release-heading">Latest Release</p>
+              <div class="release-version">v1.0.0</div>
+              <p class="release-date">First stable release</p>
+              <p class="release-summary">
+                Single API gateway, four role-based portals, JWT authentication, multi-tenant
+                SQLite, and a one-command Docker deployment.
+              </p>
+              <div class="release-links">
+                <a
+                  href="https://github.com/Life-Experimentalist/PulseWard-HMS/releases/latest"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-primary btn-sm"
+                  >Download Release</a
+                >
+                <a href="docs/changelog.html" class="btn btn-ghost btn-sm">Full Changelog</a>
               </div>
             </div>
-            <div class="button-row">
-              <button type="submit" class="cta">Save Configuration</button>
-              <button type="button" class="ghost" id="sync-providers-btn">
-                Sync Provider Status
-              </button>
-              <button type="button" class="ghost" id="discover-services-btn">
-                Discover Service URLs
-              </button>
+            <div class="release-right" aria-hidden="true">
+              <div class="release-badge-wrap">
+                <div class="release-ring"></div>
+                <div class="release-ring release-ring--2"></div>
+                <div class="release-center">
+                  <span>v1.0.0</span>
+                  <small>stable</small>
+                </div>
+              </div>
             </div>
-          </article>
-        </form>
-        <pre id="admin-output" class="terminal"></pre>
-      </section>
-
-      <section id="data-lab" class="panel">
-        <h2>Interactive Data Lab</h2>
-        <p class="subtle">
-          Create and inspect appointments and notifications in local mode or live API mode to
-          validate full demo behavior.
-        </p>
-
-        <div class="card-grid two-up">
-          <article class="mini-panel">
-            <h3>Create Appointment</h3>
-            <form id="appointment-form" class="stack-form">
-              <label for="patientId">Patient ID</label>
-              <input id="patientId" name="patientId" value="pat-demo-001" />
-
-              <label for="clinicianId">Clinician ID</label>
-              <input id="clinicianId" name="clinicianId" value="cln-demo-001" />
-
-              <label for="appointmentDate">Date Time (ISO)</label>
-              <input id="appointmentDate" name="appointmentDate" />
-
-              <label for="appointmentStatus">Status</label>
-              <select id="appointmentStatus" name="status">
-                <option value="scheduled">Scheduled</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-
-              <button type="submit" class="cta">Create Appointment</button>
-            </form>
-          </article>
-
-          <article class="mini-panel">
-            <h3>Send Notification</h3>
-            <form id="notification-form" class="stack-form">
-              <label for="recipient">Recipient</label>
-              <input id="recipient" name="recipient" value="patient@generic-care.local" />
-
-              <label for="channel">Channel</label>
-              <select id="channel" name="channel">
-                <option value="patient-notification">Patient Notification</option>
-                <option value="staff-notification">Staff Notification</option>
-                <option value="website-event">Website Event</option>
-              </select>
-
-              <label for="message">Message</label>
-              <textarea id="message" name="message" rows="3">Demo alert from PulseWard.</textarea>
-
-              <label for="providerKey">Preferred Provider</label>
-              <select id="providerKey" name="providerKey">
-                <option value="telegram-bot">Telegram Bot</option>
-                <option value="email-smtp">SMTP Email</option>
-                <option value="generic-webhook">Generic Webhook</option>
-                <option value="whatsapp-cloud-api">WhatsApp</option>
-              </select>
-
-              <button type="submit" class="cta">Send Notification</button>
-            </form>
-          </article>
+          </div>
         </div>
-
-        <div class="button-row top-gap">
-          <button type="button" class="ghost" id="refresh-data-btn">Refresh Data</button>
-          <button type="button" class="ghost" id="run-seed-btn">Seed Demo Data</button>
-        </div>
-
-        <div class="card-grid two-up">
-          <article class="mini-panel">
-            <h3>Appointments</h3>
-            <div id="appointments-table"></div>
-          </article>
-          <article class="mini-panel">
-            <h3>Notifications</h3>
-            <div id="notifications-table"></div>
-          </article>
-        </div>
-
-        <pre id="data-output" class="terminal"></pre>
-      </section>
-
-      <section id="backup-center" class="panel">
-        <h2>Backup and Restore</h2>
-        <p class="subtle">
-          Export and restore the full demo state, including admin config and generated test data.
-        </p>
-        <div class="button-row">
-          <button type="button" class="cta" id="create-backup-btn">Create Snapshot</button>
-          <button type="button" class="ghost" id="download-backup-btn">Download Backup JSON</button>
-          <label class="ghost file-btn">
-            Restore Backup
-            <input type="file" id="restore-backup-input" accept="application/json" />
-          </label>
-        </div>
-        <div id="backup-list"></div>
-      </section>
-
-      <section id="pwa" class="panel">
-        <h2>PWA and Push Notification Test</h2>
-        <p class="subtle">
-          Install this app and validate browser notifications. Live server push requires your chosen
-          push provider; this demo includes a local simulation path.
-        </p>
-        <div class="button-row">
-          <button id="install-pwa-btn" class="cta" disabled type="button">Install App</button>
-          <button id="enable-push-btn" class="ghost" type="button">Enable Notifications</button>
-          <button id="test-push-btn" class="ghost" type="button">Simulate Server Push</button>
-        </div>
-        <pre id="pwa-output" class="terminal"></pre>
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <!-- ─── FOOTER ────────────────────────────────────────────────────────────────── -->
+    <footer class="footer" role="contentinfo">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <span class="nav-icon" aria-hidden="true">⚕</span>
+          <span>PulseWard HMS</span>
+        </div>
+        <p class="footer-tagline">Open-source hospital management for the modern era.</p>
+        <nav class="footer-links" aria-label="Footer">
+          <a
+            href="https://github.com/Life-Experimentalist/PulseWard-HMS"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a href="docs/">Documentation</a>
+          <a href="docs/changelog.html">Changelog</a>
+          <a
+            href="https://github.com/Life-Experimentalist/PulseWard-HMS/issues"
+            target="_blank"
+            rel="noopener"
+            >Report an Issue</a
+          >
+        </nav>
+        <p class="footer-copy">
+          Built with ♥ by
+          <a href="https://github.com/Life-Experimentalist" target="_blank" rel="noopener"
+            >Life Experimentalist</a
+          >
+          ·
+          <a
+            href="https://github.com/Life-Experimentalist/PulseWard-HMS/blob/main/LICENSE.md"
+            target="_blank"
+            rel="noopener"
+            >UNLICENSED</a
+          >
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile nav toggle
+      const toggle = document.querySelector(".nav-toggle");
+      const menu = document.getElementById("mobile-menu");
+      toggle.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!open));
+        toggle.classList.toggle("open", !open);
+        menu.hidden = open;
+      });
+      menu.querySelectorAll("a").forEach((a) =>
+        a.addEventListener("click", () => {
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.classList.remove("open");
+          menu.hidden = true;
+        })
+      );
+
+      // Copy deploy command
+      function copyDeploy() {
+        const cmd = document.getElementById("deploy-cmd").textContent;
+        navigator.clipboard.writeText(cmd).then(() => {
+          const label = document.getElementById("copy-label");
+          const icon = document.getElementById("copy-icon");
+          label.textContent = "Copied!";
+          icon.innerHTML =
+            '<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>';
+          setTimeout(() => {
+            label.textContent = "Copy";
+            icon.innerHTML =
+              '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+          }, 2000);
+        });
+      }
+
+      // Scroll-triggered nav shadow
+      const nav = document.querySelector(".nav");
+      const heroEl = document.querySelector(".hero");
+      if (heroEl) {
+        const heroObs = new IntersectionObserver(
+          ([e]) => nav.classList.toggle("nav--scrolled", !e.isIntersecting),
+          { threshold: 0 }
+        );
+        heroObs.observe(heroEl);
+      }
+
+      // Stagger-in feature cards and pillars on scroll
+      if ("IntersectionObserver" in window) {
+        const cards = document.querySelectorAll(".feature-card, .pillar");
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add("visible");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.1 }
+        );
+        cards.forEach((c) => io.observe(c));
+      }
+
+      // Register the service worker for offline support (progressive enhancement).
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("service-worker.js").catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

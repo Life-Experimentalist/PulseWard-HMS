@@ -1,14 +1,12 @@
-# Default owner
-* @VKrishna04
-* @Life-Experimentalist
+# Default owners — apply to everything unless a more specific rule matches below.
+* @VKrishna04 @Life-Experimentalist
 
-# Governance and compliance
-/governance/ @VKrishna04
+# Security policy and threat modelling
 /security/ @VKrishna04
+
+# CI, release, and repository automation
 /.github/ @VKrishna04
 
-# Core contracts and APIs
-/contracts/ @VKrishna04
+# Backend gateway and frontend portals
 /services/ @VKrishna04
 /apps/ @VKrishna04
-/packages/ @VKrishna04

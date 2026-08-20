@@ -5,7 +5,7 @@ module.exports = {
     node: true,
   },
   parserOptions: {
-    ecmaVersion: 12,
+    ecmaVersion: 2022,
     sourceType: "script",
   },
   extends: ["eslint:recommended"],
@@ -19,10 +19,11 @@ module.exports = {
       },
     ],
     "no-prototype-builtins": "off",
+    "no-empty": ["error", { allowEmptyCatch: true }],
   },
   overrides: [
     {
-      files: ["tests/**/*.js"],
+      files: ["tests/**/*.js", "tests/**/*.mjs"],
       env: {
         node: true,
         jest: true,
@@ -83,6 +84,9 @@ module.exports = {
       files: ["services/**/*.js", "packages/**/*.js", "scripts/**/*.js", "scripts/**/*.mjs"],
       env: {
         node: true,
+      },
+      parserOptions: {
+        sourceType: "module",
       },
     },
   ],

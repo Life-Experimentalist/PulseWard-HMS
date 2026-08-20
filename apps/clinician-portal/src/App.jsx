@@ -1,84 +1,87 @@
-const todaysQueue = [
-  { id: "OPD-1021", patient: "Anaya R", reason: "Diabetes review", eta: "09:10" },
-  { id: "OPD-1047", patient: "Harsh V", reason: "Post-op follow-up", eta: "09:40" },
-  { id: "OPD-1054", patient: "Mahima P", reason: "Lab consult", eta: "10:05" },
-];
+import React, { createContext, useContext, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Users, Calendar, FileText, FlaskConical, Pill, MessageSquare, LogOut, PenLine } from 'lucide-react';
+import { getUser, api } from './api.js';
+import Login from './pages/Login.jsx';
+import Schedule from './pages/Schedule.jsx';
+import Patients from './pages/Patients.jsx';
+import PatientDetail from './pages/PatientDetail.jsx';
+import NoteWriter from './pages/NoteWriter.jsx';
 
-const tasks = [
-  "Sign 4 pending e-prescriptions",
-  "Review 2 flagged EHR alerts",
-  "Confirm discharge summary for Ward B-12",
-  "Approve radiology callback workflow",
-];
+const AuthCtx = createContext(null);
+export const useAuth = () => useContext(AuthCtx);
 
-function App() {
+export default function App() {
+  const [user, setUser] = useState(() => getUser());
+  const login = (u) => setUser(u);
+  const logout = async () => { await api.logout(); setUser(null); };
   return (
-    <div className="page-shell">
-      <aside className="rail">
-        <h1>Clinician</h1>
-        <nav>
-          <a className="active" href="#">
-            Today
-          </a>
-          <a href="#">Patient Records</a>
-          <a href="#">Orders</a>
-          <a href="#">Messages</a>
-          <a href="#">Analytics</a>
-        </nav>
-      </aside>
-
-      <main className="content">
-        <header className="hero">
-          <p className="tag">PulseWard Role Experience</p>
-          <h2>Focused Rounds Workspace</h2>
-          <p>
-            Review consultations, place care orders, and complete day-end signoff in one streamlined
-            panel.
-          </p>
-        </header>
-
-        <section className="grid">
-          <article className="card">
-            <h3>Consultation Queue</h3>
-            <ul>
-              {todaysQueue.map((item) => (
-                <li key={item.id}>
-                  <strong>{item.id}</strong>
-                  <span>{item.patient}</span>
-                  <span>{item.reason}</span>
-                  <time>{item.eta}</time>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="card compact">
-            <h3>Action Checklist</h3>
-            <ol>
-              {tasks.map((task) => (
-                <li key={task}>{task}</li>
-              ))}
-            </ol>
-          </article>
-
-          <article className="card metrics">
-            <h3>Clinical Snapshot</h3>
-            <div>
-              <p>
-                <strong>18</strong> patients seen
-              </p>
-              <p>
-                <strong>4</strong> pending labs
-              </p>
-              <p>
-                <strong>2</strong> urgent callbacks
-              </p>
-            </div>
-          </article>
-        </section>
-      </main>
-    </div>
+    <AuthCtx.Provider value={{ user, login, logout }}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+          <Route path="/*" element={user ? <Shell /> : <Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthCtx.Provider>
   );
 }
 
-export default App;
+function Shell() {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+
+  const initials = user?.name?.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || 'D';
+
+  const nav = [
+    { to: '/',        icon: Calendar,  label: "Today's Schedule" },
+    { to: '/patients',icon: Users,     label: 'Patients' },
+    { to: '/notes',   icon: PenLine,   label: 'Write Note' },
+  ];
+
+  const titles = { '/': "Today's Schedule", '/patients': 'Patients', '/notes': 'Write Note' };
+  const title = Object.entries(titles).find(([p]) => location.pathname === p)?.[1] ||
+    (location.pathname.startsWith('/patients/') ? 'Patient Detail' : 'Clinician Portal');
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="logo">
+            <div className="logo-mark">P</div>
+            <div className="logo-text">PulseWard<span>Clinician Portal</span></div>
+          </div>
+        </div>
+        <nav className="sidebar-nav">
+          <div className="nav-section-label">Workflow</div>
+          {nav.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}>
+              <Icon size={16} />{label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <div className="avatar">{initials}</div>
+            <div className="user-info">
+              <div className="user-name">{user?.name || 'Clinician'}</div>
+              <div className="user-role">{user?.role}</div>
+            </div>
+          </div>
+          <button className="nav-item" style={{ marginTop: 4 }} onClick={logout}><LogOut size={15} /> Sign out</button>
+        </div>
+      </aside>
+      <div className="main-area">
+        <header className="topbar"><h1>{title}</h1></header>
+        <main className="page-content">
+          <Routes>
+            <Route path="/"                element={<Schedule />} />
+            <Route path="/patients"        element={<Patients />} />
+            <Route path="/patients/:id"    element={<PatientDetail />} />
+            <Route path="/notes"           element={<NoteWriter />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+}

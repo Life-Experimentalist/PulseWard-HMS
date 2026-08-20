@@ -16,8 +16,8 @@ Closes #
 
 ## Architecture and Contract Impact
 
-- Services touched:
-- APIs/events changed:
+- Routes/portals touched:
+- API routes changed:
 - Backward compatibility impact:
 - Tenant config impact (branding/policies):
 
@@ -44,4 +44,3 @@ Closes #
 ## Operational Links
 
 - Related issue(s):
-- Backup checklist evidence:

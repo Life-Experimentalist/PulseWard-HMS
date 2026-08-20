@@ -7,6 +7,10 @@ export default withMermaid(
     description: "Open-source hospital management system documentation",
     base: "/docs/",
 
+    // Local dev-portal URLs (localhost:4xxx) are intentional references, not
+    // build-time-resolvable links; real external links are still checked.
+    ignoreDeadLinks: "localhostLinks",
+
     head: [
       ["meta", { name: "color-scheme", content: "dark light" }],
       ["meta", { name: "theme-color", content: "#0f4c5c" }],

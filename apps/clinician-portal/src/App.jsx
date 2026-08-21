@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, FileText, FlaskConical, Pill, MessageSquare, LogOut, PenLine } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, FileText, FlaskConical, Pill, MessageSquare, LogOut, PenLine, CalendarOff, ListTodo } from 'lucide-react';
 import { getUser, api } from './api.js';
 import Login from './pages/Login.jsx';
 import Schedule from './pages/Schedule.jsx';
 import Patients from './pages/Patients.jsx';
 import PatientDetail from './pages/PatientDetail.jsx';
 import NoteWriter from './pages/NoteWriter.jsx';
+import Availability from './pages/Availability.jsx';
+import Messages from './pages/Messages.jsx';
+import Tasks from './pages/Tasks.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -34,12 +37,18 @@ function Shell() {
   const initials = user?.name?.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || 'D';
 
   const nav = [
-    { to: '/',        icon: Calendar,  label: "Today's Schedule" },
-    { to: '/patients',icon: Users,     label: 'Patients' },
-    { to: '/notes',   icon: PenLine,   label: 'Write Note' },
+    { to: '/',            icon: Calendar,      label: "Today's Schedule" },
+    { to: '/patients',    icon: Users,         label: 'Patients' },
+    { to: '/notes',       icon: PenLine,       label: 'Write Note' },
+    { to: '/messages',    icon: MessageSquare, label: 'Messages' },
+    { to: '/availability',icon: CalendarOff,   label: 'Availability' },
+    { to: '/tasks',       icon: ListTodo,      label: 'My Tasks' },
   ];
 
-  const titles = { '/': "Today's Schedule", '/patients': 'Patients', '/notes': 'Write Note' };
+  const titles = {
+    '/': "Today's Schedule", '/patients': 'Patients', '/notes': 'Write Note',
+    '/messages': 'Messages', '/availability': 'Availability', '/tasks': 'My Tasks',
+  };
   const title = Object.entries(titles).find(([p]) => location.pathname === p)?.[1] ||
     (location.pathname.startsWith('/patients/') ? 'Patient Detail' : 'Clinician Portal');
 
@@ -79,6 +88,9 @@ function Shell() {
             <Route path="/patients"        element={<Patients />} />
             <Route path="/patients/:id"    element={<PatientDetail />} />
             <Route path="/notes"           element={<NoteWriter />} />
+            <Route path="/messages"        element={<Messages />} />
+            <Route path="/availability"    element={<Availability />} />
+            <Route path="/tasks"           element={<Tasks />} />
           </Routes>
         </main>
       </div>

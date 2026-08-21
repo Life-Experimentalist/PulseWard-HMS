@@ -88,6 +88,25 @@ describe("messages: secure threads", () => {
     expect(status).toBe(200);
     for (const m of body.messages) expect(m.patientId).toBe(patientOwnId);
   });
+
+  test("a clinician with no patientId gets their whole inbox", async () => {
+    const { status, body } = await get("/api/v1/messages", { token: sharmaToken });
+    expect(status).toBe(200);
+    expect(body.messages.some((m) => m.id === threadId)).toBe(true);
+    for (const m of body.messages) expect(m.clinicianId).toBe(sharmaEntityId);
+
+    // The other clinician's inbox stays empty of this thread.
+    const other = await get("/api/v1/messages", { token: mehtaToken });
+    expect(other.status).toBe(200);
+    expect(other.body.messages.some((m) => m.id === threadId)).toBe(false);
+  });
+
+  test("an admin without a patientId scope is still refused", async () => {
+    const adminToken = await tokenFor(ACCOUNTS.admin);
+    const { status, body } = await get("/api/v1/messages", { token: adminToken });
+    expect(status).toBe(400);
+    expect(body.error).toBe("validation_failed");
+  });
 });
 
 describe("notifications: user-scoped inbox", () => {

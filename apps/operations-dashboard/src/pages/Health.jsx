@@ -27,7 +27,7 @@ function fmtUptime(seconds) {
   return `${m}m ${seconds % 60}s`;
 }
 
-export default function Health() {
+export default function Health({ refreshTick = 0 }) {
   const [services, setServices] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,7 @@ export default function Health() {
         if (!alive) return;
         setServices(services);
         setMetrics(metrics);
+        setError('');
       } catch (e) {
         if (alive) setError(e.message || 'Unable to load platform health');
       } finally {
@@ -48,7 +49,7 @@ export default function Health() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [refreshTick]);
 
   const healthy = services.filter(s => s.status === 'healthy').length;
   const degraded = services.filter(s => s.status === 'degraded').length;

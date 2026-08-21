@@ -48,7 +48,13 @@ async function req(method, path, body, retry = true) {
     return;
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.message || data.error || `HTTP ${res.status}`);
+    err.code = data.error;
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 
@@ -117,5 +123,15 @@ export const api = {
   async getIncidents() {
     const d = await req("GET", "/platform/incidents");
     return d.incidents || [];
+  },
+  // {severity: sev1|sev2|sev3, title, service?, detail?, owner?}
+  async createIncident(body) {
+    const d = await req("POST", "/platform/incidents", body);
+    return d.incident;
+  },
+  // {status?: open|monitoring|resolved, severity?, owner?, detail?}
+  async patchIncident(id, body) {
+    const d = await req("PATCH", `/platform/incidents/${id}`, body);
+    return d.incident;
   },
 };

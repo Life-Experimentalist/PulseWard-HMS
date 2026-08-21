@@ -4,6 +4,22 @@ This page mirrors the project [CHANGELOG.md](https://github.com/Life-Experimenta
 
 For the full release history see the [GitHub Releases page](https://github.com/Life-Experimentalist/PulseWard-HMS/releases).
 
+## Unreleased
+
+- **Availability & reassignment loop** — clinicians block time off; booking refuses
+  blocked windows; displaced appointments queue for the front desk / admin to resolve
+  as reassign, reschedule, or cancel, with the patient notified of the outcome.
+- **Drug-safety gate** — prescribing checks documented allergies and drug interactions;
+  the server returns the warnings and requires a written, audited override reason.
+- **Incidents lifecycle** — open ↔ monitoring → resolved via the API and the rewritten
+  Operations Incidents page; SEV1/SEV2 downtime feeds the uptime figure.
+- **Vitals series & note addenda** — repeat vitals per patient and hash-chained addenda
+  on signed notes, visible in both the clinician and patient portals.
+- **Per-user tasks**, a dedicated clinician **Messages** page, an admin **Tenants**
+  page, and change-password that revokes all refresh tokens.
+- API surface grew from 41 to 56 documented routes, all covered by the strict
+  contract-parity gate.
+
 ## [1.0.0] — 2026-08-21
 
 Initial public release: a multi-tenant hospital management system built around a single

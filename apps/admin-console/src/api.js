@@ -48,7 +48,13 @@ async function req(method, path, body, retry = true) {
     return;
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.message || data.error || `HTTP ${res.status}`);
+    err.code = data.error;
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 
@@ -164,6 +170,17 @@ export const api = {
   async getTenants() {
     const d = await req("GET", "/admin/tenants");
     return d.tenants || [];
+  },
+
+  async getReassignments(status = "open") {
+    const d = await req("GET", `/reassignments?status=${status}`);
+    return d.queue || [];
+  },
+
+  // action: reassign {clinicianId} | reschedule {startsAt unix} | cancel
+  async resolveReassignment(id, body) {
+    const d = await req("POST", `/reassignments/${id}/resolve`, body);
+    return d.item;
   },
 
   async getClinicians() {

@@ -6,6 +6,52 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Availability & reassignment loop** — clinicians block time off (30-day cap,
+  typed reasons); booking refuses blocked windows (`409 clinician_unavailable`)
+  and same-patient stacking (`422 patient_stacking`); displaced appointments
+  queue for reassignment; admins resolve each as reassign / reschedule / cancel
+  and the patient is notified. New clinician **Availability** page and admin
+  **Reassignments** page drive the whole loop in the UI.
+- **Drug-safety gate** — prescribing checks documented allergies (drug-class
+  aware) and known drug interactions; the server answers `422` with the exact
+  warnings, and the portal requires a written override reason before allowing a
+  clearly-marked "Override & prescribe". Overrides are audited and shown as
+  annotations on the prescription.
+- **Incidents** — full open ↔ monitoring → resolved lifecycle in the API and a
+  rewritten Operations **Incidents** page (create with severity/service/owner,
+  transition buttons that mirror the server's state machine). SEV1/SEV2 downtime
+  now feeds the uptime figure on the Health page.
+- **Vitals series** — record vitals (BP, HR, temp, SpO₂, RR, weight) from the
+  clinician patient view; latest-value chips plus history table render in both
+  the clinician and patient portals.
+- **Note addenda** — signed SOAP notes accept hash-chained addenda, visible to
+  both clinician and patient.
+- **Per-user tasks** — Eisenhower-style task list for clinicians with strict
+  owner isolation.
+- **Clinician messaging** — dedicated Messages page for the care-team side of
+  patient conversations.
+- **Admin Tenants page** — read-only view of onboarded hospitals.
+- Change-password now revokes all of the user's refresh tokens.
+
+### Changed
+
+- Portal `api.js` clients now surface the server's error `code` and `data`
+  payload on thrown errors, enabling flows like the drug-safety override.
+- Operations dashboard auto-refresh re-fetches data in place instead of
+  remounting the page — open modals and half-typed forms survive the 30-second
+  tick.
+
+### Fixed
+
+- `requireAuth` no longer swallows downstream handler errors as 401s.
+- Deleting an availability block detaches its reassignment-queue rows instead
+  of tripping a foreign-key constraint.
+- Incident banner grammar ("1 active incident requires attention").
+
 ## [1.0.0] — 2026-08-21
 
 Initial public release. A multi-tenant hospital management system built around a single

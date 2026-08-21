@@ -24,6 +24,10 @@ Thumbs.db
 # Local agent tooling memory (never committed)
 .remember/
 
+# Claude Code session state (keep launch.json — shared dev-server config)
+.claude/*
+!.claude/launch.json
+
 # SQLite database files
 *.db
 *.db-shm

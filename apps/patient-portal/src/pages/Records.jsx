@@ -7,6 +7,10 @@ function fmt(dt) {
   if (!dt) return '—';
   return new Date(dt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+function fmtWhen(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 export default function Records() {
   const { user } = useAuth();
@@ -60,6 +64,20 @@ export default function Records() {
         </div>
       </div>
 
+      {patient.allergies?.length > 0 && (
+        <div className="alert alert-error" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+          <strong>Allergies:</strong>
+          <span>
+            {patient.allergies.map(a => {
+              const label = typeof a === 'string' ? a : a.substance;
+              const sev = typeof a === 'string' ? null : a.severity;
+              return `${label}${sev ? ` (${sev})` : ''}`;
+            }).join(', ')}
+          </span>
+        </div>
+      )}
+
       <div className="tabs">
         {[['overview','Overview'],['notes','Clinical Notes'],['allergies','Allergies']].map(([v,l]) => (
           <button key={v} className={`tab-btn${tab===v?' active':''}`} onClick={() => setTab(v)}>{l}</button>
@@ -80,6 +98,25 @@ export default function Records() {
                   {patient.vitals.weight && <div className="vital-chip"><div className="v-label">Weight</div><div className="v-value">{patient.vitals.weight}</div><div className="v-unit">kg</div></div>}
                 </div>
               ) : <p className="text-muted" style={{fontSize:13.5}}>No vitals recorded</p>}
+              {patient.vitalsSeries?.length > 1 && (
+                <div className="table-wrap" style={{ marginTop: 14 }}>
+                  <table>
+                    <thead><tr><th>When</th><th>BP</th><th>HR</th><th>Temp</th><th>SpO₂</th><th>Weight</th></tr></thead>
+                    <tbody>
+                      {[...patient.vitalsSeries].reverse().slice(0, 6).map((v, i) => (
+                        <tr key={i}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{v.at ? fmtWhen(v.at * 1000) : '—'}</td>
+                          <td>{v.bp || '—'}</td>
+                          <td>{v.hr ?? '—'}</td>
+                          <td>{v.temp ?? '—'}</td>
+                          <td>{v.spo2 ?? '—'}</td>
+                          <td>{v.weight ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
           <div className="card">
@@ -108,12 +145,16 @@ export default function Records() {
             <div key={n.id} className="card">
               <div className="card-header">
                 <div>
-                  <div style={{fontFamily:'var(--font-head)',fontWeight:600,fontSize:14}}>{n.type?.replace(/_/g,' ')} Note</div>
+                  <div style={{fontFamily:'var(--font-head)',fontWeight:600,fontSize:14}}>{n.addendumOf ? (n.title || 'Addendum') : `${n.type?.replace(/_/g,' ')} Note`}</div>
                   <div style={{fontSize:12,color:'var(--text-muted)',marginTop:2}}>{fmt(n.createdAt)} {n.signedAt && '· Signed'}</div>
                 </div>
-                {n.signedAt && <span className="badge badge-green">Signed</span>}
+                <div style={{display:'flex',gap:6}}>
+                  {n.addendumOf && <span className="badge badge-blue">Addendum</span>}
+                  {n.signedAt && <span className="badge badge-green">Signed</span>}
+                </div>
               </div>
               <div className="card-body">
+                {n.text && <p style={{fontSize:13.5,marginBottom:n.subjective||n.objective||n.assessment||n.plan?12:0}}>{n.text}</p>}
                 {n.subjective && <div style={{marginBottom:12}}><div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--text-muted)',marginBottom:4}}>Subjective</div><p style={{fontSize:13.5}}>{n.subjective}</p></div>}
                 {n.objective && <div style={{marginBottom:12}}><div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--text-muted)',marginBottom:4}}>Objective</div><p style={{fontSize:13.5}}>{n.objective}</p></div>}
                 {n.assessment && <div style={{marginBottom:12}}><div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--text-muted)',marginBottom:4}}>Assessment</div><p style={{fontSize:13.5}}>{n.assessment}</p></div>}

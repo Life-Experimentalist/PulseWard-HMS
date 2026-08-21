@@ -30,9 +30,13 @@ function Shell() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setLastRefresh(new Date()), 30000);
+    const t = setInterval(() => {
+      setLastRefresh(new Date());
+      setTick(x => x + 1);
+    }, 30000);
     return () => clearInterval(t);
   }, []);
 
@@ -84,8 +88,10 @@ function Shell() {
         </header>
         <main className="page-content">
           <Routes>
-            <Route path="/"          element={<Health key={lastRefresh.getTime()} />} />
-            <Route path="/incidents" element={<Incidents key={lastRefresh.getTime()} />} />
+            {/* refreshTick re-fetches data in place — remounting via key would
+                close open modals and drop half-typed forms every 30s */}
+            <Route path="/"          element={<Health refreshTick={tick} />} />
+            <Route path="/incidents" element={<Incidents refreshTick={tick} />} />
           </Routes>
         </main>
       </div>

@@ -47,12 +47,26 @@ function normAppt(a) {
 
 function normPatient(p) {
   if (!p) return null;
+  // vitalsJson is a recorded series (newest last); legacy rows held one object.
+  const series = Array.isArray(p.vitalsJson)
+    ? p.vitalsJson
+    : p.vitalsJson && typeof p.vitalsJson === "object"
+    ? [p.vitalsJson]
+    : [];
+  let latest = null;
+  if (series.length) {
+    const vals = { ...series[series.length - 1] };
+    delete vals.at;
+    delete vals.by;
+    if (Object.keys(vals).length) latest = vals;
+  }
   return {
     ...p,
     bloodGroup: p.bloodType,
     conditions: Array.isArray(p.conditionsJson) ? p.conditionsJson : [],
     allergies: Array.isArray(p.allergiesJson) ? p.allergiesJson : [],
-    vitals: p.vitalsJson && !Array.isArray(p.vitalsJson) ? p.vitalsJson : null,
+    vitals: latest,
+    vitalsSeries: series,
   };
 }
 
@@ -65,6 +79,7 @@ function normNote(n) {
     objective: body.objective || body.o || "",
     assessment: body.assessment || body.a || "",
     plan: body.plan || body.p || "",
+    text: body.text || "",
     signedAt: unix(n.signedAt),
     createdAt: unix(n.createdAt),
   };
@@ -125,7 +140,13 @@ async function req(method, path, body, retry = true) {
     return;
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.message || data.error || `HTTP ${res.status}`);
+    err.code = data.error;
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 
@@ -268,13 +289,27 @@ export const api = {
       freq: body.frequency || body.freq,
       duration: body.durationDays || body.duration,
       instructions: body.instructions,
+      ...(body.overrideReason ? { overrideReason: body.overrideReason } : {}),
     };
     const d = await req("POST", "/prescriptions", payload);
     return normRx(d.prescription || d);
   },
+  async patchPrescription(id, body) {
+    const d = await req("PATCH", `/prescriptions/${id}`, body);
+    return normRx(d.prescription || d);
+  },
+
+  async recordVitals(patientId, body) {
+    const d = await req("POST", `/patients/${patientId}/vitals`, body);
+    return d.vitals || [];
+  },
+  async addAddendum(noteId, text) {
+    const d = await req("POST", `/notes/${noteId}/addendum`, { body: { text } });
+    return normNote(d.note || d);
+  },
 
   async getMessages(patientId) {
-    const d = await req("GET", `/messages?patientId=${patientId}`);
+    const d = await req("GET", `/messages${patientId ? "?patientId=" + patientId : ""}`);
     return d.messages || [];
   },
   async sendMessage(body) {
@@ -286,6 +321,48 @@ export const api = {
       threadId: body.threadId,
     });
     return d.message || d;
+  },
+  async markMessageRead(threadId) {
+    return req("POST", `/messages/${threadId}/read`, {});
+  },
+
+  async getAvailability() {
+    const d = await req("GET", "/availability");
+    return d.blocks || [];
+  },
+  async createBlock(body) {
+    // { startsAt, endsAt (unix seconds), kind, reason } → { block, affectedAppointments }
+    const d = await req("POST", "/availability", body);
+    return { block: d.block, affectedAppointments: (d.affectedAppointments || []).map(normAppt) };
+  },
+  async deleteBlock(id) {
+    return req("DELETE", `/availability/${id}`);
+  },
+
+  async getReassignments(status = "open") {
+    const d = await req("GET", `/reassignments?status=${status}`);
+    return d.queue || [];
+  },
+  async queueReassignment(body) {
+    // { appointmentId, blockId?, reason? }
+    const d = await req("POST", "/reassignments", body);
+    return d.item;
+  },
+
+  async getTasks() {
+    const d = await req("GET", "/tasks");
+    return d.tasks || [];
+  },
+  async createTask(body) {
+    const d = await req("POST", "/tasks", body);
+    return d.task;
+  },
+  async patchTask(id, body) {
+    const d = await req("PATCH", `/tasks/${id}`, body);
+    return d.task;
+  },
+  async deleteTask(id) {
+    return req("DELETE", `/tasks/${id}`);
   },
 
   async getClinicians() {

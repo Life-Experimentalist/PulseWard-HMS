@@ -1852,10 +1852,15 @@ app.get("/api/v1/messages", requireAuth, requireRole("admin", "clinician", "pati
   const { patientId } = c.req.query();
   const u = c.get("user");
   const pid = patientId || (u.role === "patient" ? u.eid : null);
-  if (!pid) return fail(c, "validation_failed", "patientId required");
+  // A clinician with no patientId gets their whole inbox; other roles must scope.
+  if (!pid && u.role !== "clinician") return fail(c, "validation_failed", "patientId required");
   if (u.role === "patient" && pid !== u.eid) return fail(c, "forbidden", "Access denied", 403);
-  let sql = `${MSG_SELECT} WHERE m.tenant_id=? AND m.patient_id=?`;
-  const params = [u.tid, pid];
+  let sql = `${MSG_SELECT} WHERE m.tenant_id=?`;
+  const params = [u.tid];
+  if (pid) {
+    sql += " AND m.patient_id=?";
+    params.push(pid);
+  }
   // Secure messages are private between a patient and one clinician. A clinician
   // may only see threads they are a party to; admins may audit all threads.
   if (u.role === "clinician") {

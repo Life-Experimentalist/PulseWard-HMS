@@ -37,12 +37,27 @@ function unix(ts) {
 
 function normPatient(p) {
   if (!p) return null;
+  // vitalsJson is an append-only series of {at, by, ...measurements}; legacy rows
+  // may still hold a single object.
+  const series = Array.isArray(p.vitalsJson)
+    ? p.vitalsJson
+    : p.vitalsJson && typeof p.vitalsJson === "object"
+    ? [p.vitalsJson]
+    : [];
+  let latest = null;
+  if (series.length) {
+    const vals = { ...series[series.length - 1] };
+    delete vals.at;
+    delete vals.by;
+    if (Object.keys(vals).length) latest = vals;
+  }
   return {
     ...p,
     bloodGroup: p.bloodType || p.bloodGroup,
     conditions: Array.isArray(p.conditionsJson) ? p.conditionsJson : p.conditions || [],
     allergies: Array.isArray(p.allergiesJson) ? p.allergiesJson : p.allergies || [],
-    vitals: p.vitalsJson && !Array.isArray(p.vitalsJson) ? p.vitalsJson : p.vitals || null,
+    vitals: latest,
+    vitalsSeries: series,
   };
 }
 
@@ -103,6 +118,7 @@ function normNote(n) {
     objective: body.objective || body.o || n.objective,
     assessment: body.assessment || body.a || n.assessment,
     plan: body.plan || body.p || n.plan,
+    text: body.text || "",
     signedAt: unix(n.signedAt),
     createdAt: unix(n.createdAt),
   };

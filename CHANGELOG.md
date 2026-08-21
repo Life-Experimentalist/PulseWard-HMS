@@ -45,6 +45,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
   remounting the page — open modals and half-typed forms survive the 30-second
   tick.
 
+### Security
+
+- Dependency sweep: `hono` 4.12.34 (fixes CORS origin reflection with
+  credentials, `serve-static` path traversal on Windows, and ReDoS advisories),
+  `@hono/node-server` 1.19.15, `uuid` 11, `vite` 7.3.6,
+  `react-router-dom` 7 (open-redirect fixes), `mermaid` 11.16.1, and pinned
+  overrides for transitive advisories (postcss, nanoid, js-yaml,
+  brace-expansion, follow-redirects, qs, @babel/core, dompurify, esbuild).
+  Known advisories drop from 54 to 4; the remainder are confined to the docs
+  **dev server** (VitePress 1.x pins Vite 5) — published docs are static HTML.
+
 ### Fixed
 
 - `requireAuth` no longer swallows downstream handler errors as 401s.

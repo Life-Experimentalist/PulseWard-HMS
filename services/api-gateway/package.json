@@ -9,11 +9,11 @@
     "dev": "node --no-warnings --watch src"
   },
   "dependencies": {
-    "hono": "^4.6.3",
-    "@hono/node-server": "^1.13.2",
+    "hono": "^4.12.34",
+    "@hono/node-server": "^1.19.15",
     "jose": "^5.9.6",
     "bcryptjs": "^2.4.3",
     "zod": "^3.23.8",
-    "uuid": "^10.0.0"
+    "uuid": "^11.1.1"
   }
 }

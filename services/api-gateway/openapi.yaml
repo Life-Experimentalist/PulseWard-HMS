@@ -36,6 +36,12 @@ tags:
     description: Secure patient–clinician threads.
   - name: Notifications
     description: The authenticated user's notification inbox.
+  - name: Availability
+    description: Clinician availability blocks (leave, holiday, training, emergency).
+  - name: Reassignments
+    description: Queue of appointments displaced by availability blocks, awaiting resolution.
+  - name: Tasks
+    description: The authenticated user's personal Eisenhower-matrix task list.
   - name: Admin
     description: Tenant administration — users, clinicians, audit, tenants, stats.
   - name: Platform
@@ -108,9 +114,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [refreshToken]
+              required: [refresh]
               properties:
-                refreshToken: { type: string }
+                refresh: { type: string }
       responses:
         "200":
           description: New access and refresh tokens issued.
@@ -131,7 +137,7 @@ paths:
             schema:
               type: object
               properties:
-                refreshToken: { type: string }
+                refresh: { type: string }
       responses:
         "200":
           description: Logged out (idempotent).
@@ -149,6 +155,32 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MeResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change the caller's password
+      description: >-
+        Verifies the current password, stores the new hash, and revokes every
+        active refresh token for the account so all other sessions must sign in again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, minLength: 8, maxLength: 128 }
+      responses:
+        "200":
+          description: Password changed; other sessions revoked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/v1/patients:
@@ -237,6 +269,46 @@ paths:
                 properties:
                   ok: { type: boolean }
                   patient: { $ref: "#/components/schemas/Patient" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/patients/{id}/vitals:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Patients]
+      summary: Record a vitals snapshot
+      description: >-
+        Appends a timestamped vitals reading (any subset of bp, hr, temp,
+        weight, spo2, rr) to the patient's time series. At least one
+        measurement is required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bp: { type: string, example: "120/80" }
+                hr: { type: number, description: Heart rate (bpm). }
+                temp: { type: number, description: Temperature (°C). }
+                weight: { type: number, description: Weight (kg). }
+                spo2: { type: number, description: Oxygen saturation (%). }
+                rr: { type: number, description: Respiratory rate (breaths/min). }
+      responses:
+        "201":
+          description: Snapshot recorded; returns the full vitals series.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  vitals:
+                    type: array
+                    items: { type: object }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -371,6 +443,199 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
+  /api/v1/availability:
+    get:
+      tags: [Availability]
+      summary: List availability blocks
+      description: >-
+        Clinicians default to their own blocks; admin/frontdesk/ops see all
+        (optionally filtered by clinicianId); patients receive a sanitized view
+        (times only, no reasons) for booking.
+      parameters:
+        - name: clinicianId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Availability blocks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  blocks:
+                    type: array
+                    items: { $ref: "#/components/schemas/AvailabilityBlock" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Availability]
+      summary: Create an availability block
+      description: >-
+        Clinicians may block only their own calendar; admins may block any
+        clinician's. The response lists appointments that fall inside the block
+        so the caller can queue, reschedule, or cancel each one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startsAt, endsAt]
+              properties:
+                clinicianId: { type: string, description: Admin only; clinicians are self-scoped. }
+                startsAt: { type: integer, description: Unix epoch seconds. }
+                endsAt: { type: integer, description: Unix epoch seconds; must exceed startsAt. }
+                kind:
+                  type: string
+                  enum: [leave, holiday, training, emergency]
+                  default: leave
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: Block created; includes affected appointments.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  block: { $ref: "#/components/schemas/AvailabilityBlock" }
+                  affectedAppointments:
+                    type: array
+                    items: { $ref: "#/components/schemas/Appointment" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/availability/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    delete:
+      tags: [Availability]
+      summary: Remove an availability block
+      description: Clinicians may remove only their own blocks; admins may remove any.
+      responses:
+        "200":
+          description: Block removed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/reassignments:
+    get:
+      tags: [Reassignments]
+      summary: List the reassignment queue
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved, all]
+            default: open
+      responses:
+        "200":
+          description: Queue items sorted by appointment start time.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  queue:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReassignmentItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Reassignments]
+      summary: Queue an appointment for reassignment
+      description: >-
+        Typically called after creating an availability block, once per affected
+        appointment the clinician chose to hand to the front desk.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [appointmentId]
+              properties:
+                appointmentId: { type: string }
+                blockId: { type: string }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: Queue item created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  item: { $ref: "#/components/schemas/ReassignmentItem" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: An open queue item already exists for this appointment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/reassignments/{id}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Reassignments]
+      summary: Resolve a queued appointment
+      description: >-
+        Admin/front-desk action — reassign to another clinician, reschedule to
+        a new time, or cancel. The patient is notified of the outcome.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [reassign, reschedule, cancel]
+                clinicianId: { type: string, description: Required for reassign. }
+                startsAt: { type: integer, description: Required for reschedule (epoch seconds). }
+      responses:
+        "200":
+          description: Item resolved; returns the resolution record.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  item: { $ref: "#/components/schemas/ReassignmentItem" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Item already resolved, or the target slot is taken/blocked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: The appointment's state does not allow this action.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   /api/v1/notes:
     get:
       tags: [Clinical Notes]
@@ -475,6 +740,46 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
+  /api/v1/notes/{id}/addendum:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    post:
+      tags: [Clinical Notes]
+      summary: Append an addendum to a signed note
+      description: >-
+        Signed notes are immutable; corrections are appended as addenda. The
+        addendum records a hash of the parent note's body at the time of
+        writing (prev_hash) to preserve the chain of custody.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+      responses:
+        "201":
+          description: Addendum created as a new note linked to the parent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  note: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The parent note is not signed yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   /api/v1/labs:
     get:
       tags: [Labs]
@@ -554,7 +859,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [ordered, in-lab, resulted, reviewed]
+                  enum: [in-lab, resulted, reviewed, cancelled]
                 results: { type: string }
       responses:
         "200":
@@ -615,13 +920,25 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: >-
+            Drug safety block — the drug matches a recorded patient allergy
+            (error "drug_allergy") or interacts with an active medication
+            (error "drug_interaction"). The response includes a `warnings`
+            array; resubmit with an `overrideReason` to proceed deliberately.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /api/v1/prescriptions/{id}:
     parameters:
       - $ref: "#/components/parameters/PathId"
     patch:
       tags: [Prescriptions]
-      summary: Update a prescription (e.g. discontinue)
+      summary: Update a prescription (dispense, complete, discontinue, refill)
+      description: >-
+        Valid transitions — active→dispensed|completed|discontinued,
+        dispensed→completed|discontinued. Discontinuing requires a reason.
       requestBody:
         required: true
         content:
@@ -631,7 +948,11 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [active, discontinued, completed]
+                  enum: [dispensed, completed, discontinued]
+                reason:
+                  type: string
+                  description: Required when status is "discontinued".
+                refills: { type: integer, minimum: 0 }
       responses:
         "200":
           description: Updated prescription.
@@ -646,6 +967,11 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Illegal status transition.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /api/v1/messages:
     get:
@@ -762,6 +1088,95 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/OkResponse" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/tasks:
+    get:
+      tags: [Tasks]
+      summary: List the caller's tasks
+      responses:
+        "200":
+          description: The authenticated user's tasks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  tasks:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 300 }
+                quadrant:
+                  type: string
+                  enum: [do, schedule, delegate, eliminate]
+                  default: do
+      responses:
+        "201":
+          description: Task created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  task: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Tasks]
+      summary: Update a task (title, quadrant, or done)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, minLength: 1, maxLength: 300 }
+                quadrant:
+                  type: string
+                  enum: [do, schedule, delegate, eliminate]
+                done: { type: boolean }
+      responses:
+        "200":
+          description: Updated task.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  task: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      responses:
+        "200":
+          description: Task deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/admin/stats:
     get:
@@ -916,10 +1331,11 @@ paths:
   /api/v1/platform/incidents:
     get:
       tags: [Platform]
-      summary: Active incident feed
+      summary: Incident feed
+      description: Most recent 100 incidents, newest first. Empty when healthy.
       responses:
         "200":
-          description: Current incidents (empty when healthy).
+          description: Incidents recorded for the tenant.
           content:
             application/json:
               schema:
@@ -928,9 +1344,85 @@ paths:
                   ok: { type: boolean }
                   incidents:
                     type: array
-                    items: { type: object }
+                    items: { $ref: "#/components/schemas/Incident" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Platform]
+      summary: Open an incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [severity, title]
+              properties:
+                severity:
+                  type: string
+                  enum: [sev1, sev2, sev3]
+                title: { type: string, minLength: 3, maxLength: 200 }
+                service: { type: string, maxLength: 100, default: api-gateway }
+                detail: { type: string, maxLength: 2000 }
+                owner: { type: string, maxLength: 200, description: Defaults to the caller. }
+      responses:
+        "201":
+          description: Incident opened.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  incident: { $ref: "#/components/schemas/Incident" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/platform/incidents/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+    patch:
+      tags: [Platform]
+      summary: Update an incident
+      description: >-
+        Valid status transitions — open→monitoring|resolved,
+        monitoring→open|resolved. Resolved incidents are immutable in status.
+        Resolving stamps resolved_at, which feeds the uptime calculation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, monitoring, resolved]
+                severity:
+                  type: string
+                  enum: [sev1, sev2, sev3]
+                owner: { type: string }
+                detail: { type: string }
+      responses:
+        "200":
+          description: Updated incident.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  incident: { $ref: "#/components/schemas/Incident" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Illegal status transition.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
 components:
   securitySchemes:
@@ -1017,7 +1509,7 @@ components:
         token:
           type: string
           description: Bearer access token (15-minute lifetime).
-        refreshToken:
+        refresh:
           type: string
           description: Single-use rotating refresh token.
         role:
@@ -1206,6 +1698,60 @@ components:
         id: { type: string }
         slug: { type: string }
         name: { type: string }
+    AvailabilityBlock:
+      type: object
+      properties:
+        id: { type: string }
+        clinicianId: { type: string }
+        clinicianName: { type: string }
+        startsAt: { type: integer, description: Unix epoch seconds. }
+        endsAt: { type: integer, description: Unix epoch seconds. }
+        kind:
+          type: string
+          enum: [leave, holiday, training, emergency]
+        reason: { type: string, nullable: true }
+    ReassignmentItem:
+      type: object
+      properties:
+        id: { type: string }
+        appointmentId: { type: string }
+        blockId: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [open, resolved]
+        patientName: { type: string }
+        clinicianName: { type: string }
+        appointmentStartsAt: { type: integer }
+        resolution:
+          type: object
+          nullable: true
+          description: Present once resolved — action taken, by whom, and when.
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        quadrant:
+          type: string
+          enum: [do, schedule, delegate, eliminate]
+        done: { type: boolean }
+    Incident:
+      type: object
+      properties:
+        id: { type: string }
+        severity:
+          type: string
+          enum: [sev1, sev2, sev3]
+        title: { type: string }
+        service: { type: string }
+        detail: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [open, monitoring, resolved]
+        owner: { type: string, nullable: true }
+        openedAt: { type: integer, description: Unix epoch seconds. }
+        resolvedAt: { type: integer, nullable: true }
     PlatformHealth:
       type: object
       properties:

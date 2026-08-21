@@ -202,14 +202,35 @@ describe("prescriptions: lifecycle", () => {
     rxId = body.prescription.id;
   });
 
-  test("the prescription can be discontinued", async () => {
+  test("discontinuing without a reason is rejected", async () => {
     const { status, body } = await patch(
       `/api/v1/prescriptions/${rxId}`,
       { status: "discontinued" },
       { token: sharmaToken }
     );
+    expect(status).toBe(400);
+    expect(body.error).toBe("validation_failed");
+  });
+
+  test("the prescription can be discontinued with a reason", async () => {
+    const { status, body } = await patch(
+      `/api/v1/prescriptions/${rxId}`,
+      { status: "discontinued", reason: "Patient reported myalgia" },
+      { token: sharmaToken }
+    );
     expect(status).toBe(200);
     expect(body.prescription.status).toBe("discontinued");
+    expect(body.prescription.discontinuedReason).toBe("Patient reported myalgia");
+  });
+
+  test("a discontinued prescription cannot be dispensed", async () => {
+    const { status, body } = await patch(
+      `/api/v1/prescriptions/${rxId}`,
+      { status: "dispensed" },
+      { token: sharmaToken }
+    );
+    expect(status).toBe(422);
+    expect(body.error).toBe("invalid_transition");
   });
 
   test("prescribing without a drug is rejected", async () => {

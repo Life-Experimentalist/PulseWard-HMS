@@ -1,4 +1,4 @@
-import { get, post, del, login, tokenFor, ACCOUNTS } from "./_helpers.mjs";
+import { get, post, patch, del, login, tokenFor, ACCOUNTS } from "./_helpers.mjs";
 
 let adminToken, adminUserId;
 let patientToken;
@@ -197,10 +197,61 @@ describe("platform: health and incidents", () => {
     expect(typeof body.metrics.users).toBe("number");
   });
 
-  test("incidents endpoint returns an empty list", async () => {
-    const { status, body } = await get("/api/v1/platform/incidents", { token: adminToken });
-    expect(status).toBe(200);
-    expect(body.incidents).toEqual([]);
+  test("incidents start empty, then support the full open→resolve lifecycle", async () => {
+    const empty = await get("/api/v1/platform/incidents", { token: adminToken });
+    expect(empty.status).toBe(200);
+    expect(empty.body.incidents).toEqual([]);
+
+    const bad = await post(
+      "/api/v1/platform/incidents",
+      { severity: "sev9", title: "Nope" },
+      { token: adminToken }
+    );
+    expect(bad.status).toBe(400);
+    expect(bad.body.error).toBe("validation_failed");
+
+    const opened = await post(
+      "/api/v1/platform/incidents",
+      { severity: "sev2", title: "Elevated API latency", detail: "p95 above 800ms" },
+      { token: adminToken }
+    );
+    expect(opened.status).toBe(201);
+    expect(opened.body.incident.status).toBe("open");
+    expect(opened.body.incident.service).toBe("api-gateway");
+    expect(opened.body.incident.owner).toBeTruthy();
+    const incId = opened.body.incident.id;
+
+    const listed = await get("/api/v1/platform/incidents", { token: adminToken });
+    expect(listed.body.incidents.map((i) => i.id)).toContain(incId);
+
+    const monitoring = await patch(
+      `/api/v1/platform/incidents/${incId}`,
+      { status: "monitoring" },
+      { token: adminToken }
+    );
+    expect(monitoring.status).toBe(200);
+    expect(monitoring.body.incident.status).toBe("monitoring");
+
+    const resolved = await patch(
+      `/api/v1/platform/incidents/${incId}`,
+      { status: "resolved" },
+      { token: adminToken }
+    );
+    expect(resolved.status).toBe(200);
+    expect(resolved.body.incident.resolvedAt).toBeTruthy();
+
+    // Resolved incidents cannot be reopened.
+    const reopen = await patch(
+      `/api/v1/platform/incidents/${incId}`,
+      { status: "open" },
+      { token: adminToken }
+    );
+    expect(reopen.status).toBe(422);
+    expect(reopen.body.error).toBe("invalid_transition");
+
+    // A patient cannot touch incidents.
+    const denied = await get("/api/v1/platform/incidents", { token: patientToken });
+    expect(denied.status).toBe(403);
   });
 
   test("a patient cannot reach platform health", async () => {

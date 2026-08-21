@@ -156,6 +156,7 @@ function initSchema(db) {
         CHECK(status IN ('active','dispensed','completed','discontinued')),
       instructions TEXT,
       override_reason TEXT,
+      discontinued_reason TEXT,
       prescribed_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
@@ -221,13 +222,67 @@ function initSchema(db) {
       replaced_by TEXT
     );
 
+    -- Operational incidents recorded by ops/admin; uptime is derived from these.
+    CREATE TABLE IF NOT EXISTS incidents (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id),
+      severity TEXT NOT NULL CHECK(severity IN ('sev1','sev2','sev3')),
+      title TEXT NOT NULL,
+      service TEXT DEFAULT 'api-gateway',
+      detail TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','monitoring','resolved')),
+      owner TEXT,
+      opened_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      resolved_at INTEGER
+    );
+
+    -- Appointments displaced by an availability block, awaiting an admin or
+    -- front-desk decision: reassign, reschedule, or cancel.
+    CREATE TABLE IF NOT EXISTS reassignment_queue (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id),
+      appointment_id TEXT NOT NULL REFERENCES appointments(id),
+      block_id TEXT REFERENCES availability_blocks(id),
+      reason TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved')),
+      resolution_json TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      resolved_at INTEGER
+    );
+
+    -- Per-user Eisenhower task board (Do first / Schedule / Delegate / Eliminate).
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      title TEXT NOT NULL,
+      quadrant TEXT NOT NULL DEFAULT 'do' CHECK(quadrant IN ('do','schedule','delegate','eliminate')),
+      done INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
     CREATE INDEX IF NOT EXISTS idx_appt_clinician ON appointments(tenant_id, clinician_id, starts_at);
     CREATE INDEX IF NOT EXISTS idx_appt_patient ON appointments(tenant_id, patient_id, starts_at);
     CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_events(tenant_id, at DESC);
     CREATE INDEX IF NOT EXISTS idx_refresh_family ON refresh_tokens(family_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_user ON refresh_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_block_clinician ON availability_blocks(tenant_id, clinician_id, starts_at);
+    CREATE INDEX IF NOT EXISTS idx_queue_tenant ON reassignment_queue(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(tenant_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_incidents_tenant ON incidents(tenant_id, opened_at DESC);
   `);
+  applyMigrations(db);
+}
+
+// CREATE TABLE IF NOT EXISTS never alters an existing table, so columns added
+// after a release must be applied to older databases explicitly.
+function applyMigrations(db) {
+  const ensureColumn = (table, column, ddl) => {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  };
+  ensureColumn("prescriptions", "discontinued_reason", "discontinued_reason TEXT");
 }
 
 function seedIfEmpty(db) {
@@ -342,7 +397,11 @@ function seedIfEmpty(db) {
       { substance: "Penicillin", severity: "severe", reaction: "Anaphylaxis" },
       { substance: "Sulfa drugs", severity: "moderate", reaction: "Rash" },
     ]),
-    JSON.stringify({ bp: "128/82", hr: 74, temp: 36.8, weight: 62, spo2: 98 })
+    JSON.stringify([
+      { at: now - 86400 * 90, bp: "134/86", hr: 78, temp: 36.7, weight: 63.5, spo2: 97 },
+      { at: now - 86400 * 30, bp: "130/84", hr: 76, temp: 36.6, weight: 62.8, spo2: 98 },
+      { at: now - 86400 * 7, bp: "128/82", hr: 74, temp: 36.8, weight: 62, spo2: 98 },
+    ])
   );
 
   db.prepare(
@@ -360,7 +419,9 @@ function seedIfEmpty(db) {
     "vikram.singh@email.com",
     JSON.stringify(["Asthma"]),
     JSON.stringify([{ substance: "Aspirin", severity: "mild", reaction: "GI upset" }]),
-    JSON.stringify({ bp: "118/76", hr: 68, temp: 36.5, weight: 78, spo2: 96 })
+    JSON.stringify([
+      { at: now - 86400 * 14, bp: "118/76", hr: 68, temp: 36.5, weight: 78, spo2: 96 },
+    ])
   );
 
   db.prepare(
@@ -378,7 +439,9 @@ function seedIfEmpty(db) {
     "meera.nair@email.com",
     JSON.stringify([]),
     JSON.stringify([]),
-    JSON.stringify({ bp: "110/70", hr: 64, temp: 36.6, weight: 55, spo2: 99 })
+    JSON.stringify([
+      { at: now - 86400 * 21, bp: "110/70", hr: 64, temp: 36.6, weight: 55, spo2: 99 },
+    ])
   );
 
   db.prepare(

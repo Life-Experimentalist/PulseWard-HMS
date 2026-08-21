@@ -105,16 +105,161 @@ async function issueRefresh(db, user, familyId) {
   return { token, jti };
 }
 
-function audit(tenantId, actor, action, scope, ip) {
+function audit(tenantId, actor, action, scope, ip, extra = {}) {
   try {
     getDb()
-      .prepare("INSERT INTO audit_events(id,tenant_id,actor,action,scope,ip) VALUES(?,?,?,?,?,?)")
-      .run(uuid(), tenantId, actor, action, scope || null, ip || null);
+      .prepare(
+        "INSERT INTO audit_events(id,tenant_id,actor,action,scope,ip,user_agent,diff_json) VALUES(?,?,?,?,?,?,?,?)"
+      )
+      .run(
+        uuid(),
+        tenantId,
+        actor,
+        action,
+        scope || null,
+        ip || null,
+        extra.ua || null,
+        extra.diff ? JSON.stringify(extra.diff) : null
+      );
   } catch (_) {}
 }
 
 function getIp(c) {
   return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+function getUa(c) {
+  return c.req.header("user-agent") || null;
+}
+
+// Users are linked to their patient/clinician entity via linked_entity_id;
+// resolve the login account for an entity so it can receive notifications.
+function linkedUserId(db, tid, entityId) {
+  if (!entityId) return null;
+  const row = db
+    .prepare("SELECT id FROM users WHERE linked_entity_id=? AND tenant_id=?")
+    .get(entityId, tid);
+  return row ? row.id : null;
+}
+
+function notifyUser(db, tid, userId, kind, title, body, payload) {
+  if (!userId) return;
+  db.prepare(
+    "INSERT INTO notifications(id,tenant_id,user_id,kind,title,body,payload_json) VALUES(?,?,?,?,?,?,?)"
+  ).run(uuid(), tid, userId, kind, title, body || null, JSON.stringify(payload || {}));
+}
+
+// ─── RATE LIMITING ───────────────────────────────────────────────────────────
+// In-memory sliding window per key. Limits are read from the environment at
+// request time so operators can tune them without a code change; the test
+// environment gets a high default so suites are unaffected unless a test
+// explicitly sets the env var to assert 429 behaviour.
+const rateBuckets = new Map();
+
+function rateLimited(key, max, windowSec) {
+  const now = Date.now();
+  const cutoff = now - windowSec * 1000;
+  let hits = rateBuckets.get(key);
+  if (!hits) {
+    if (rateBuckets.size > 5000) rateBuckets.clear(); // bound memory under abuse
+    hits = [];
+    rateBuckets.set(key, hits);
+  }
+  while (hits.length && hits[0] <= cutoff) hits.shift();
+  if (hits.length >= max) return true;
+  hits.push(now);
+  return false;
+}
+
+function rateMax(envName, prodDefault) {
+  const v = Number(process.env[envName]);
+  if (Number.isFinite(v) && v > 0) return v;
+  return NODE_ENV === "test" ? 10000 : prodDefault;
+}
+
+// ─── DRUG SAFETY ─────────────────────────────────────────────────────────────
+// A deliberately small, clinically real reference set. It is a safety net for
+// the most common severe reactions, not a full formulary — prescribers can
+// override any warning with a recorded reason.
+const ALLERGY_CLASSES = {
+  penicillin: ["penicillin", "amoxicillin", "ampicillin", "augmentin", "amoxiclav", "piperacillin"],
+  sulfa: [
+    "sulfamethoxazole",
+    "cotrimoxazole",
+    "co-trimoxazole",
+    "bactrim",
+    "sulfasalazine",
+    "sulfadiazine",
+  ],
+  aspirin: ["aspirin", "acetylsalicylic"],
+  nsaid: ["ibuprofen", "naproxen", "diclofenac", "ketorolac"],
+};
+
+function allergyWarnings(allergies, drug) {
+  const d = String(drug).toLowerCase();
+  const out = [];
+  for (const a of allergies || []) {
+    const sub = String(a.substance || "").toLowerCase();
+    if (!sub) continue;
+    let hit = d.includes(sub) || sub.includes(d);
+    if (!hit) {
+      for (const [cls, members] of Object.entries(ALLERGY_CLASSES)) {
+        const subInClass = sub.includes(cls) || members.some((m) => sub.includes(m));
+        const drugInClass = d.includes(cls) || members.some((m) => d.includes(m));
+        if (subInClass && drugInClass) {
+          hit = true;
+          break;
+        }
+      }
+    }
+    if (hit)
+      out.push({
+        type: "allergy",
+        substance: a.substance,
+        severity: a.severity || "unknown",
+        reaction: a.reaction || null,
+      });
+  }
+  return out;
+}
+
+const INTERACTION_PAIRS = [
+  [["warfarin"], ["aspirin", "ibuprofen", "naproxen", "diclofenac"], "Increased bleeding risk"],
+  [["sildenafil", "tadalafil"], ["nitroglycerin", "isosorbide", "nitrate"], "Severe hypotension"],
+  [
+    ["tramadol"],
+    ["fluoxetine", "sertraline", "paroxetine", "escitalopram"],
+    "Serotonin syndrome risk",
+  ],
+  [["methotrexate"], ["trimethoprim", "cotrimoxazole", "bactrim"], "Bone-marrow toxicity"],
+  [["clopidogrel"], ["omeprazole", "esomeprazole"], "Reduced antiplatelet effect"],
+  [
+    ["simvastatin", "atorvastatin"],
+    ["clarithromycin", "erythromycin", "itraconazole"],
+    "Myopathy / rhabdomyolysis risk",
+  ],
+  [
+    ["lisinopril", "enalapril", "ramipril", "losartan", "telmisartan"],
+    ["spironolactone", "eplerenone"],
+    "Hyperkalaemia risk",
+  ],
+  [["digoxin"], ["amiodarone", "verapamil"], "Digoxin toxicity risk"],
+];
+
+function interactionWarnings(activeDrugs, drug) {
+  const d = String(drug).toLowerCase();
+  const out = [];
+  for (const existing of activeDrugs || []) {
+    const e = String(existing).toLowerCase();
+    for (const [a, b, risk] of INTERACTION_PAIRS) {
+      const dInA = a.some((m) => d.includes(m));
+      const dInB = b.some((m) => d.includes(m));
+      const eInA = a.some((m) => e.includes(m));
+      const eInB = b.some((m) => e.includes(m));
+      if ((dInA && eInB) || (dInB && eInA)) out.push({ type: "interaction", with: existing, risk });
+    }
+  }
+  return out;
 }
 
 function tryParse(v, def) {
@@ -151,16 +296,19 @@ function transaction(db, fn) {
 async function requireAuth(c, next) {
   const header = c.req.header("authorization") || "";
   if (!header.startsWith("Bearer ")) return fail(c, "no_session", "Authentication required", 401);
+  let payload;
+  // The catch must cover ONLY token verification — downstream handler errors
+  // belong to app.onError, not a misleading 401.
   try {
-    const { payload } = await jwtVerify(header.slice(7), JWT_SECRET, { algorithms: [JWT_ALG] });
-    // Only access tokens are valid for API calls. Refresh tokens (type:'refresh')
-    // carry no role/eid and must never be accepted here.
-    if (payload.type !== "access") return fail(c, "no_session", "Invalid token type", 401);
-    c.set("user", payload);
-    await next();
+    ({ payload } = await jwtVerify(header.slice(7), JWT_SECRET, { algorithms: [JWT_ALG] }));
   } catch {
     return fail(c, "no_session", "Token expired or invalid", 401);
   }
+  // Only access tokens are valid for API calls. Refresh tokens (type:'refresh')
+  // carry no role/eid and must never be accepted here.
+  if (payload.type !== "access") return fail(c, "no_session", "Invalid token type", 401);
+  c.set("user", payload);
+  await next();
 }
 
 function requireRole(...roles) {
@@ -216,6 +364,8 @@ app.get("/health", (c) => ok(c, { service: "api-gateway", version: "1.0.0" }));
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
 app.post("/api/v1/auth/login", async (c) => {
+  if (rateLimited(`login:${getIp(c)}`, rateMax("LOGIN_RATE_MAX", 10), 900))
+    return fail(c, "rate_limited", "Too many login attempts, please try again later", 429);
   const body = await c.req.json().catch(() => ({}));
   const { email, password } = body;
   if (!email || !password) return fail(c, "validation_failed", "email and password required");
@@ -232,7 +382,7 @@ app.post("/api/v1/auth/login", async (c) => {
   );
   const token = await signToken(accessPayload(user), ACCESS_TTL);
   const { token: refresh } = await issueRefresh(db, user, uuid());
-  audit(user.tenant_id, user.email, "auth.login", `user:${user.id}`, getIp(c));
+  audit(user.tenant_id, user.email, "auth.login", `user:${user.id}`, getIp(c), { ua: getUa(c) });
   return ok(c, {
     token,
     refresh,
@@ -249,6 +399,8 @@ app.post("/api/v1/auth/login", async (c) => {
 });
 
 app.post("/api/v1/auth/signup", async (c) => {
+  if (rateLimited(`signup:${getIp(c)}`, rateMax("SIGNUP_RATE_MAX", 5), 3600))
+    return fail(c, "rate_limited", "Too many signup attempts, please try again later", 429);
   const body = await c.req.json().catch(() => ({}));
   const schema = z.object({
     name: z.string().min(2),
@@ -420,6 +572,34 @@ app.get("/api/v1/auth/me", requireAuth, (c) => {
   });
 });
 
+app.post("/api/v1/auth/change-password", requireAuth, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const schema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8).max(128),
+  });
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return fail(c, "validation_failed", parsed.error.issues[0].message);
+  const db = getDb();
+  const u = c.get("user");
+  const user = db.prepare("SELECT * FROM users WHERE id=?").get(u.sub);
+  if (!user) return fail(c, "not_found", "User not found", 404);
+  const match = await bcrypt.compare(parsed.data.currentPassword, user.password_hash);
+  if (!match) return fail(c, "invalid_credentials", "Current password is incorrect", 401);
+  const hash = await bcrypt.hash(parsed.data.newPassword, 10);
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE users SET password_hash=? WHERE id=?").run(hash, user.id);
+  // Changing the password ends every existing session on every device.
+  db.prepare("UPDATE refresh_tokens SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").run(
+    now,
+    user.id
+  );
+  audit(user.tenant_id, user.email, "auth.password_changed", `user:${user.id}`, getIp(c), {
+    ua: getUa(c),
+  });
+  return ok(c, {});
+});
+
 // ─── PATIENTS ─────────────────────────────────────────────────────────────────
 
 function parsePatient(p) {
@@ -558,18 +738,61 @@ app.patch("/api/v1/patients/:id", requireAuth, async (c) => {
   };
   const updates = [];
   const vals = [];
+  const diff = {};
   for (const [bk, dbk] of Object.entries(map)) {
     if (body[bk] !== undefined) {
       updates.push(`${dbk}=?`);
       vals.push(typeof body[bk] === "object" ? JSON.stringify(body[bk]) : body[bk]);
+      diff[bk] = body[bk];
     }
   }
   if (updates.length > 0)
     db.prepare(`UPDATE patients SET ${updates.join(",")} WHERE id=?`).run(...vals, patient.id);
   const updated = db.prepare("SELECT * FROM patients WHERE id=?").get(patient.id);
-  audit(tid, u.email, "patient.updated", `pat:${patient.id}`, getIp(c));
+  audit(tid, u.email, "patient.updated", `pat:${patient.id}`, getIp(c), { ua: getUa(c), diff });
   return ok(c, { patient: parsePatient(updated) });
 });
+
+app.post(
+  "/api/v1/patients/:id/vitals",
+  requireAuth,
+  requireRole("clinician", "admin", "frontdesk"),
+  async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const schema = z.object({
+      bp: z.string().max(20).optional(),
+      hr: z.number().optional(),
+      temp: z.number().optional(),
+      weight: z.number().optional(),
+      spo2: z.number().optional(),
+      rr: z.number().optional(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) return fail(c, "validation_failed", parsed.error.issues[0].message);
+    const snap = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
+    if (Object.keys(snap).length === 0)
+      return fail(c, "validation_failed", "At least one vital sign is required");
+    const db = getDb();
+    const u = c.get("user");
+    const patient = db
+      .prepare("SELECT * FROM patients WHERE id=? AND tenant_id=?")
+      .get(c.req.param("id"), u.tid);
+    if (!patient) return fail(c, "not_found", "Patient not found", 404);
+    let series = tryParse(patient.vitals_json, []);
+    // Legacy records stored a single vitals object; fold it into the series.
+    if (series && !Array.isArray(series)) series = [{ at: patient.created_at, ...series }];
+    if (!Array.isArray(series)) series = [];
+    series.push({ at: Math.floor(Date.now() / 1000), by: u.email, ...snap });
+    db.prepare("UPDATE patients SET vitals_json=? WHERE id=?").run(
+      JSON.stringify(series),
+      patient.id
+    );
+    audit(u.tid, u.email, "patient.vitals_recorded", `pat:${patient.id}`, getIp(c), {
+      diff: snap,
+    });
+    return ok(c, { vitals: series }, 201);
+  }
+);
 
 // ─── CLINICIANS ───────────────────────────────────────────────────────────────
 
@@ -709,26 +932,44 @@ app.post("/api/v1/appointments", requireAuth, async (c) => {
     )
     .get(tid, clinicianId, endsAt, startsAt);
   if (conflict) return fail(c, "slot_taken", "This time slot is already booked", 409);
+  // The clinician may have blocked this window (leave, training, emergency).
+  const blocked = db
+    .prepare(
+      "SELECT id FROM availability_blocks WHERE tenant_id=? AND clinician_id=? AND starts_at<? AND ends_at>? LIMIT 1"
+    )
+    .get(tid, clinicianId, endsAt, startsAt);
+  if (blocked)
+    return fail(c, "clinician_unavailable", "The clinician is unavailable at this time", 409);
+  // Guard against the same patient stacking bookings within 30 minutes of
+  // each other (double-booked patients are a front-desk headache).
+  const PAD = 1800;
+  const stacked = db
+    .prepare(
+      `SELECT id FROM appointments WHERE tenant_id=? AND patient_id=? AND status NOT IN ('cancelled','no-show') AND starts_at<? AND starts_at+duration_min*60>? LIMIT 1`
+    )
+    .get(tid, patientId, endsAt + PAD, startsAt - PAD);
+  if (stacked)
+    return fail(
+      c,
+      "patient_stacking",
+      "This patient already has an appointment within 30 minutes of this slot",
+      422
+    );
   const id = uuid();
   db.prepare(
     "INSERT INTO appointments(id,tenant_id,patient_id,clinician_id,starts_at,duration_min,kind,reason) VALUES(?,?,?,?,?,?,?,?)"
   ).run(id, tid, patientId, clinicianId, startsAt, durationMin, kind, reason || null);
-  const patUser = db
-    .prepare("SELECT id FROM users WHERE linked_entity_id=? AND tenant_id=?")
-    .get(patientId, tid);
-  if (patUser)
-    db.prepare(
-      "INSERT INTO notifications(id,tenant_id,user_id,kind,title,body) VALUES(?,?,?,?,?,?)"
-    ).run(
-      uuid(),
-      tid,
-      patUser.id,
-      "appointment.booked",
-      "Appointment Confirmed",
-      `Your appointment is confirmed for ${new Date(startsAt * 1000).toLocaleString("en-IN")}.`
-    );
+  notifyUser(
+    db,
+    tid,
+    linkedUserId(db, tid, patientId),
+    "appointment.booked",
+    "Appointment Confirmed",
+    `Your appointment is confirmed for ${new Date(startsAt * 1000).toLocaleString("en-IN")}.`,
+    { appointmentId: id }
+  );
   const appt = db.prepare(`${APPT_SELECT} WHERE a.id=?`).get(id);
-  audit(tid, c.get("user").email, "appointment.booked", `appt:${id}`, getIp(c));
+  audit(tid, c.get("user").email, "appointment.booked", `appt:${id}`, getIp(c), { ua: getUa(c) });
   return ok(c, { appointment: parseAppt(appt) }, 201);
 });
 
@@ -768,18 +1009,372 @@ app.patch("/api/v1/appointments/:id", requireAuth, async (c) => {
   };
   const updates = [];
   const vals = [];
+  const diff = {};
   for (const [bk, dbk] of Object.entries(map)) {
     if (body[bk] !== undefined) {
       updates.push(`${dbk}=?`);
       vals.push(body[bk]);
+      diff[bk] = body[bk];
     }
   }
   if (updates.length > 0)
     db.prepare(`UPDATE appointments SET ${updates.join(",")} WHERE id=?`).run(...vals, appt.id);
   const updated = db.prepare(`${APPT_SELECT} WHERE a.id=?`).get(appt.id);
-  audit(tid, c.get("user").email, "appointment.updated", `appt:${appt.id}`, getIp(c));
+  const patientUid = linkedUserId(db, tid, appt.patient_id);
+  if (body.status === "cancelled" && appt.status !== "cancelled") {
+    notifyUser(
+      db,
+      tid,
+      patientUid,
+      "appointment.cancelled",
+      "Appointment Cancelled",
+      `Your appointment on ${new Date(appt.starts_at * 1000).toLocaleString(
+        "en-IN"
+      )} has been cancelled.`,
+      { appointmentId: appt.id }
+    );
+    // If the patient cancelled, tell the clinician their slot freed up.
+    if (u.role === "patient")
+      notifyUser(
+        db,
+        tid,
+        linkedUserId(db, tid, appt.clinician_id),
+        "appointment.cancelled",
+        "Appointment Cancelled by Patient",
+        `${updated.patient_name} cancelled the appointment on ${new Date(
+          appt.starts_at * 1000
+        ).toLocaleString("en-IN")}.`,
+        { appointmentId: appt.id }
+      );
+  } else if (body.startsAt !== undefined && body.startsAt !== appt.starts_at) {
+    notifyUser(
+      db,
+      tid,
+      patientUid,
+      "appointment.rescheduled",
+      "Appointment Rescheduled",
+      `Your appointment has been moved to ${new Date(body.startsAt * 1000).toLocaleString(
+        "en-IN"
+      )}.`,
+      { appointmentId: appt.id }
+    );
+  }
+  audit(tid, c.get("user").email, "appointment.updated", `appt:${appt.id}`, getIp(c), {
+    ua: getUa(c),
+    diff,
+  });
   return ok(c, { appointment: parseAppt(updated) });
 });
+
+// ─── AVAILABILITY ─────────────────────────────────────────────────────────────
+
+function parseBlock(b) {
+  return {
+    id: b.id,
+    tenantId: b.tenant_id,
+    clinicianId: b.clinician_id,
+    startsAt: b.starts_at,
+    endsAt: b.ends_at,
+    kind: b.kind,
+    reason: b.reason,
+    createdAt: b.created_at,
+    clinicianName: b.clinician_name,
+  };
+}
+
+const BLOCK_SELECT = `SELECT b.*,c.name as clinician_name FROM availability_blocks b JOIN clinicians c ON c.id=b.clinician_id`;
+
+app.get("/api/v1/availability", requireAuth, (c) => {
+  const db = getDb();
+  const u = c.get("user");
+  const { clinicianId } = c.req.query();
+  let sql = `${BLOCK_SELECT} WHERE b.tenant_id=?`;
+  const params = [u.tid];
+  const cid = clinicianId || (u.role === "clinician" ? u.eid : null);
+  if (cid) {
+    sql += " AND b.clinician_id=?";
+    params.push(cid);
+  }
+  sql += " ORDER BY b.starts_at LIMIT 500";
+  const rows = db
+    .prepare(sql)
+    .all(...params)
+    .map(parseBlock);
+  // Patients only need to know WHEN a clinician is unavailable, not why.
+  if (u.role === "patient")
+    return ok(c, {
+      blocks: rows.map((b) => ({
+        id: b.id,
+        clinicianId: b.clinicianId,
+        startsAt: b.startsAt,
+        endsAt: b.endsAt,
+      })),
+    });
+  return ok(c, { blocks: rows });
+});
+
+app.post("/api/v1/availability", requireAuth, requireRole("clinician", "admin"), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const schema = z.object({
+    clinicianId: z.string().optional(),
+    startsAt: z.number().int().positive(),
+    endsAt: z.number().int().positive(),
+    kind: z.enum(["leave", "holiday", "training", "emergency"]).default("leave"),
+    reason: z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return fail(c, "validation_failed", parsed.error.issues[0].message);
+  const db = getDb();
+  const u = c.get("user");
+  const tid = u.tid;
+  if (u.role === "clinician" && parsed.data.clinicianId && parsed.data.clinicianId !== u.eid)
+    return fail(c, "forbidden", "Clinicians can only block their own calendar", 403);
+  const clinicianId = u.role === "clinician" ? u.eid : parsed.data.clinicianId;
+  if (!clinicianId) return fail(c, "validation_failed", "clinicianId required");
+  const { startsAt, endsAt, kind, reason } = parsed.data;
+  if (endsAt <= startsAt) return fail(c, "validation_failed", "endsAt must be after startsAt");
+  if (endsAt - startsAt > 30 * 86400)
+    return fail(c, "validation_failed", "A block cannot span more than 30 days");
+  const clin = db
+    .prepare("SELECT id FROM clinicians WHERE id=? AND tenant_id=?")
+    .get(clinicianId, tid);
+  if (!clin) return fail(c, "not_found", "Clinician not found", 404);
+  const id = uuid();
+  db.prepare(
+    "INSERT INTO availability_blocks(id,tenant_id,clinician_id,starts_at,ends_at,kind,reason) VALUES(?,?,?,?,?,?,?)"
+  ).run(id, tid, clinicianId, startsAt, endsAt, kind, reason || null);
+  // Surface every live appointment the new block collides with so the caller
+  // can decide per appointment: queue for the front desk, reschedule, or cancel.
+  const affected = db
+    .prepare(
+      `${APPT_SELECT} WHERE a.tenant_id=? AND a.clinician_id=? AND a.status IN ('scheduled','checked-in') AND a.starts_at<? AND a.starts_at+a.duration_min*60>? ORDER BY a.starts_at`
+    )
+    .all(tid, clinicianId, endsAt, startsAt)
+    .map(parseAppt);
+  audit(tid, u.email, "availability.blocked", `block:${id}`, getIp(c), {
+    diff: { clinicianId, startsAt, endsAt, kind },
+  });
+  const block = db.prepare(`${BLOCK_SELECT} WHERE b.id=?`).get(id);
+  return ok(c, { block: parseBlock(block), affectedAppointments: affected }, 201);
+});
+
+app.delete("/api/v1/availability/:id", requireAuth, requireRole("clinician", "admin"), (c) => {
+  const db = getDb();
+  const u = c.get("user");
+  const block = db
+    .prepare("SELECT * FROM availability_blocks WHERE id=? AND tenant_id=?")
+    .get(c.req.param("id"), u.tid);
+  if (!block) return fail(c, "not_found", "Block not found", 404);
+  if (u.role !== "admin" && block.clinician_id !== u.eid)
+    return fail(c, "forbidden", "Only the owning clinician can remove this block", 403);
+  // Queue items are history of displaced appointments — detach rather than
+  // let the FK block the delete (or cascade them away).
+  transaction(db, () => {
+    db.prepare("UPDATE reassignment_queue SET block_id=NULL WHERE block_id=?").run(block.id);
+    db.prepare("DELETE FROM availability_blocks WHERE id=?").run(block.id);
+  })();
+  audit(u.tid, u.email, "availability.unblocked", `block:${block.id}`, getIp(c));
+  return ok(c, {});
+});
+
+// ─── REASSIGNMENT QUEUE ──────────────────────────────────────────────────────
+// Appointments displaced by an availability block land here for the front desk
+// or an admin to resolve: hand to another clinician, move the time, or cancel.
+
+function parseQueueItem(r) {
+  return {
+    id: r.id,
+    tenantId: r.tenant_id,
+    appointmentId: r.appointment_id,
+    blockId: r.block_id,
+    reason: r.reason,
+    status: r.status,
+    resolution: tryParse(r.resolution_json, null),
+    createdAt: r.created_at,
+    resolvedAt: r.resolved_at,
+    startsAt: r.starts_at,
+    durationMin: r.duration_min,
+    apptStatus: r.appt_status,
+    patientId: r.patient_id,
+    patientName: r.patient_name,
+    mrn: r.mrn,
+    clinicianId: r.clinician_id,
+    clinicianName: r.clinician_name,
+    department: r.department,
+  };
+}
+
+const RQ_SELECT = `SELECT q.*,a.starts_at,a.duration_min,a.status as appt_status,a.patient_id,a.clinician_id,p.name as patient_name,p.mrn,c.name as clinician_name,c.department FROM reassignment_queue q JOIN appointments a ON a.id=q.appointment_id JOIN patients p ON p.id=a.patient_id JOIN clinicians c ON c.id=a.clinician_id`;
+
+app.get(
+  "/api/v1/reassignments",
+  requireAuth,
+  requireRole("admin", "frontdesk", "clinician", "ops"),
+  (c) => {
+    const u = c.get("user");
+    const { status = "open" } = c.req.query();
+    let sql = `${RQ_SELECT} WHERE q.tenant_id=?`;
+    const params = [u.tid];
+    if (status !== "all") {
+      sql += " AND q.status=?";
+      params.push(status);
+    }
+    sql += " ORDER BY a.starts_at LIMIT 200";
+    return ok(c, {
+      queue: getDb()
+        .prepare(sql)
+        .all(...params)
+        .map(parseQueueItem),
+    });
+  }
+);
+
+app.post(
+  "/api/v1/reassignments",
+  requireAuth,
+  requireRole("clinician", "admin", "frontdesk"),
+  async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    if (!body.appointmentId) return fail(c, "validation_failed", "appointmentId required");
+    const db = getDb();
+    const u = c.get("user");
+    const tid = u.tid;
+    const appt = db
+      .prepare("SELECT * FROM appointments WHERE id=? AND tenant_id=?")
+      .get(body.appointmentId, tid);
+    if (!appt) return fail(c, "not_found", "Appointment not found", 404);
+    if (u.role === "clinician" && appt.clinician_id !== u.eid)
+      return fail(c, "forbidden", "Access denied", 403);
+    const open = db
+      .prepare("SELECT id FROM reassignment_queue WHERE appointment_id=? AND status='open'")
+      .get(appt.id);
+    if (open)
+      return fail(c, "conflict", "This appointment is already queued for reassignment", 409);
+    const id = uuid();
+    db.prepare(
+      "INSERT INTO reassignment_queue(id,tenant_id,appointment_id,block_id,reason) VALUES(?,?,?,?,?)"
+    ).run(id, tid, appt.id, body.blockId || null, body.reason || null);
+    audit(tid, u.email, "reassignment.queued", `queue:${id}`, getIp(c));
+    return ok(c, { item: parseQueueItem(db.prepare(`${RQ_SELECT} WHERE q.id=?`).get(id)) }, 201);
+  }
+);
+
+app.post(
+  "/api/v1/reassignments/:id/resolve",
+  requireAuth,
+  requireRole("admin", "frontdesk"),
+  async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const action = body.action;
+    if (!["reassign", "reschedule", "cancel"].includes(action))
+      return fail(c, "validation_failed", "action must be reassign, reschedule, or cancel");
+    const db = getDb();
+    const u = c.get("user");
+    const tid = u.tid;
+    const item = db
+      .prepare("SELECT * FROM reassignment_queue WHERE id=? AND tenant_id=?")
+      .get(c.req.param("id"), tid);
+    if (!item) return fail(c, "not_found", "Queue item not found", 404);
+    if (item.status !== "open") return fail(c, "conflict", "Queue item already resolved", 409);
+    const appt = db
+      .prepare("SELECT * FROM appointments WHERE id=? AND tenant_id=?")
+      .get(item.appointment_id, tid);
+    if (!appt) return fail(c, "not_found", "Appointment not found", 404);
+    const now = Math.floor(Date.now() / 1000);
+    const patientUid = linkedUserId(db, tid, appt.patient_id);
+    const resolution = { action, by: u.email, at: now };
+    if (action === "cancel") {
+      if (appt.status !== "scheduled")
+        return fail(c, "invalid_transition", `Cannot cancel a ${appt.status} appointment`, 422);
+      db.prepare("UPDATE appointments SET status='cancelled' WHERE id=?").run(appt.id);
+      notifyUser(
+        db,
+        tid,
+        patientUid,
+        "appointment.cancelled",
+        "Appointment Cancelled",
+        `Your appointment on ${new Date(appt.starts_at * 1000).toLocaleString(
+          "en-IN"
+        )} was cancelled by the hospital. Please rebook at your convenience.`,
+        { appointmentId: appt.id }
+      );
+    } else if (action === "reassign") {
+      const target = db
+        .prepare("SELECT id FROM clinicians WHERE id=? AND tenant_id=?")
+        .get(body.clinicianId || "", tid);
+      if (!target) return fail(c, "not_found", "Target clinician not found", 404);
+      const endsAt = appt.starts_at + appt.duration_min * 60;
+      const busy = db
+        .prepare(
+          `SELECT id FROM appointments WHERE tenant_id=? AND clinician_id=? AND id!=? AND status NOT IN ('cancelled','no-show') AND starts_at<? AND starts_at+duration_min*60>? LIMIT 1`
+        )
+        .get(tid, target.id, appt.id, endsAt, appt.starts_at);
+      if (busy)
+        return fail(c, "slot_taken", "The target clinician already has a booking then", 409);
+      const blocked = db
+        .prepare(
+          "SELECT id FROM availability_blocks WHERE tenant_id=? AND clinician_id=? AND starts_at<? AND ends_at>? LIMIT 1"
+        )
+        .get(tid, target.id, endsAt, appt.starts_at);
+      if (blocked)
+        return fail(c, "clinician_unavailable", "The target clinician is unavailable then", 409);
+      db.prepare("UPDATE appointments SET clinician_id=? WHERE id=?").run(target.id, appt.id);
+      resolution.clinicianId = target.id;
+      notifyUser(
+        db,
+        tid,
+        patientUid,
+        "appointment.reassigned",
+        "Appointment Update",
+        `Your appointment on ${new Date(appt.starts_at * 1000).toLocaleString(
+          "en-IN"
+        )} has been moved to a different clinician.`,
+        { appointmentId: appt.id }
+      );
+    } else {
+      const startsAt = Number(body.startsAt);
+      if (!Number.isInteger(startsAt) || startsAt <= 0)
+        return fail(c, "validation_failed", "startsAt (unix seconds) required");
+      const endsAt = startsAt + appt.duration_min * 60;
+      const busy = db
+        .prepare(
+          `SELECT id FROM appointments WHERE tenant_id=? AND clinician_id=? AND id!=? AND status NOT IN ('cancelled','no-show') AND starts_at<? AND starts_at+duration_min*60>? LIMIT 1`
+        )
+        .get(tid, appt.clinician_id, appt.id, endsAt, startsAt);
+      if (busy) return fail(c, "slot_taken", "That slot is already booked", 409);
+      const blocked = db
+        .prepare(
+          "SELECT id FROM availability_blocks WHERE tenant_id=? AND clinician_id=? AND starts_at<? AND ends_at>? LIMIT 1"
+        )
+        .get(tid, appt.clinician_id, endsAt, startsAt);
+      if (blocked)
+        return fail(
+          c,
+          "clinician_unavailable",
+          "The clinician is unavailable at the new time",
+          409
+        );
+      db.prepare("UPDATE appointments SET starts_at=? WHERE id=?").run(startsAt, appt.id);
+      resolution.startsAt = startsAt;
+      notifyUser(
+        db,
+        tid,
+        patientUid,
+        "appointment.rescheduled",
+        "Appointment Rescheduled",
+        `Your appointment has been moved to ${new Date(startsAt * 1000).toLocaleString("en-IN")}.`,
+        { appointmentId: appt.id }
+      );
+    }
+    db.prepare(
+      "UPDATE reassignment_queue SET status='resolved', resolution_json=?, resolved_at=? WHERE id=?"
+    ).run(JSON.stringify(resolution), now, item.id);
+    audit(tid, u.email, "reassignment.resolved", `queue:${item.id}`, getIp(c), {
+      diff: resolution,
+    });
+    return ok(c, { item: parseQueueItem(db.prepare(`${RQ_SELECT} WHERE q.id=?`).get(item.id)) });
+  }
+);
 
 // ─── NOTES ────────────────────────────────────────────────────────────────────
 
@@ -796,6 +1391,7 @@ function parseNote(n) {
     diagnoses: tryParse(n.diagnoses_json, []),
     signedAt: n.signed_at,
     addendumOf: n.addendum_of,
+    prevHash: n.prev_hash,
     createdAt: n.created_at,
     clinicianName: n.clinician_name,
     specialty: n.specialty,
@@ -895,6 +1491,45 @@ app.post("/api/v1/notes/:id/sign", requireAuth, requireRole("clinician", "admin"
   return ok(c, { note: parseNote(db.prepare(`${NOTE_SELECT} WHERE n.id=?`).get(note.id)) });
 });
 
+app.post(
+  "/api/v1/notes/:id/addendum",
+  requireAuth,
+  requireRole("clinician", "admin"),
+  async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const db = getDb();
+    const u = c.get("user");
+    const target = db
+      .prepare("SELECT * FROM notes WHERE id=? AND tenant_id=?")
+      .get(c.req.param("id"), u.tid);
+    if (!target) return fail(c, "not_found", "Note not found", 404);
+    if (!target.signed_at)
+      return fail(c, "conflict", "Addenda can only be added to signed notes", 409);
+    const clinicianId = clinicianEntityId(db, u);
+    if (!clinicianId)
+      return fail(c, "no_clinician_profile", "No clinician profile is linked to this account", 409);
+    const id = uuid();
+    // prev_hash chains the addendum to the exact signed content it amends.
+    db.prepare(
+      "INSERT INTO notes(id,tenant_id,patient_id,clinician_id,appointment_id,type,title,body_json,diagnoses_json,addendum_of,prev_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
+    ).run(
+      id,
+      u.tid,
+      target.patient_id,
+      clinicianId,
+      target.appointment_id,
+      target.type,
+      body.title || `Addendum: ${target.title || "note"}`,
+      JSON.stringify(body.body || {}),
+      JSON.stringify(body.diagnoses || []),
+      target.id,
+      sha256(target.body_json || "")
+    );
+    audit(u.tid, u.email, "note.addendum", `note:${id}`, getIp(c));
+    return ok(c, { note: parseNote(db.prepare(`${NOTE_SELECT} WHERE n.id=?`).get(id)) }, 201);
+  }
+);
+
 // ─── LABS ──────────────────────────────────────────────────────────────────────
 
 function parseLab(l) {
@@ -980,6 +1615,15 @@ app.patch("/api/v1/labs/:id", requireAuth, requireRole("clinician", "admin"), as
   if (!lab) return fail(c, "not_found", "Lab order not found", 404);
   if (u.role !== "admin" && lab.clinician_id !== u.eid)
     return fail(c, "forbidden", "Only the ordering clinician can modify this lab", 403);
+  const LAB_VALID = {
+    ordered: ["in-lab", "resulted", "cancelled"],
+    "in-lab": ["resulted", "cancelled"],
+    resulted: ["reviewed"],
+    reviewed: [],
+    cancelled: [],
+  };
+  if (body.status && body.status !== lab.status && !LAB_VALID[lab.status]?.includes(body.status))
+    return fail(c, "invalid_transition", `Cannot move from ${lab.status} to ${body.status}`, 422);
   const updates = [];
   const vals = [];
   if (body.status) {
@@ -996,6 +1640,16 @@ app.patch("/api/v1/labs/:id", requireAuth, requireRole("clinician", "admin"), as
   }
   if (updates.length > 0)
     db.prepare(`UPDATE lab_orders SET ${updates.join(",")} WHERE id=?`).run(...vals, lab.id);
+  if (body.status === "resulted" && lab.status !== "resulted")
+    notifyUser(
+      db,
+      u.tid,
+      linkedUserId(db, u.tid, lab.patient_id),
+      "lab.resulted",
+      "Lab Results Ready",
+      `Results for your ${lab.panel} panel are ready to view.`,
+      { labId: lab.id }
+    );
   audit(u.tid, u.email, "lab.updated", `lab:${lab.id}`, getIp(c));
   return ok(c, { lab: parseLab(db.prepare(`${LAB_SELECT} WHERE l.id=?`).get(lab.id)) });
 });
@@ -1017,6 +1671,8 @@ function parseRx(r) {
     refills: r.refills,
     status: r.status,
     instructions: r.instructions,
+    overrideReason: r.override_reason,
+    discontinuedReason: r.discontinued_reason,
     prescribedAt: r.prescribed_at,
     clinicianName: r.clinician_name,
   };
@@ -1052,15 +1708,40 @@ app.post("/api/v1/prescriptions", requireAuth, requireRole("clinician", "admin")
   const u = c.get("user");
   const tid = u.tid;
   const pat = db
-    .prepare("SELECT id FROM patients WHERE id=? AND tenant_id=?")
+    .prepare("SELECT id,allergies_json FROM patients WHERE id=? AND tenant_id=?")
     .get(body.patientId, tid);
   if (!pat) return fail(c, "not_found", "Patient not found", 404);
   const clinicianId = clinicianEntityId(db, u);
   if (!clinicianId)
     return fail(c, "no_clinician_profile", "No clinician profile is linked to this account", 409);
+  // Safety gate: check the drug against recorded allergies and every active or
+  // dispensed prescription. Warnings block unless the prescriber overrides
+  // with a recorded reason.
+  const activeDrugs = db
+    .prepare(
+      `SELECT drug FROM prescriptions WHERE tenant_id=? AND patient_id=? AND status IN ('active','dispensed')`
+    )
+    .all(tid, body.patientId)
+    .map((r) => r.drug);
+  const warnings = [
+    ...allergyWarnings(tryParse(pat.allergies_json, []), body.drug),
+    ...interactionWarnings(activeDrugs, body.drug),
+  ];
+  if (warnings.length > 0 && !String(body.overrideReason || "").trim()) {
+    const code = warnings.some((w) => w.type === "allergy") ? "drug_allergy" : "drug_interaction";
+    return c.json(
+      {
+        ok: false,
+        error: code,
+        message: "Safety warnings found; pass overrideReason to prescribe anyway",
+        warnings,
+      },
+      422
+    );
+  }
   const id = uuid();
   db.prepare(
-    "INSERT INTO prescriptions(id,tenant_id,patient_id,clinician_id,appointment_id,drug,form,dose,freq,duration,refills,instructions) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO prescriptions(id,tenant_id,patient_id,clinician_id,appointment_id,drug,form,dose,freq,duration,refills,instructions,override_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).run(
     id,
     tid,
@@ -1073,9 +1754,15 @@ app.post("/api/v1/prescriptions", requireAuth, requireRole("clinician", "admin")
     body.freq || null,
     body.duration || null,
     body.refills || 0,
-    body.instructions || null
+    body.instructions || null,
+    warnings.length > 0 ? String(body.overrideReason).trim() : null
   );
-  audit(tid, u.email, "prescription.created", `rx:${id}`, getIp(c));
+  audit(tid, u.email, "prescription.created", `rx:${id}`, getIp(c), {
+    diff:
+      warnings.length > 0
+        ? { warnings, overrideReason: String(body.overrideReason).trim() }
+        : undefined,
+  });
   return ok(c, { prescription: parseRx(db.prepare(`${RX_SELECT} WHERE r.id=?`).get(id)) }, 201);
 });
 
@@ -1098,11 +1785,25 @@ app.patch(
         "Only the prescribing clinician can modify this prescription",
         403
       );
+    const RX_VALID = {
+      active: ["dispensed", "completed", "discontinued"],
+      dispensed: ["completed", "discontinued"],
+      completed: [],
+      discontinued: [],
+    };
+    if (body.status && body.status !== rx.status && !RX_VALID[rx.status]?.includes(body.status))
+      return fail(c, "invalid_transition", `Cannot move from ${rx.status} to ${body.status}`, 422);
+    if (body.status === "discontinued" && !String(body.reason || "").trim())
+      return fail(c, "validation_failed", "A reason is required to discontinue a prescription");
     const updates = [];
     const vals = [];
     if (body.status) {
       updates.push("status=?");
       vals.push(body.status);
+    }
+    if (body.status === "discontinued") {
+      updates.push("discontinued_reason=?");
+      vals.push(String(body.reason).trim());
     }
     if (body.refills !== undefined) {
       updates.push("refills=?");
@@ -1110,7 +1811,19 @@ app.patch(
     }
     if (updates.length > 0)
       db.prepare(`UPDATE prescriptions SET ${updates.join(",")} WHERE id=?`).run(...vals, rx.id);
-    audit(u.tid, u.email, "prescription.updated", `rx:${rx.id}`, getIp(c));
+    if (body.status === "discontinued")
+      notifyUser(
+        db,
+        u.tid,
+        linkedUserId(db, u.tid, rx.patient_id),
+        "prescription.discontinued",
+        "Prescription Discontinued",
+        `${rx.drug} has been discontinued: ${String(body.reason).trim()}`,
+        { prescriptionId: rx.id }
+      );
+    audit(u.tid, u.email, "prescription.updated", `rx:${rx.id}`, getIp(c), {
+      diff: { status: body.status, reason: body.reason, refills: body.refills },
+    });
     return ok(c, { prescription: parseRx(db.prepare(`${RX_SELECT} WHERE r.id=?`).get(rx.id)) });
   }
 );
@@ -1191,6 +1904,17 @@ app.post(
         now,
         msg.id
       );
+      const otherEntity = u.role === "patient" ? msg.clinician_id : msg.patient_id;
+      notifyUser(
+        db,
+        tid,
+        linkedUserId(db, tid, otherEntity),
+        "message.received",
+        "New Message",
+        `You have a new message in "${msg.subject}".`,
+        { threadId: msg.id }
+      );
+      audit(tid, u.email, "message.sent", `msg:${msg.id}`, getIp(c));
       return ok(c, { message: parseMsg(db.prepare(`${MSG_SELECT} WHERE m.id=?`).get(msg.id)) });
     }
     const patientId = u.role === "patient" ? u.eid : body.patientId;
@@ -1226,6 +1950,17 @@ app.post(
       1,
       0
     );
+    const otherEntity = from === "patient" ? body.clinicianId : patientId;
+    notifyUser(
+      db,
+      tid,
+      linkedUserId(db, tid, otherEntity),
+      "message.received",
+      "New Message",
+      `You have a new message in "${body.subject || "Message"}".`,
+      { threadId: id }
+    );
+    audit(tid, u.email, "message.sent", `msg:${id}`, getIp(c));
     return ok(c, { message: parseMsg(db.prepare(`${MSG_SELECT} WHERE m.id=?`).get(id)) }, 201);
   }
 );
@@ -1287,6 +2022,93 @@ app.post("/api/v1/notifications/read-all", requireAuth, (c) => {
   return ok(c, {});
 });
 
+// ─── TASKS ─────────────────────────────────────────────────────────────────────
+// Personal Eisenhower-matrix task list, private to each signed-in user.
+
+function parseTask(t) {
+  return {
+    id: t.id,
+    userId: t.user_id,
+    title: t.title,
+    quadrant: t.quadrant,
+    done: !!t.done,
+    createdAt: t.created_at,
+  };
+}
+
+const TASK_QUADRANTS = ["do", "schedule", "delegate", "eliminate"];
+
+app.get("/api/v1/tasks", requireAuth, (c) => {
+  const u = c.get("user");
+  const rows = getDb()
+    .prepare(
+      "SELECT * FROM tasks WHERE tenant_id=? AND user_id=? ORDER BY created_at DESC LIMIT 500"
+    )
+    .all(u.tid, u.sub);
+  return ok(c, { tasks: rows.map(parseTask) });
+});
+
+app.post("/api/v1/tasks", requireAuth, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const title = String(body.title || "").trim();
+  if (!title || title.length > 300)
+    return fail(c, "validation_failed", "title required (max 300 chars)");
+  const quadrant = body.quadrant || "do";
+  if (!TASK_QUADRANTS.includes(quadrant))
+    return fail(c, "validation_failed", "quadrant must be do, schedule, delegate, or eliminate");
+  const u = c.get("user");
+  const db = getDb();
+  const id = uuid();
+  db.prepare("INSERT INTO tasks(id,tenant_id,user_id,title,quadrant) VALUES(?,?,?,?,?)").run(
+    id,
+    u.tid,
+    u.sub,
+    title,
+    quadrant
+  );
+  return ok(c, { task: parseTask(db.prepare("SELECT * FROM tasks WHERE id=?").get(id)) }, 201);
+});
+
+app.patch("/api/v1/tasks/:id", requireAuth, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const u = c.get("user");
+  const db = getDb();
+  const task = db
+    .prepare("SELECT * FROM tasks WHERE id=? AND tenant_id=? AND user_id=?")
+    .get(c.req.param("id"), u.tid, u.sub);
+  if (!task) return fail(c, "not_found", "Task not found", 404);
+  if (body.quadrant !== undefined && !TASK_QUADRANTS.includes(body.quadrant))
+    return fail(c, "validation_failed", "quadrant must be do, schedule, delegate, or eliminate");
+  const updates = [];
+  const vals = [];
+  if (body.title !== undefined) {
+    const t = String(body.title).trim();
+    if (!t || t.length > 300) return fail(c, "validation_failed", "title required (max 300 chars)");
+    updates.push("title=?");
+    vals.push(t);
+  }
+  if (body.quadrant !== undefined) {
+    updates.push("quadrant=?");
+    vals.push(body.quadrant);
+  }
+  if (body.done !== undefined) {
+    updates.push("done=?");
+    vals.push(body.done ? 1 : 0);
+  }
+  if (updates.length > 0)
+    db.prepare(`UPDATE tasks SET ${updates.join(",")} WHERE id=?`).run(...vals, task.id);
+  return ok(c, { task: parseTask(db.prepare("SELECT * FROM tasks WHERE id=?").get(task.id)) });
+});
+
+app.delete("/api/v1/tasks/:id", requireAuth, (c) => {
+  const u = c.get("user");
+  const res = getDb()
+    .prepare("DELETE FROM tasks WHERE id=? AND tenant_id=? AND user_id=?")
+    .run(c.req.param("id"), u.tid, u.sub);
+  if (!res.changes) return fail(c, "not_found", "Task not found", 404);
+  return ok(c, {});
+});
+
 // ─── ADMIN ─────────────────────────────────────────────────────────────────────
 
 app.get("/api/v1/admin/stats", requireAuth, requireRole("admin", "ops"), (c) => {
@@ -1319,11 +2141,18 @@ app.get("/api/v1/admin/stats", requireAuth, requireRole("admin", "ops"), (c) => 
 });
 
 app.get("/api/v1/admin/users", requireAuth, requireRole("admin"), (c) => {
+  const { q } = c.req.query();
+  let sql =
+    "SELECT id,name,email,role,linked_entity_id,last_login_at,created_at FROM users WHERE tenant_id=?";
+  const params = [c.get("user").tid];
+  if (q) {
+    sql += " AND (name LIKE ? OR email LIKE ?)";
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  sql += " ORDER BY created_at DESC";
   const users = getDb()
-    .prepare(
-      "SELECT id,name,email,role,linked_entity_id,last_login_at,created_at FROM users WHERE tenant_id=? ORDER BY created_at DESC"
-    )
-    .all(c.get("user").tid);
+    .prepare(sql)
+    .all(...params);
   return ok(c, {
     users: users.map((u) => ({
       id: u.id,
@@ -1454,12 +2283,17 @@ app.get("/api/v1/platform/health", requireAuth, requireRole("admin", "ops"), (c)
     .get(tid, tid);
   return ok(c, {
     services: [
-      { name: "api-gateway", status: "healthy", latency: dbLatency + 1, uptime: uptimePct() },
+      {
+        name: "api-gateway",
+        status: "healthy",
+        latency: dbLatency + 1,
+        uptime: uptimePct(db, tid),
+      },
       {
         name: "database (sqlite/wal)",
         status: dbHealthy ? "healthy" : "degraded",
         latency: dbLatency,
-        uptime: uptimePct(),
+        uptime: uptimePct(db, tid),
       },
     ],
     metrics: {
@@ -1470,14 +2304,118 @@ app.get("/api/v1/platform/health", requireAuth, requireRole("admin", "ops"), (c)
   });
 });
 
-app.get("/api/v1/platform/incidents", requireAuth, requireRole("admin", "ops"), (c) =>
-  ok(c, { incidents: [] })
-);
+function parseIncident(i) {
+  return {
+    id: i.id,
+    tenantId: i.tenant_id,
+    severity: i.severity,
+    title: i.title,
+    service: i.service,
+    detail: i.detail,
+    status: i.status,
+    owner: i.owner,
+    openedAt: i.opened_at,
+    resolvedAt: i.resolved_at,
+  };
+}
 
-function uptimePct() {
-  // Single-process uptime approximation; real deployments compute this from an
-  // external monitor. Reported as a stable high value for the ops view.
-  return 99.99;
+app.get("/api/v1/platform/incidents", requireAuth, requireRole("admin", "ops"), (c) => {
+  const rows = getDb()
+    .prepare("SELECT * FROM incidents WHERE tenant_id=? ORDER BY opened_at DESC LIMIT 100")
+    .all(c.get("user").tid);
+  return ok(c, { incidents: rows.map(parseIncident) });
+});
+
+app.post("/api/v1/platform/incidents", requireAuth, requireRole("admin", "ops"), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const schema = z.object({
+    severity: z.enum(["sev1", "sev2", "sev3"]),
+    title: z.string().min(3).max(200),
+    service: z.string().max(100).optional(),
+    detail: z.string().max(2000).optional(),
+    owner: z.string().max(200).optional(),
+  });
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return fail(c, "validation_failed", parsed.error.issues[0].message);
+  const db = getDb();
+  const u = c.get("user");
+  const id = uuid();
+  db.prepare(
+    "INSERT INTO incidents(id,tenant_id,severity,title,service,detail,owner) VALUES(?,?,?,?,?,?,?)"
+  ).run(
+    id,
+    u.tid,
+    parsed.data.severity,
+    parsed.data.title,
+    parsed.data.service || "api-gateway",
+    parsed.data.detail || null,
+    parsed.data.owner || u.email
+  );
+  audit(u.tid, u.email, "incident.opened", `inc:${id}`, getIp(c));
+  return ok(
+    c,
+    { incident: parseIncident(db.prepare("SELECT * FROM incidents WHERE id=?").get(id)) },
+    201
+  );
+});
+
+app.patch("/api/v1/platform/incidents/:id", requireAuth, requireRole("admin", "ops"), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const db = getDb();
+  const u = c.get("user");
+  const inc = db
+    .prepare("SELECT * FROM incidents WHERE id=? AND tenant_id=?")
+    .get(c.req.param("id"), u.tid);
+  if (!inc) return fail(c, "not_found", "Incident not found", 404);
+  const INC_VALID = {
+    open: ["monitoring", "resolved"],
+    monitoring: ["open", "resolved"],
+    resolved: [],
+  };
+  if (body.status && body.status !== inc.status && !INC_VALID[inc.status]?.includes(body.status))
+    return fail(c, "invalid_transition", `Cannot move from ${inc.status} to ${body.status}`, 422);
+  if (body.severity && !["sev1", "sev2", "sev3"].includes(body.severity))
+    return fail(c, "validation_failed", "severity must be sev1, sev2, or sev3");
+  const updates = [];
+  const vals = [];
+  const map = { status: "status", severity: "severity", owner: "owner", detail: "detail" };
+  for (const [bk, dbk] of Object.entries(map)) {
+    if (body[bk] !== undefined) {
+      updates.push(`${dbk}=?`);
+      vals.push(body[bk]);
+    }
+  }
+  if (body.status === "resolved" && inc.status !== "resolved") {
+    updates.push("resolved_at=?");
+    vals.push(Math.floor(Date.now() / 1000));
+  }
+  if (updates.length > 0)
+    db.prepare(`UPDATE incidents SET ${updates.join(",")} WHERE id=?`).run(...vals, inc.id);
+  audit(u.tid, u.email, "incident.updated", `inc:${inc.id}`, getIp(c), { diff: body });
+  return ok(c, {
+    incident: parseIncident(db.prepare("SELECT * FROM incidents WHERE id=?").get(inc.id)),
+  });
+});
+
+// Uptime over the trailing 30 days, derived from recorded incidents: sev1
+// downtime counts in full, sev2 at 40% weight, sev3 not at all.
+function uptimePct(db, tid) {
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = now - 30 * 86400;
+  const rows = db
+    .prepare(
+      "SELECT severity, opened_at, resolved_at FROM incidents WHERE tenant_id=? AND severity IN ('sev1','sev2') AND opened_at < ?"
+    )
+    .all(tid, now);
+  let downtime = 0;
+  for (const r of rows) {
+    const start = Math.max(r.opened_at, windowStart);
+    const end = Math.min(r.resolved_at || now, now);
+    if (end <= start) continue;
+    downtime += (end - start) * (r.severity === "sev1" ? 1 : 0.4);
+  }
+  const pct = Math.max(0, 100 - (downtime / (30 * 86400)) * 100);
+  return Math.round(pct * 100) / 100;
 }
 
 // ─── HELPERS THAT NEED getDb ────────────────────────────────────────────────
